@@ -60,6 +60,10 @@ object BpmnNodeNamingPolicy {
             // like a task does.
             is BpmnSubProcess -> true
 
+            // An event subprocess names the trigger it handles (e.g. "Handle timeout"), so it
+            // carries a label like an embedded subprocess does.
+            is BpmnEventSubProcess -> true
+
             // A call activity is a meaningful composite step (it names what it invokes), so it
             // carries a label like a task does.
             is BpmnCallActivity -> true

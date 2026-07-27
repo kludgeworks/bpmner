@@ -17,6 +17,7 @@ import dev.groknull.bpmner.bpmn.BpmnEscalationEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnEvent
 import dev.groknull.bpmner.bpmn.BpmnEventBasedGateway
 import dev.groknull.bpmner.bpmn.BpmnEventDefinition
+import dev.groknull.bpmner.bpmn.BpmnEventSubProcess
 import dev.groknull.bpmner.bpmn.BpmnExclusiveGateway
 import dev.groknull.bpmner.bpmn.BpmnGroup
 import dev.groknull.bpmner.bpmn.BpmnInclusiveGateway
@@ -298,6 +299,10 @@ private fun BpmnNode.bpmnTypeName(): String = when (this) {
     is BpmnEventBasedGateway -> BpmnTypeName.EVENT_BASED_GATEWAY
 
     is BpmnSubProcess -> BpmnTypeName.SUB_PROCESS
+
+    // Same BPMN element as an embedded subprocess (<bpmn:subProcess triggeredByEvent="true">),
+    // so it shares the exact typename — rules that target bpmn:SubProcess see both.
+    is BpmnEventSubProcess -> BpmnTypeName.SUB_PROCESS
 
     is BpmnCallActivity -> BpmnTypeName.CALL_ACTIVITY
 

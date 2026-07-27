@@ -12,6 +12,7 @@ import dev.groknull.bpmner.bpmn.BpmnEndEvent
 import dev.groknull.bpmner.bpmn.BpmnErrorRef
 import dev.groknull.bpmner.bpmn.BpmnEscalationRef
 import dev.groknull.bpmner.bpmn.BpmnEventBasedGateway
+import dev.groknull.bpmner.bpmn.BpmnEventSubProcess
 import dev.groknull.bpmner.bpmn.BpmnExclusiveGateway
 import dev.groknull.bpmner.bpmn.BpmnInclusiveGateway
 import dev.groknull.bpmner.bpmn.BpmnIntermediateCatchEvent
@@ -58,13 +59,13 @@ internal fun FlowNode.toBpmnTaskOrNull(normalisedName: String?, parentRef: Strin
     val mRef = taskMetadata.messageRefs[id].orEmpty()
 
     return when (this) {
-        is UserTask -> BpmnUserTask(id, normalisedName, mi, sl, parentRef)
-        is ServiceTask -> BpmnServiceTask(id, normalisedName, mi, sl, parentRef)
-        is ScriptTask -> BpmnScriptTask(id, normalisedName, mi, sl, parentRef)
-        is BusinessRuleTask -> BpmnBusinessRuleTask(id, normalisedName, dRef, mi, sl, parentRef)
-        is SendTask -> BpmnSendTask(id, normalisedName, mRef, mi, sl, parentRef)
-        is ReceiveTask -> BpmnReceiveTask(id, normalisedName, mRef, mi, sl, parentRef)
-        is ManualTask -> BpmnManualTask(id, normalisedName, mi, sl, parentRef)
+        is UserTask -> BpmnUserTask(id, normalisedName, mi, sl, isForCompensation, parentRef)
+        is ServiceTask -> BpmnServiceTask(id, normalisedName, mi, sl, isForCompensation, parentRef)
+        is ScriptTask -> BpmnScriptTask(id, normalisedName, mi, sl, isForCompensation, parentRef)
+        is BusinessRuleTask -> BpmnBusinessRuleTask(id, normalisedName, dRef, mi, sl, isForCompensation, parentRef)
+        is SendTask -> BpmnSendTask(id, normalisedName, mRef, mi, sl, isForCompensation, parentRef)
+        is ReceiveTask -> BpmnReceiveTask(id, normalisedName, mRef, mi, sl, isForCompensation, parentRef)
+        is ManualTask -> BpmnManualTask(id, normalisedName, mi, sl, isForCompensation, parentRef)
         else -> null
     }
 }
@@ -154,7 +155,7 @@ internal fun FlowNode.toBpmnSubProcessOrUnrecognized(normalisedName: String?, pa
             if (this is Transaction) {
                 toUnrecognizedNode(normalisedName, parentRef)
             } else if (triggeredByEvent()) {
-                toUnrecognizedNode(normalisedName, parentRef)
+                BpmnEventSubProcess(id = id, name = normalisedName, parentRef = parentRef)
             } else {
                 BpmnSubProcess(id = id, name = normalisedName, parentRef = parentRef)
             }

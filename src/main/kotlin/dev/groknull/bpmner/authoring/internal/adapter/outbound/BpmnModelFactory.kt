@@ -10,6 +10,7 @@ import dev.groknull.bpmner.bpmn.BpmnBusinessRuleTask
 import dev.groknull.bpmner.bpmn.BpmnCallActivity
 import dev.groknull.bpmner.bpmn.BpmnEndEvent
 import dev.groknull.bpmner.bpmn.BpmnEventBasedGateway
+import dev.groknull.bpmner.bpmn.BpmnEventSubProcess
 import dev.groknull.bpmner.bpmn.BpmnExclusiveGateway
 import dev.groknull.bpmner.bpmn.BpmnInclusiveGateway
 import dev.groknull.bpmner.bpmn.BpmnIntermediateCatchEvent
@@ -24,10 +25,12 @@ import dev.groknull.bpmner.bpmn.BpmnSendTask
 import dev.groknull.bpmner.bpmn.BpmnServiceTask
 import dev.groknull.bpmner.bpmn.BpmnStartEvent
 import dev.groknull.bpmner.bpmn.BpmnSubProcess
+import dev.groknull.bpmner.bpmn.BpmnTask
 import dev.groknull.bpmner.bpmn.BpmnUnrecognizedNode
 import dev.groknull.bpmner.bpmn.BpmnUserTask
 import dev.groknull.bpmner.bpmn.RetryableBpmnGenerationException
 import org.camunda.bpm.model.bpmn.BpmnModelInstance
+import org.camunda.bpm.model.bpmn.instance.Activity
 import org.camunda.bpm.model.bpmn.instance.BoundaryEvent
 import org.camunda.bpm.model.bpmn.instance.BusinessRuleTask
 import org.camunda.bpm.model.bpmn.instance.CallActivity
@@ -92,6 +95,11 @@ internal object BpmnModelFactory {
 
                 is BpmnSubProcess -> modelInstance.newInstance(SubProcess::class.java)
 
+                is BpmnEventSubProcess ->
+                    modelInstance.newInstance(SubProcess::class.java).apply {
+                        setTriggeredByEvent(true)
+                    }
+
                 is BpmnCallActivity ->
                     modelInstance.newInstance(CallActivity::class.java).apply {
                         calledElement = node.calledElement
@@ -110,6 +118,9 @@ internal object BpmnModelFactory {
             }
         flowNode.id = node.id
         BpmnNodeNamingPolicy.normalize(node.name)?.let { flowNode.name = it }
+        // isForCompensation is cross-cutting across every task kind (all are Camunda Activity
+        // subtypes); one check here covers all seven rather than an arm per task type above.
+        if (node is BpmnTask) (flowNode as Activity).setForCompensation(node.isForCompensation)
         return flowNode
     }
 }

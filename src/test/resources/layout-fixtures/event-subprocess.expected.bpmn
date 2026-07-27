@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" expressionLanguage="http://www.w3.org/1999/XPath" id="Definitions_event_subprocess" targetNamespace="https://groknull.dev/bpmner" typeLanguage="http://www.w3.org/2001/XMLSchema">
+
+  <bpmn:error errorCode="ORDER_FAILED" id="Error_1" name="Order Failed"/>
+
+  <bpmn:process id="Process_1" isClosed="false" isExecutable="true" name="Event Subprocess" processType="None">
+
+    <bpmn:startEvent id="Start_1" isInterrupting="true" name="Order Received" parallelMultiple="false">
+
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+
+    </bpmn:startEvent>
+
+    <bpmn:serviceTask completionQuantity="1" id="Task_process" implementation="##WebService" isForCompensation="false" name="Process Order" startQuantity="1">
+
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+
+    </bpmn:serviceTask>
+
+    <bpmn:endEvent id="End_1" name="Order Shipped">
+
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+
+    </bpmn:endEvent>
+
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="Start_1" targetRef="Task_process"/>
+
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="Task_process" targetRef="End_1"/>
+
+    <bpmn:subProcess completionQuantity="1" id="SubProcess_handler" isForCompensation="false" name="Handle Order Failure" startQuantity="1" triggeredByEvent="true">
+
+      <bpmn:startEvent id="Start_handler" isInterrupting="true" name="On Failure" parallelMultiple="false">
+
+        <bpmn:outgoing>Flow_handler_1</bpmn:outgoing>
+
+        <bpmn:errorEventDefinition errorRef="Error_1" id="ErrorDef_1"/>
+
+      </bpmn:startEvent>
+
+      <bpmn:serviceTask completionQuantity="1" id="Task_notify" implementation="##WebService" isForCompensation="false" name="Notify Customer" startQuantity="1">
+
+        <bpmn:incoming>Flow_handler_1</bpmn:incoming>
+
+        <bpmn:outgoing>Flow_handler_2</bpmn:outgoing>
+
+      </bpmn:serviceTask>
+
+      <bpmn:endEvent id="End_handler" name="Failure Handled">
+
+        <bpmn:incoming>Flow_handler_2</bpmn:incoming>
+
+      </bpmn:endEvent>
+
+      <bpmn:sequenceFlow id="Flow_handler_1" sourceRef="Start_handler" targetRef="Task_notify"/>
+
+      <bpmn:sequenceFlow id="Flow_handler_2" sourceRef="Task_notify" targetRef="End_handler"/>
+
+    </bpmn:subProcess>
+
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane bpmnElement="Process_1" id="BPMNPlane_1">
+      <bpmndi:BPMNShape bpmnElement="End_1" id="BPMNShape_End_1">
+        <dc:Bounds height="36.0" width="36.0" x="397.05859375" y="34.0"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_End_1">
+          <dc:Bounds height="20.0" width="78.046875" x="376.03515625" y="85.0"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="End_handler" id="BPMNShape_End_handler">
+        <dc:Bounds height="36.0" width="36.0" x="422.37890625" y="279.0"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_End_handler">
+          <dc:Bounds height="20.0" width="84.71484375" x="398.021484375" y="330.0"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="Start_1" id="BPMNShape_Start_1">
+        <dc:Bounds height="36.0" width="36.0" x="36.017578125" y="34.0"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_Start_1">
+          <dc:Bounds height="20.0" width="84.03515625" x="12.0" y="85.0"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="Start_handler" id="BPMNShape_Start_handler">
+        <dc:Bounds height="36.0" width="36.0" x="72.0107421875" y="279.0"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_Start_handler">
+          <dc:Bounds height="20.0" width="56.021484375" x="62.0" y="330.0"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="SubProcess_handler" id="BPMNShape_SubProcess_handler" isExpanded="true">
+        <dc:Bounds height="235.0" width="520.736328125" x="12.0" y="187.0"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_SubProcess_handler">
+          <dc:Bounds height="28.0" width="72.03515625" x="236.3505859375" y="437.0"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="Task_notify" id="BPMNShape_Task_notify">
+        <dc:Bounds height="80.0" width="100.0" x="208.021484375" y="257.0"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_Task_notify">
+          <dc:Bounds height="20.0" width="86.021484375" x="215.0107421875" y="352.0"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="Task_process" id="BPMNShape_Task_process">
+        <dc:Bounds height="80.0" width="100.0" x="186.03515625" y="12.0"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_Task_process">
+          <dc:Bounds height="20.0" width="77.35546875" x="197.357421875" y="107.0"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge bpmnElement="Flow_1" id="BPMNEdge_Flow_1">
+        <di:waypoint x="72.017578125" y="52.0"/>
+        <di:waypoint x="186.03515625" y="52.0"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="Flow_2" id="BPMNEdge_Flow_2">
+        <di:waypoint x="286.03515625" y="52.0"/>
+        <di:waypoint x="397.05859375" y="52.0"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="Flow_handler_1" id="BPMNEdge_Flow_handler_1">
+        <di:waypoint x="108.0107421875" y="297.0"/>
+        <di:waypoint x="208.021484375" y="297.0"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="Flow_handler_2" id="BPMNEdge_Flow_handler_2">
+        <di:waypoint x="308.021484375" y="297.0"/>
+        <di:waypoint x="422.37890625" y="297.0"/>
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+
+</bpmn:definitions>

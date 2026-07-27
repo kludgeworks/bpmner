@@ -23,7 +23,7 @@ Populate event definitions and catalog refs consistently for every event node.
 
 ## Diagnostic Messages
 
-- `def-invalid-activity-ref`: Compensate event definition activityRef must not be blank when present.
+- `def-invalid-activity-ref`: Compensate event definition activityRef, when present, must reference an existing task with isForCompensation=true.
 - `def-invalid-attached-to`: Boundary event attachedToRef must match an existing node id.
 - `def-invalid-error-ref`: Error event definitions must reference an existing error.
 - `def-invalid-escalation-ref`: Escalation event definitions must reference an existing escalation.

@@ -1,0 +1,506 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" expressionLanguage="http://www.w3.org/1999/XPath" id="Definitions_miwg_c2_four_pools" targetNamespace="https://groknull.dev/bpmner" typeLanguage="http://www.w3.org/2001/XMLSchema">
+
+  <!--
+    Pool-stacking spike fixture (622-1, spike b): a MIWG C.2.0-derived four-participant
+    collaboration — 4 participants, 5 message flows, an embedded (expanded) subprocess, and a
+    boundary error event. Parked: intentionally NOT enrolled in ElkGoldenLayoutTest's corpus and
+    has no golden yet, since white-box pool stacking is documented-broken beyond two participants
+    until Stage 622-4 lands AD-622-05. Enrollment is that stage's exit gate.
+  -->
+
+  <bpmn:collaboration id="Collab_c2_four_pools" isClosed="false">
+
+    <bpmn:participant id="Participant_customer" name="Customer" processRef="Process_customer"/>
+
+    <bpmn:participant id="Participant_retailer" name="Retailer" processRef="Process_retailer"/>
+
+    <bpmn:participant id="Participant_warehouse" name="Warehouse" processRef="Process_warehouse"/>
+
+    <bpmn:participant id="Participant_carrier" name="Carrier" processRef="Process_carrier"/>
+
+    <bpmn:messageFlow id="MsgFlow_order" name="Order" sourceRef="Task_place_order" targetRef="Task_receive_order"/>
+
+    <bpmn:messageFlow id="MsgFlow_reserve" name="Reserve Stock" sourceRef="Task_process_order" targetRef="Task_reserve_stock"/>
+
+    <bpmn:messageFlow id="MsgFlow_confirm" name="Stock Confirmed" sourceRef="Task_reserve_stock" targetRef="Task_confirm_order"/>
+
+    <bpmn:messageFlow id="MsgFlow_dispatch" name="Dispatch Request" sourceRef="Task_confirm_order" targetRef="Task_schedule_pickup"/>
+
+    <bpmn:messageFlow id="MsgFlow_delivered" name="Delivered" sourceRef="Task_deliver" targetRef="Task_receive_goods"/>
+
+  </bpmn:collaboration>
+
+  <bpmn:process id="Process_customer" isClosed="false" isExecutable="true" processType="None">
+
+    <bpmn:startEvent id="Start_customer" isInterrupting="true" name="Need Goods" parallelMultiple="false">
+
+      <bpmn:outgoing>Flow_c1</bpmn:outgoing>
+
+    </bpmn:startEvent>
+
+    <bpmn:userTask completionQuantity="1" id="Task_place_order" implementation="##unspecified" isForCompensation="false" name="Place Order" startQuantity="1">
+
+      <bpmn:incoming>Flow_c1</bpmn:incoming>
+
+      <bpmn:outgoing>Flow_c2</bpmn:outgoing>
+
+    </bpmn:userTask>
+
+    <bpmn:userTask completionQuantity="1" id="Task_receive_goods" implementation="##unspecified" isForCompensation="false" name="Receive Goods" startQuantity="1">
+
+      <bpmn:incoming>Flow_c2</bpmn:incoming>
+
+      <bpmn:outgoing>Flow_c3</bpmn:outgoing>
+
+    </bpmn:userTask>
+
+    <bpmn:endEvent id="End_customer" name="Done">
+
+      <bpmn:incoming>Flow_c3</bpmn:incoming>
+
+    </bpmn:endEvent>
+
+    <bpmn:sequenceFlow id="Flow_c1" sourceRef="Start_customer" targetRef="Task_place_order"/>
+
+    <bpmn:sequenceFlow id="Flow_c2" sourceRef="Task_place_order" targetRef="Task_receive_goods"/>
+
+    <bpmn:sequenceFlow id="Flow_c3" sourceRef="Task_receive_goods" targetRef="End_customer"/>
+
+  </bpmn:process>
+
+  <bpmn:process id="Process_retailer" isClosed="false" isExecutable="true" processType="None">
+
+    <bpmn:startEvent id="Start_retailer" isInterrupting="true" name="Order Received" parallelMultiple="false">
+
+      <bpmn:outgoing>Flow_r1</bpmn:outgoing>
+
+    </bpmn:startEvent>
+
+    <bpmn:serviceTask completionQuantity="1" id="Task_receive_order" implementation="##WebService" isForCompensation="false" name="Receive Order" startQuantity="1">
+
+      <bpmn:incoming>Flow_r1</bpmn:incoming>
+
+      <bpmn:outgoing>Flow_r2</bpmn:outgoing>
+
+    </bpmn:serviceTask>
+
+    <bpmn:subProcess completionQuantity="1" id="SubProcess_fulfil" isForCompensation="false" name="Fulfil Order" startQuantity="1" triggeredByEvent="false">
+
+      <bpmn:incoming>Flow_r2</bpmn:incoming>
+
+      <bpmn:outgoing>Flow_r3</bpmn:outgoing>
+
+      <bpmn:startEvent id="SubStart_fulfil" isInterrupting="true" name="Begin" parallelMultiple="false">
+
+        <bpmn:outgoing>SubFlow_r1</bpmn:outgoing>
+
+      </bpmn:startEvent>
+
+      <bpmn:serviceTask completionQuantity="1" id="Task_process_order" implementation="##WebService" isForCompensation="false" name="Process Order" startQuantity="1">
+
+        <bpmn:incoming>SubFlow_r1</bpmn:incoming>
+
+        <bpmn:outgoing>SubFlow_r2</bpmn:outgoing>
+
+      </bpmn:serviceTask>
+
+      <bpmn:userTask completionQuantity="1" id="Task_confirm_order" implementation="##unspecified" isForCompensation="false" name="Confirm Order" startQuantity="1">
+
+        <bpmn:incoming>SubFlow_r2</bpmn:incoming>
+
+        <bpmn:outgoing>SubFlow_r3</bpmn:outgoing>
+
+      </bpmn:userTask>
+
+      <bpmn:endEvent id="SubEnd_fulfil" name="Fulfilled">
+
+        <bpmn:incoming>SubFlow_r3</bpmn:incoming>
+
+      </bpmn:endEvent>
+
+      <bpmn:sequenceFlow id="SubFlow_r1" sourceRef="SubStart_fulfil" targetRef="Task_process_order"/>
+
+      <bpmn:sequenceFlow id="SubFlow_r2" sourceRef="Task_process_order" targetRef="Task_confirm_order"/>
+
+      <bpmn:sequenceFlow id="SubFlow_r3" sourceRef="Task_confirm_order" targetRef="SubEnd_fulfil"/>
+
+    </bpmn:subProcess>
+
+    <bpmn:boundaryEvent attachedToRef="SubProcess_fulfil" cancelActivity="true" id="Boundary_fulfil_error" name="Stock Unavailable" parallelMultiple="false">
+
+      <bpmn:outgoing>Flow_error</bpmn:outgoing>
+
+      <bpmn:errorEventDefinition id="ErrorDef_stock"/>
+
+    </bpmn:boundaryEvent>
+
+    <bpmn:userTask completionQuantity="1" id="Task_notify_customer" implementation="##unspecified" isForCompensation="false" name="Notify Customer" startQuantity="1">
+
+      <bpmn:incoming>Flow_error</bpmn:incoming>
+
+      <bpmn:outgoing>Flow_r4</bpmn:outgoing>
+
+    </bpmn:userTask>
+
+    <bpmn:endEvent id="End_retailer_error" name="Cancelled">
+
+      <bpmn:incoming>Flow_r4</bpmn:incoming>
+
+    </bpmn:endEvent>
+
+    <bpmn:endEvent id="End_retailer" name="Order Fulfilled">
+
+      <bpmn:incoming>Flow_r3</bpmn:incoming>
+
+    </bpmn:endEvent>
+
+    <bpmn:sequenceFlow id="Flow_r1" sourceRef="Start_retailer" targetRef="Task_receive_order"/>
+
+    <bpmn:sequenceFlow id="Flow_r2" sourceRef="Task_receive_order" targetRef="SubProcess_fulfil"/>
+
+    <bpmn:sequenceFlow id="Flow_r3" sourceRef="SubProcess_fulfil" targetRef="End_retailer"/>
+
+    <bpmn:sequenceFlow id="Flow_error" sourceRef="Boundary_fulfil_error" targetRef="Task_notify_customer"/>
+
+    <bpmn:sequenceFlow id="Flow_r4" sourceRef="Task_notify_customer" targetRef="End_retailer_error"/>
+
+  </bpmn:process>
+
+  <bpmn:process id="Process_warehouse" isClosed="false" isExecutable="true" processType="None">
+
+    <bpmn:startEvent id="Start_warehouse" isInterrupting="true" name="Reserve Requested" parallelMultiple="false">
+
+      <bpmn:outgoing>Flow_w1</bpmn:outgoing>
+
+    </bpmn:startEvent>
+
+    <bpmn:serviceTask completionQuantity="1" id="Task_reserve_stock" implementation="##WebService" isForCompensation="false" name="Reserve Stock" startQuantity="1">
+
+      <bpmn:incoming>Flow_w1</bpmn:incoming>
+
+      <bpmn:outgoing>Flow_w2</bpmn:outgoing>
+
+    </bpmn:serviceTask>
+
+    <bpmn:endEvent id="End_warehouse" name="Reserved">
+
+      <bpmn:incoming>Flow_w2</bpmn:incoming>
+
+    </bpmn:endEvent>
+
+    <bpmn:sequenceFlow id="Flow_w1" sourceRef="Start_warehouse" targetRef="Task_reserve_stock"/>
+
+    <bpmn:sequenceFlow id="Flow_w2" sourceRef="Task_reserve_stock" targetRef="End_warehouse"/>
+
+  </bpmn:process>
+
+  <bpmn:process id="Process_carrier" isClosed="false" isExecutable="true" processType="None">
+
+    <bpmn:startEvent id="Start_carrier" isInterrupting="true" name="Dispatch Requested" parallelMultiple="false">
+
+      <bpmn:outgoing>Flow_p1</bpmn:outgoing>
+
+    </bpmn:startEvent>
+
+    <bpmn:serviceTask completionQuantity="1" id="Task_schedule_pickup" implementation="##WebService" isForCompensation="false" name="Schedule Pickup" startQuantity="1">
+
+      <bpmn:incoming>Flow_p1</bpmn:incoming>
+
+      <bpmn:outgoing>Flow_p2</bpmn:outgoing>
+
+    </bpmn:serviceTask>
+
+    <bpmn:serviceTask completionQuantity="1" id="Task_deliver" implementation="##WebService" isForCompensation="false" name="Deliver" startQuantity="1">
+
+      <bpmn:incoming>Flow_p2</bpmn:incoming>
+
+      <bpmn:outgoing>Flow_p3</bpmn:outgoing>
+
+    </bpmn:serviceTask>
+
+    <bpmn:endEvent id="End_carrier" name="Delivered">
+
+      <bpmn:incoming>Flow_p3</bpmn:incoming>
+
+    </bpmn:endEvent>
+
+    <bpmn:sequenceFlow id="Flow_p1" sourceRef="Start_carrier" targetRef="Task_schedule_pickup"/>
+
+    <bpmn:sequenceFlow id="Flow_p2" sourceRef="Task_schedule_pickup" targetRef="Task_deliver"/>
+
+    <bpmn:sequenceFlow id="Flow_p3" sourceRef="Task_deliver" targetRef="End_carrier"/>
+
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane bpmnElement="Collab_c2_four_pools" id="BPMNPlane_1">
+      <bpmndi:BPMNShape bpmnElement="Participant_carrier" id="BPMNShape_Participant_carrier" isHorizontal="true">
+        <dc:Bounds height="155.0" width="1436.7421875" x="12.0" y="1011.5"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_Participant_carrier">
+          <dc:Bounds height="155.0" width="30.0" x="12.0" y="1011.5"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="Participant_customer" id="BPMNShape_Participant_customer" isHorizontal="true">
+        <dc:Bounds height="155.0" width="1436.7421875" x="12.0" y="12.0"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_Participant_customer">
+          <dc:Bounds height="155.0" width="30.0" x="12.0" y="12.0"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="Participant_retailer" id="BPMNShape_Participant_retailer" isHorizontal="true">
+        <dc:Bounds height="449.5" width="1436.7421875" x="12.0" y="247.0"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_Participant_retailer">
+          <dc:Bounds height="449.5" width="30.0" x="12.0" y="247.0"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="Participant_warehouse" id="BPMNShape_Participant_warehouse" isHorizontal="true">
+        <dc:Bounds height="155.0" width="1436.7421875" x="12.0" y="776.5"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_Participant_warehouse">
+          <dc:Bounds height="155.0" width="30.0" x="12.0" y="776.5"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="End_carrier" id="BPMNShape_End_carrier">
+        <dc:Bounds height="36.0" width="36.0" x="597.3876953125" y="1053.5"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_End_carrier">
+          <dc:Bounds height="20.0" width="50.689453125" x="590.04296875" y="1104.5"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="End_customer" id="BPMNShape_End_customer">
+        <dc:Bounds height="36.0" width="36.0" x="599.376953125" y="54.0"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_End_customer">
+          <dc:Bounds height="20.0" width="28.6875" x="603.033203125" y="105.0"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="End_retailer" id="BPMNShape_End_retailer">
+        <dc:Bounds height="36.0" width="36.0" x="1373.0634765625" y="406.0"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_End_retailer">
+          <dc:Bounds height="20.0" width="75.357421875" x="1353.384765625" y="457.0"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="End_retailer_error" id="BPMNShape_End_retailer_error">
+        <dc:Bounds height="36.0" width="36.0" x="1373.0634765625" y="583.5"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_End_retailer_error">
+          <dc:Bounds height="20.0" width="53.3671875" x="1364.3798828125" y="634.5"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="End_warehouse" id="BPMNShape_End_warehouse">
+        <dc:Bounds height="36.0" width="36.0" x="407.7216796875" y="818.5"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_End_warehouse">
+          <dc:Bounds height="20.0" width="51.357421875" x="400.04296875" y="869.5"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="Start_carrier" id="BPMNShape_Start_carrier">
+        <dc:Bounds height="36.0" width="36.0" x="73.021484375" y="1053.5"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_Start_carrier">
+          <dc:Bounds height="28.0" width="58.04296875" x="62.0" y="1104.5"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="Start_customer" id="BPMNShape_Start_customer">
+        <dc:Bounds height="36.0" width="36.0" x="77.6884765625" y="54.0"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_Start_customer">
+          <dc:Bounds height="20.0" width="67.376953125" x="62.0" y="105.0"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="Start_retailer" id="BPMNShape_Start_retailer">
+        <dc:Bounds height="36.0" width="36.0" x="86.017578125" y="406.0"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_Start_retailer">
+          <dc:Bounds height="20.0" width="84.03515625" x="62.0" y="457.0"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="Start_warehouse" id="BPMNShape_Start_warehouse">
+        <dc:Bounds height="36.0" width="36.0" x="73.021484375" y="818.5"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_Start_warehouse">
+          <dc:Bounds height="28.0" width="58.04296875" x="62.0" y="869.5"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="SubEnd_fulfil" id="BPMNShape_SubEnd_fulfil">
+        <dc:Bounds height="36.0" width="36.0" x="984.7099609375" y="398.5"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_SubEnd_fulfil">
+          <dc:Bounds height="20.0" width="41.349609375" x="982.03515625" y="449.5"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="SubProcess_fulfil" id="BPMNShape_SubProcess_fulfil" isExpanded="true">
+        <dc:Bounds height="235.0" width="647.349609375" x="426.03515625" y="306.5"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_SubProcess_fulfil">
+          <dc:Bounds height="20.0" width="59.34375" x="720.0380859375" y="631.5"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="SubStart_fulfil" id="BPMNShape_SubStart_fulfil">
+        <dc:Bounds height="36.0" width="36.0" x="476.03515625" y="398.5"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_SubStart_fulfil">
+          <dc:Bounds height="20.0" width="30.69140625" x="478.689453125" y="449.5"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="Task_confirm_order" id="BPMNShape_Task_confirm_order">
+        <dc:Bounds height="80.0" width="100.0" x="792.03515625" y="376.5"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_Task_confirm_order">
+          <dc:Bounds height="20.0" width="76.013671875" x="804.0283203125" y="471.5"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="Task_deliver" id="BPMNShape_Task_deliver">
+        <dc:Bounds height="80.0" width="100.0" x="400.04296875" y="1031.5"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_Task_deliver">
+          <dc:Bounds height="20.0" width="37.341796875" x="431.3720703125" y="1126.5"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="Task_notify_customer" id="BPMNShape_Task_notify_customer">
+        <dc:Bounds height="80.0" width="100.0" x="1163.384765625" y="561.5"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_Task_notify_customer">
+          <dc:Bounds height="20.0" width="86.021484375" x="1170.3740234375" y="656.5"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="Task_place_order" id="BPMNShape_Task_place_order">
+        <dc:Bounds height="80.0" width="100.0" x="219.376953125" y="32.0"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_Task_place_order">
+          <dc:Bounds height="20.0" width="64.025390625" x="237.3642578125" y="127.0"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="Task_process_order" id="BPMNShape_Task_process_order">
+        <dc:Bounds height="80.0" width="100.0" x="602.03515625" y="376.5"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_Task_process_order">
+          <dc:Bounds height="20.0" width="77.35546875" x="613.357421875" y="471.5"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="Task_receive_goods" id="BPMNShape_Task_receive_goods">
+        <dc:Bounds height="80.0" width="100.0" x="409.376953125" y="32.0"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_Task_receive_goods">
+          <dc:Bounds height="20.0" width="82.04296875" x="418.35546875" y="127.0"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="Task_receive_order" id="BPMNShape_Task_receive_order">
+        <dc:Bounds height="80.0" width="100.0" x="236.03515625" y="384.0"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_Task_receive_order">
+          <dc:Bounds height="20.0" width="77.361328125" x="247.3544921875" y="479.0"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="Task_reserve_stock" id="BPMNShape_Task_reserve_stock">
+        <dc:Bounds height="80.0" width="100.0" x="210.04296875" y="796.5"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_Task_reserve_stock">
+          <dc:Bounds height="20.0" width="78.029296875" x="221.0283203125" y="891.5"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="Task_schedule_pickup" id="BPMNShape_Task_schedule_pickup">
+        <dc:Bounds height="80.0" width="100.0" x="210.04296875" y="1031.5"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_Task_schedule_pickup">
+          <dc:Bounds height="20.0" width="89.390625" x="215.34765625" y="1126.5"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="Boundary_fulfil_error" id="BPMNShape_Boundary_fulfil_error">
+        <dc:Bounds height="36.0" width="36.0" x="731.7099609375" y="515.5"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_Boundary_fulfil_error">
+          <dc:Bounds height="28.0" width="62.70703125" x="718.3564453125" y="603.5"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge bpmnElement="Flow_c1" id="BPMNEdge_Flow_c1">
+        <di:waypoint x="113.6884765625" y="72.0"/>
+        <di:waypoint x="219.376953125" y="72.0"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="Flow_c2" id="BPMNEdge_Flow_c2">
+        <di:waypoint x="319.376953125" y="72.0"/>
+        <di:waypoint x="409.376953125" y="72.0"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="Flow_c3" id="BPMNEdge_Flow_c3">
+        <di:waypoint x="509.376953125" y="72.0"/>
+        <di:waypoint x="599.376953125" y="72.0"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="Flow_error" id="BPMNEdge_Flow_error">
+        <di:waypoint x="749.7099609375" y="551.5"/>
+        <di:waypoint x="749.7099609375" y="601.5"/>
+        <di:waypoint x="1163.384765625" y="601.5"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="Flow_p1" id="BPMNEdge_Flow_p1">
+        <di:waypoint x="109.021484375" y="1071.5"/>
+        <di:waypoint x="210.04296875" y="1071.5"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="Flow_p2" id="BPMNEdge_Flow_p2">
+        <di:waypoint x="310.04296875" y="1071.5"/>
+        <di:waypoint x="400.04296875" y="1071.5"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="Flow_p3" id="BPMNEdge_Flow_p3">
+        <di:waypoint x="500.04296875" y="1071.5"/>
+        <di:waypoint x="597.3876953125" y="1071.5"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="Flow_r1" id="BPMNEdge_Flow_r1">
+        <di:waypoint x="122.017578125" y="424.0"/>
+        <di:waypoint x="236.03515625" y="424.0"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="Flow_r2" id="BPMNEdge_Flow_r2">
+        <di:waypoint x="336.03515625" y="424.0"/>
+        <di:waypoint x="426.03515625" y="424.0"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="Flow_r3" id="BPMNEdge_Flow_r3">
+        <di:waypoint x="1073.384765625" y="424.0"/>
+        <di:waypoint x="1373.0634765625" y="424.0"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="Flow_r4" id="BPMNEdge_Flow_r4">
+        <di:waypoint x="1263.384765625" y="601.5"/>
+        <di:waypoint x="1373.0634765625" y="601.5"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="Flow_w1" id="BPMNEdge_Flow_w1">
+        <di:waypoint x="109.021484375" y="836.5"/>
+        <di:waypoint x="210.04296875" y="836.5"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="Flow_w2" id="BPMNEdge_Flow_w2">
+        <di:waypoint x="310.04296875" y="836.5"/>
+        <di:waypoint x="407.7216796875" y="836.5"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="SubFlow_r1" id="BPMNEdge_SubFlow_r1">
+        <di:waypoint x="512.03515625" y="416.5"/>
+        <di:waypoint x="602.03515625" y="416.5"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="SubFlow_r2" id="BPMNEdge_SubFlow_r2">
+        <di:waypoint x="702.03515625" y="416.5"/>
+        <di:waypoint x="792.03515625" y="416.5"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="SubFlow_r3" id="BPMNEdge_SubFlow_r3">
+        <di:waypoint x="892.03515625" y="416.5"/>
+        <di:waypoint x="984.7099609375" y="416.5"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="MsgFlow_confirm" id="BPMNEdge_MsgFlow_confirm">
+        <di:waypoint x="243.37630208333334" y="796.5"/>
+        <di:waypoint x="243.37630208333334" y="611.5"/>
+        <di:waypoint x="825.3684895833334" y="611.5"/>
+        <di:waypoint x="825.3684895833334" y="456.5"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_MsgFlow_confirm">
+          <dc:Bounds height="20.0" width="88.69921875" x="475.02278645833337" y="601.5"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="MsgFlow_delivered" id="BPMNEdge_MsgFlow_delivered">
+        <di:waypoint x="450.04296875" y="1031.5"/>
+        <di:waypoint x="450.04296875" y="571.75"/>
+        <di:waypoint x="459.376953125" y="571.75"/>
+        <di:waypoint x="459.376953125" y="112.0"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_MsgFlow_delivered">
+          <dc:Bounds height="20.0" width="50.689453125" x="429.365234375" y="561.75"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="MsgFlow_dispatch" id="BPMNEdge_MsgFlow_dispatch">
+        <di:waypoint x="858.7018229166666" y="456.5"/>
+        <di:waypoint x="858.7018229166666" y="744.0"/>
+        <di:waypoint x="260.04296875" y="744.0"/>
+        <di:waypoint x="260.04296875" y="1031.5"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_MsgFlow_dispatch">
+          <dc:Bounds height="20.0" width="94.716796875" x="512.0139973958334" y="734.0"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="MsgFlow_order" id="BPMNEdge_MsgFlow_order">
+        <di:waypoint x="269.376953125" y="112.0"/>
+        <di:waypoint x="269.376953125" y="248.0"/>
+        <di:waypoint x="286.03515625" y="248.0"/>
+        <di:waypoint x="286.03515625" y="384.0"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_MsgFlow_order">
+          <dc:Bounds height="20.0" width="30.673828125" x="262.369140625" y="238.0"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="MsgFlow_reserve" id="BPMNEdge_MsgFlow_reserve">
+        <di:waypoint x="652.03515625" y="456.5"/>
+        <di:waypoint x="652.03515625" y="641.5"/>
+        <di:waypoint x="276.7096354166667" y="641.5"/>
+        <di:waypoint x="276.7096354166667" y="796.5"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_MsgFlow_reserve">
+          <dc:Bounds height="20.0" width="78.029296875" x="440.35774739583337" y="631.5"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+
+</bpmn:definitions>

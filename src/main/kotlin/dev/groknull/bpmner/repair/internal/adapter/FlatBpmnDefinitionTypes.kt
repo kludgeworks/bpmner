@@ -60,6 +60,7 @@ public enum class FlatBpmnNodeKind {
     INTERMEDIATE_CATCH_EVENT,
     INTERMEDIATE_THROW_EVENT,
     SUB_PROCESS,
+    EVENT_SUB_PROCESS,
     CALL_ACTIVITY,
 }
 
@@ -82,7 +83,11 @@ public enum class FlatBpmnEventDefinitionKind {
         "BOUNDARY_EVENT → attachedToRef + eventDefinition, optionally cancelActivity; " +
         "START_EVENT additionally accepts isInterrupting (defaults true); " +
         "SUB_PROCESS → inner nodes carrying parentRef; " +
-        "CALL_ACTIVITY → required calledElement (id of the separately-defined process it invokes).",
+        "EVENT_SUB_PROCESS → same as SUB_PROCESS but floating: no incoming/outgoing sequence flow, " +
+        "started by its own inner START_EVENT's trigger (e.g. an error or message event); " +
+        "CALL_ACTIVITY → required calledElement (id of the separately-defined process it invokes); " +
+        "any task kind additionally accepts isForCompensation (defaults false) to mark it a " +
+        "compensation handler, referenced by a COMPENSATE eventDefinition's activityRef.",
 )
 public data class FlatBpmnNode(
     @field:NotBlank
@@ -140,6 +145,11 @@ public data class FlatBpmnNode(
             "Leave null for an ordinary single-run activity.",
     )
     val standardLoop: FlatStandardLoopCharacteristics? = null,
+    @get:JsonPropertyDescription(
+        "Task kinds only. Whether this task is a compensation handler, invoked only via a " +
+            "compensation event and never through normal sequence flow. Defaults to false.",
+    )
+    val isForCompensation: Boolean? = null,
     @get:JsonPropertyDescription(
         "CALL_ACTIVITY only. Id of the separately-defined process this call activity invokes. The " +
             "called process is referenced by id and need not appear in this definition.",

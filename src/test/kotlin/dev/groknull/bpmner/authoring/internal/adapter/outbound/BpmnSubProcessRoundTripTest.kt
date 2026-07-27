@@ -8,6 +8,9 @@ package dev.groknull.bpmner.authoring.internal.adapter.outbound
 import dev.groknull.bpmner.bpmn.BpmnDefinition
 import dev.groknull.bpmner.bpmn.BpmnEdge
 import dev.groknull.bpmner.bpmn.BpmnEndEvent
+import dev.groknull.bpmner.bpmn.BpmnErrorEventDefinition
+import dev.groknull.bpmner.bpmn.BpmnErrorRef
+import dev.groknull.bpmner.bpmn.BpmnEventSubProcess
 import dev.groknull.bpmner.bpmn.BpmnNode
 import dev.groknull.bpmner.bpmn.BpmnStartEvent
 import dev.groknull.bpmner.bpmn.BpmnSubProcess
@@ -93,6 +96,50 @@ class BpmnSubProcessRoundTripTest {
         assertEquals(MultiInstanceMode.PARALLEL, mi.mode)
         assertEquals("each shipment line", mi.collectionDescription)
     }
+
+    @Test
+    fun `event subprocess renders triggeredByEvent and round-trips as its own typed node`() {
+        // V3 (#622-Y): an event subprocess is floating — no incoming or outgoing sequence flow to
+        // the enclosing scope — started by its own start event's trigger, not by flow.
+        val original = eventSubProcessDefinition()
+
+        val xml = converter.render(original).xml
+        assertXml(xml).nodesByXPath(
+            "//bpmn:subProcess[@id='SubProcess_handler' and @triggeredByEvent='true']",
+        ).exist()
+
+        val parsed = BpmnXmlToDefinitionConverter().parse(xml)
+
+        assertIs<BpmnEventSubProcess>(parsed.nodes.single { it.id == "SubProcess_handler" })
+        assertEquals(parentRefById(original.nodes), parentRefById(parsed.nodes))
+        assertEquals(original.nodes.size, parsed.nodes.size)
+    }
+
+    private fun eventSubProcessDefinition(): BpmnDefinition = BpmnDefinition(
+        processId = "Process_event_sp",
+        processName = "Handles errors via event subprocess",
+        nodes =
+        listOf(
+            BpmnStartEvent("StartEvent_top", "Start"),
+            BpmnUserTask("act-work", "Do work"),
+            BpmnEndEvent("EndEvent_top", "Done"),
+            BpmnEventSubProcess("SubProcess_handler", "Handle error"),
+            BpmnStartEvent(
+                "StartEvent_handler",
+                "On error",
+                eventDefinition = BpmnErrorEventDefinition("Error_1"),
+                parentRef = "SubProcess_handler",
+            ),
+            BpmnEndEvent("EndEvent_handler", "Handled", parentRef = "SubProcess_handler"),
+        ),
+        sequences =
+        listOf(
+            BpmnEdge("Flow_top1", "StartEvent_top", "act-work"),
+            BpmnEdge("Flow_top2", "act-work", "EndEvent_top"),
+            BpmnEdge("Flow_handler", "StartEvent_handler", "EndEvent_handler", parentRef = "SubProcess_handler"),
+        ),
+        errors = listOf(BpmnErrorRef(id = "Error_1", code = "ERR")),
+    )
 
     private fun parentRefById(nodes: List<BpmnNode>): Map<String, String?> = nodes.associate { it.id to it.parentRef }
 

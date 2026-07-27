@@ -6,10 +6,15 @@
 package dev.groknull.bpmner.layout.internal
 
 import dev.groknull.bpmner.layout.BpmnAutoLayoutException
-import dev.groknull.bpmner.layout.internal.elk.BPMNER_LAYERED_ALGORITHM_ID
 import org.camunda.bpm.model.bpmn.BpmnModelInstance
+import org.camunda.bpm.model.bpmn.instance.Association
 import org.camunda.bpm.model.bpmn.instance.BoundaryEvent
 import org.camunda.bpm.model.bpmn.instance.Collaboration
+import org.camunda.bpm.model.bpmn.instance.DataAssociation
+import org.camunda.bpm.model.bpmn.instance.DataInputAssociation
+import org.camunda.bpm.model.bpmn.instance.DataObjectReference
+import org.camunda.bpm.model.bpmn.instance.DataOutputAssociation
+import org.camunda.bpm.model.bpmn.instance.DataStoreReference
 import org.camunda.bpm.model.bpmn.instance.EndEvent
 import org.camunda.bpm.model.bpmn.instance.FlowElement
 import org.camunda.bpm.model.bpmn.instance.FlowNode
@@ -20,9 +25,11 @@ import org.camunda.bpm.model.bpmn.instance.SequenceFlow
 import org.camunda.bpm.model.bpmn.instance.StartEvent
 import org.camunda.bpm.model.bpmn.instance.SubProcess
 import org.camunda.bpm.model.bpmn.instance.TextAnnotation
+import org.eclipse.elk.alg.layered.components.ComponentOrderingStrategy
 import org.eclipse.elk.alg.layered.options.CenterEdgeLabelPlacementStrategy
 import org.eclipse.elk.alg.layered.options.LayerConstraint
 import org.eclipse.elk.alg.layered.options.LayeredOptions
+import org.eclipse.elk.alg.layered.options.LayeredSpacings
 import org.eclipse.elk.alg.layered.options.NodePlacementStrategy
 import org.eclipse.elk.alg.layered.options.OrderingStrategy
 import org.eclipse.elk.core.math.ElkPadding
@@ -106,7 +113,8 @@ internal object BpmnToElkMapper {
             mapProcess(root, topProcess.flowElements.toList(), nodeMap, model)
         }
 
-        trackAnnotations(model, nodeMap)
+        trackAnnotations(model, nodeMap, edgeMap)
+        trackDataReferences(model, nodeMap, edgeMap)
         trackGroups(model, nodeMap)
 
         mapBoundaryEvents(model, nodeMap, portMap)
@@ -167,15 +175,22 @@ internal object BpmnToElkMapper {
         }
     }
 
+    // Nested lanes (a lane with a childLaneSet) are not supported. A lane that delegates to a
+    // childLaneSet carries no flowNodeRefs of its own, so mapping it unguarded would silently
+    // produce a zero-height ghost lane while its descendants escape to the top level — a broken
+    // diagram with no error. Fail loudly instead.
     private fun mapLane(
         participant: ElkNode,
         lane: Lane,
         nodeMap: MutableMap<String, ElkNode>,
         model: BpmnModelInstance,
     ) {
+        if (lane.childLaneSet != null) {
+            throw BpmnAutoLayoutException("ELK layout: nested lanes (lane '${lane.id}' has a childLaneSet) are not supported")
+        }
         val compound = ElkGraphUtil.createNode(participant)
         compound.identifier = lane.id
-        applyLaneProfile(compound)
+        applyLaneProfile(compound, lane)
         nodeMap[lane.id] = compound
         mapProcess(compound, lane.flowNodeRefs.toList(), nodeMap, model)
     }
@@ -200,10 +215,15 @@ internal object BpmnToElkMapper {
                     val compound = ElkGraphUtil.createNode(container)
                     compound.identifier = element.id
                     compound.setProperty(CoreOptions.HIERARCHY_HANDLING, HierarchyHandling.INCLUDE_CHILDREN)
+                    // Extra top padding equal to the direct children's tallest label makes the
+                    // node row itself land on the compound's centre, rather than the
+                    // node-row-plus-label-strip bbox that outsideBottomCenter produces under
+                    // symmetric padding. Same fix as applyLaneProfile.
+                    val maxLabelHeight = tallestLabelHeight(element.flowElements.filterIsInstance<FlowNode>().map { it.name })
                     compound.setProperty(
                         CoreOptions.PADDING,
                         ElkPadding(
-                            SUBPROCESS_PADDING,
+                            SUBPROCESS_PADDING + maxLabelHeight,
                             SUBPROCESS_PADDING,
                             SUBPROCESS_PADDING,
                             SUBPROCESS_PADDING,
@@ -245,20 +265,128 @@ internal object BpmnToElkMapper {
     }
 
     /**
-     * Tracks TextAnnotations in [nodeMap] with their placeholder sizes.
-     * The nodeMap entry lets the placement pass find their dimensions.
+     * Tracks TextAnnotations in [nodeMap]. One with at least one [Association] to an
+     * already-mapped host is attached as a real comment-box sibling of the first such host
+     * (`CoreOptions.COMMENT_BOX`), with every matching association mapped as a real edge — ELK
+     * itself decides whether a multi-connection comment is lifted out or treated as a regular
+     * node, so all associations are mapped rather than choosing one. An annotation with no
+     * mapped host keeps the old detached size-carrier placeholder, which [ArtifactPlacement]
+     * falls back to stacking below the skeleton.
      */
     private fun trackAnnotations(
         model: BpmnModelInstance,
         nodeMap: MutableMap<String, ElkNode>,
+        edgeMap: MutableMap<String, ElkEdge>,
     ) {
+        val annotationIds = model.getModelElementsByType(TextAnnotation::class.java).mapTo(mutableSetOf()) { it.id }
+        val associationsByAnnotation = model.getModelElementsByType(Association::class.java)
+            .sortedBy { it.id }
+            .mapNotNull { assoc ->
+                val src = assoc.source?.id
+                val tgt = assoc.target?.id
+                val annId = listOf(src, tgt).firstOrNull { it in annotationIds } ?: return@mapNotNull null
+                val hostId = listOf(src, tgt).firstOrNull { it != annId } ?: return@mapNotNull null
+                Triple(annId, hostId, assoc)
+            }
+            .groupBy({ it.first }) { it.second to it.third }
+
         for (ann in model.getModelElementsByType(TextAnnotation::class.java).sortedBy { it.id }) {
-            // Use a detached ElkNode (no parent) to carry the size info.
-            val elkNode = ElkGraphUtil.createGraph() // detached root size carrier
-            elkNode.identifier = ann.id
-            elkNode.width = ANNOTATION_WIDTH
-            elkNode.height = ANNOTATION_HEIGHT
-            nodeMap[ann.id] = elkNode
+            val mappedAssociations = associationsByAnnotation[ann.id].orEmpty()
+                .mapNotNull { (hostId, assoc) -> nodeMap[hostId]?.let { it to assoc } }
+            val firstHost = mappedAssociations.firstOrNull()?.first
+            if (firstHost != null) {
+                val elkNode = ElkGraphUtil.createNode(firstHost.parent)
+                elkNode.identifier = ann.id
+                elkNode.width = ANNOTATION_WIDTH
+                elkNode.height = ANNOTATION_HEIGHT
+                elkNode.setProperty(CoreOptions.COMMENT_BOX, true)
+                nodeMap[ann.id] = elkNode
+                mappedAssociations.forEach { (host, assoc) ->
+                    val edge = ElkGraphUtil.createSimpleEdge(elkNode, host)
+                    edge.identifier = assoc.id
+                    edgeMap[assoc.id] = edge
+                }
+            } else {
+                // Use a detached ElkNode (no parent) to carry the size info.
+                val elkNode = ElkGraphUtil.createGraph() // detached root size carrier
+                elkNode.identifier = ann.id
+                elkNode.width = ANNOTATION_WIDTH
+                elkNode.height = ANNOTATION_HEIGHT
+                nodeMap[ann.id] = elkNode
+            }
+        }
+    }
+
+    /**
+     * Tracks DataObjectReferences and DataStoreReferences in [nodeMap], using the same
+     * attach-or-placeholder mechanism as [trackAnnotations]: one with a [DataInputAssociation] or
+     * [DataOutputAssociation] to an already-mapped activity becomes a comment-box sibling of that
+     * activity with every matching association mapped as a real edge, and one with none keeps a
+     * detached size-carrier placeholder.
+     *
+     * `sourceRef`/`targetRef` are read directly from each association's own child elements
+     * rather than the typed `DataAssociation` accessors: a `dataInputAssociation`'s `targetRef`
+     * self-references its owning activity (since `ioSpecification` is not modelled), and an
+     * activity is not an `ItemAwareElement`, so the typed accessor cannot resolve it reliably.
+     */
+    private fun trackDataReferences(
+        model: BpmnModelInstance,
+        nodeMap: MutableMap<String, ElkNode>,
+        edgeMap: MutableMap<String, ElkEdge>,
+    ) {
+        fun DataAssociation.childRef(localName: String): String? = domElement
+            .getChildElementsByNameNs(BPMN_MODEL_NAMESPACE, localName)
+            .firstOrNull()
+            ?.textContent
+            ?.trim()
+            ?.takeIf { it.isNotBlank() }
+
+        val dataRefIds = model.getModelElementsByType(DataObjectReference::class.java).mapTo(mutableSetOf()) { it.id } +
+            model.getModelElementsByType(DataStoreReference::class.java).mapTo(mutableSetOf()) { it.id }
+
+        val associationsByDataRef = (
+            model.getModelElementsByType(DataInputAssociation::class.java).mapNotNull { assoc ->
+                val dataRefId = assoc.childRef("sourceRef") ?: return@mapNotNull null
+                val activityId = (assoc.parentElement as? FlowNode)?.id ?: return@mapNotNull null
+                Triple(dataRefId, activityId, assoc as DataAssociation)
+            } +
+                model.getModelElementsByType(DataOutputAssociation::class.java).mapNotNull { assoc ->
+                    val dataRefId = assoc.childRef("targetRef") ?: return@mapNotNull null
+                    val activityId = (assoc.parentElement as? FlowNode)?.id ?: return@mapNotNull null
+                    Triple(dataRefId, activityId, assoc as DataAssociation)
+                }
+            )
+            .filter { (dataRefId, _, _) -> dataRefId in dataRefIds }
+            .sortedBy { (_, _, assoc) -> assoc.id }
+            .groupBy({ it.first }) { it.second to it.third }
+
+        val dataReferences = model.getModelElementsByType(DataObjectReference::class.java).map { it.id to it.name } +
+            model.getModelElementsByType(DataStoreReference::class.java).map { it.id to it.name }
+
+        for ((refId, _) in dataReferences.sortedBy { it.first }) {
+            val mappedAssociations = associationsByDataRef[refId].orEmpty()
+                .mapNotNull { (activityId, assoc) -> nodeMap[activityId]?.let { it to assoc } }
+            val firstHost = mappedAssociations.firstOrNull()?.first
+            if (firstHost != null) {
+                val elkNode = ElkGraphUtil.createNode(firstHost.parent)
+                elkNode.identifier = refId
+                elkNode.width = DATA_REFERENCE_WIDTH
+                elkNode.height = DATA_REFERENCE_HEIGHT
+                elkNode.setProperty(CoreOptions.COMMENT_BOX, true)
+                nodeMap[refId] = elkNode
+                mappedAssociations.forEach { (host, assoc) ->
+                    val edge = ElkGraphUtil.createSimpleEdge(elkNode, host)
+                    edge.identifier = assoc.id
+                    edgeMap[assoc.id] = edge
+                }
+            } else {
+                // Use a detached ElkNode (no parent) to carry the size info.
+                val elkNode = ElkGraphUtil.createGraph() // detached root size carrier
+                elkNode.identifier = refId
+                elkNode.width = DATA_REFERENCE_WIDTH
+                elkNode.height = DATA_REFERENCE_HEIGHT
+                nodeMap[refId] = elkNode
+            }
         }
     }
 
@@ -393,13 +521,16 @@ internal object BpmnToElkMapper {
      *
      * Any flow whose endpoints sit in different participants is excluded: that participant pair's
      * relative position is always decided afterward by a bounded BPMN exception
-     * (`ExternalBlackBoxBandPlacement` for a black box, `WhiteBoxPoolBandPlacement` for stacked
-     * white-box pools), which fully regenerates the flow's route rather than projecting ELK's
-     * section. Modelling it as a real graph edge anyway buys nothing and actively harms the
+     * (`CollaborationFramePlacement`, for both a black box and stacked white-box pools), which
+     * fully regenerates the flow's route rather than projecting ELK's section. Modelling it as a
+     * real graph edge anyway buys nothing and actively harms the
      * primary flow: because collaborations use `HIERARCHY_HANDLING.INCLUDE_CHILDREN`, ELK solves
      * the whole collaboration as one joint layered graph, so a cross-participant edge's hierarchical
      * port dummies let its crossing minimisation and network-simplex node placement perturb each
      * participant's own internal layout for a routing decision that is discarded anyway.
+     *
+     * This exclusion is retained deliberately: removing it has been measured to reorder tasks by
+     * tens of pixels within their own pool, confirming the perturbation described above.
      */
     private fun mapMessageFlows(
         root: ElkNode,
@@ -530,18 +661,28 @@ internal object BpmnToElkMapper {
 
     /** Applies the fixed, executable ELK layout profile. */
     private fun applyRootLayoutOptions(root: ElkNode) {
-        root.setProperty(CoreOptions.ALGORITHM, BPMNER_LAYERED_ALGORITHM_ID)
+        root.setProperty(CoreOptions.ALGORITHM, LayeredOptions.ALGORITHM_ID)
         root.setProperty(CoreOptions.DIRECTION, Direction.RIGHT)
         root.setProperty(CoreOptions.EDGE_ROUTING, EdgeRouting.ORTHOGONAL)
         root.setProperty(CoreOptions.RANDOM_SEED, RANDOM_SEED)
         root.setProperty(CoreOptions.HIERARCHY_HANDLING, HierarchyHandling.SEPARATE_CHILDREN)
         applyFlowSpacing(root)
-        // Handler nodes (no incoming ELK edge) become disconnected components placed below.
+        // Floating nodes (no sequence-flow edge at all — an event subprocess or a
+        // compensation-handler task) become their own disconnected component, guaranteeing they
+        // do not overlap the main flow.
         root.setProperty(CoreOptions.SEPARATE_CONNECTED_COMPONENTS, true)
         // NETWORK_SIMPLEX keeps the primary flow on a single Y baseline.
         root.setProperty(LayeredOptions.NODE_PLACEMENT_STRATEGY, NodePlacementStrategy.NETWORK_SIMPLEX)
         // Use model order for deterministic, document-order branch ordering.
         root.setProperty(LayeredOptions.CONSIDER_MODEL_ORDER_STRATEGY, OrderingStrategy.NODES_AND_EDGES)
+        // Order the row-packer's components by BPMN declaration order too, so the main flow
+        // (declared first) sets row 1's width and a floating element wraps below it, rather than
+        // the packer's default size-based ordering, which can float a small component above the
+        // main flow.
+        root.setProperty(
+            LayeredOptions.CONSIDER_MODEL_ORDER_COMPONENTS,
+            ComponentOrderingStrategy.MODEL_ORDER,
+        )
         // Ensure adequate spacing between connected components.
         root.setProperty(LayeredOptions.SPACING_COMPONENT_COMPONENT, NODE_NODE_SPACING)
         // A named edge spanning 2+ layers (e.g. a gateway branch straight to a later end event,
@@ -571,15 +712,35 @@ internal object BpmnToElkMapper {
         applyCompoundProfile(node)
     }
 
-    private fun applyLaneProfile(node: ElkNode) {
+    /**
+     * `NODE_LABELS_PLACEMENT = outsideBottomCenter` makes a compound's content bbox the node row
+     * plus the label strip below it, so symmetric padding centres that combined box rather than
+     * the node row — the row ends up sitting half the label height above the band's visual
+     * centre. Declaring extra top padding equal to the lane's own direct children's tallest
+     * label, rather than translating content after the fact, makes the node row itself land on
+     * the band's centre.
+     */
+    private fun applyLaneProfile(node: ElkNode, lane: Lane) {
         node.setProperty(CoreOptions.HIERARCHY_HANDLING, HierarchyHandling.INCLUDE_CHILDREN)
         node.setProperty(CoreOptions.SEPARATE_CONNECTED_COMPONENTS, false)
+        val maxLabelHeight = tallestLabelHeight(lane.flowNodeRefs.map { it.name })
         node.setProperty(
             CoreOptions.PADDING,
-            ElkPadding(LANE_PADDING, LANE_PADDING, LANE_PADDING, LANE_PADDING),
+            ElkPadding(LANE_PADDING + maxLabelHeight, LANE_PADDING, LANE_PADDING, LANE_PADDING),
         )
         applyCompoundProfile(node)
     }
+
+    /**
+     * The tallest rendered label height among [names], or 0.0 if none is named — the extra
+     * top-padding compounds need so `NODE_LABELS_PLACEMENT = outsideBottomCenter`'s node-row-plus-
+     * label-strip bbox doesn't push the row above centre.
+     */
+    private fun tallestLabelHeight(names: Collection<String?>): Double = names
+        .filterNotNull()
+        .filter(String::isNotBlank)
+        .maxOfOrNull { BpmnPlacementPass.estimateLabelDimensions(it, BpmnPlacementPass.LABEL_WIDTH).second }
+        ?: 0.0
 
     private fun applyCompoundProfile(node: ElkNode) {
         applyFlowSpacing(node)
@@ -591,6 +752,12 @@ internal object BpmnToElkMapper {
         node.setProperty(LayeredOptions.SPACING_NODE_NODE_BETWEEN_LAYERS, NODE_NODE_BETWEEN_LAYERS)
         node.setProperty(CoreOptions.SPACING_EDGE_NODE, EDGE_NODE_SPACING)
         node.setProperty(LayeredOptions.SPACING_EDGE_NODE_BETWEEN_LAYERS, EDGE_NODE_BETWEEN_LAYERS)
+        // Dependent spacings (SPACING_LABEL_NODE among them) are independently defaulted and are
+        // never scaled by the four explicit overrides above — ELK's own fix for that mismatch
+        // (issue #104) is to derive every other SPACING_* proportionally from one base value,
+        // which also stops node labels defaulting to a spacing tuned for ELK's un-scaled
+        // node-node gap. withBaseValue never overwrites a property already set above.
+        LayeredSpacings.withBaseValue(NODE_NODE_SPACING).apply(node)
     }
 
     private fun nodeDimensions(flowNode: FlowNode): Pair<Double, Double> {
@@ -624,6 +791,12 @@ internal object BpmnToElkMapper {
     private const val ANNOTATION_HEIGHT = 60.0
     private const val GROUP_WIDTH = 300.0
     private const val GROUP_HEIGHT = 200.0
+
+    // BPMN's own data-object/data-store icon footprint (bpmn-js convention) — smaller than an
+    // annotation's free-text box.
+    private const val DATA_REFERENCE_WIDTH = 36.0
+    private const val DATA_REFERENCE_HEIGHT = 50.0
+    private const val BPMN_MODEL_NAMESPACE = "http://www.omg.org/spec/BPMN/20100524/MODEL"
     internal const val SUBPROCESS_PADDING = 50.0
     internal const val BOUNDARY_PORT_SIZE = 10.0
 

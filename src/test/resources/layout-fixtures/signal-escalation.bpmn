@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  id="Definitions_signal_escalation" targetNamespace="https://groknull.dev/bpmner">
+  <bpmn:signal id="Signal_1" name="Order Cancelled"/>
+  <bpmn:escalation id="Escalation_1" escalationCode="OVERDUE" name="Overdue"/>
+  <bpmn:process id="Process_1" name="Signal and Escalation" isExecutable="true">
+    <bpmn:startEvent id="Start_1" name="Order Placed">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:serviceTask id="Task_process" name="Process Order">
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:intermediateThrowEvent id="Throw_signal" name="Broadcast Cancellation">
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+      <bpmn:outgoing>Flow_3</bpmn:outgoing>
+      <bpmn:signalEventDefinition id="SignalDef_1" signalRef="Signal_1"/>
+    </bpmn:intermediateThrowEvent>
+    <bpmn:intermediateThrowEvent id="Throw_escalation" name="Escalate Delay">
+      <bpmn:incoming>Flow_3</bpmn:incoming>
+      <bpmn:outgoing>Flow_4</bpmn:outgoing>
+      <bpmn:escalationEventDefinition id="EscalationDef_1" escalationRef="Escalation_1"/>
+    </bpmn:intermediateThrowEvent>
+    <bpmn:endEvent id="End_1" name="Order Cancelled">
+      <bpmn:incoming>Flow_4</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="Start_1" targetRef="Task_process"/>
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="Task_process" targetRef="Throw_signal"/>
+    <bpmn:sequenceFlow id="Flow_3" sourceRef="Throw_signal" targetRef="Throw_escalation"/>
+    <bpmn:sequenceFlow id="Flow_4" sourceRef="Throw_escalation" targetRef="End_1"/>
+  </bpmn:process>
+</bpmn:definitions>

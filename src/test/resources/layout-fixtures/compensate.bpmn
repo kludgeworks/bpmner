@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  id="Definitions_compensate" targetNamespace="https://groknull.dev/bpmner">
+  <bpmn:error id="Error_1" errorCode="SHIP_FAILED" name="Shipment Failed"/>
+  <bpmn:process id="Process_1" name="Compensate" isExecutable="true">
+    <bpmn:startEvent id="Start_1" name="Order Placed">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:serviceTask id="Task_charge" name="Charge Card">
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="Task_ship" name="Ship Order">
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+      <bpmn:outgoing>Flow_3</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="End_1" name="Order Complete">
+      <bpmn:incoming>Flow_3</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:boundaryEvent id="Boundary_error" name="Shipment Failed" attachedToRef="Task_ship" cancelActivity="true">
+      <bpmn:outgoing>Flow_error</bpmn:outgoing>
+      <bpmn:errorEventDefinition id="ErrorDef_1" errorRef="Error_1"/>
+    </bpmn:boundaryEvent>
+    <bpmn:endEvent id="End_compensate" name="Order Reversed">
+      <bpmn:incoming>Flow_error</bpmn:incoming>
+      <bpmn:compensateEventDefinition id="CompDef_1"/>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="Start_1" targetRef="Task_charge"/>
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="Task_charge" targetRef="Task_ship"/>
+    <bpmn:sequenceFlow id="Flow_3" sourceRef="Task_ship" targetRef="End_1"/>
+    <bpmn:sequenceFlow id="Flow_error" sourceRef="Boundary_error" targetRef="End_compensate"/>
+  </bpmn:process>
+</bpmn:definitions>

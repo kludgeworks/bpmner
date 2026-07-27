@@ -346,7 +346,7 @@ class BpmnToElkMapperTest {
             result.nodeMap.getValue("Task_A").getProperty(CoreOptions.NODE_SIZE_CONSTRAINTS),
         )
         // Task_A (Participant_A) and Task_B (Participant_B) sit in different participants, so
-        // WhiteBoxPoolBandPlacement fully owns this route post-stacking; modelling it as a real
+        // CollaborationFramePlacement fully owns this route post-stacking; modelling it as a real
         // ELK edge would let it perturb each participant's own internal layered layout.
         assertNull(result.edgeMap["Message_1"], "cross-participant message flow must NOT be in edgeMap")
     }
@@ -424,6 +424,96 @@ class BpmnToElkMapperTest {
         assertEquals(participant, result.edgeMap.getValue("Flow_3").containingNode)
     }
 
+    @Test
+    fun `lane padding grows on top by its own members' tallest label height (AD-622-28)`() {
+        // Lane_sales has a named member (label height > 0); Lane_empty has none. Both keep the
+        // same base padding on every other side — only top grows, and only where a label exists.
+        val result = BpmnToElkMapper.map(parseXml(LANE_LABEL_PADDING_XML))
+
+        val labelled = result.nodeMap.getValue("Lane_sales").getProperty(CoreOptions.PADDING)
+        val unlabelled = result.nodeMap.getValue("Lane_empty").getProperty(CoreOptions.PADDING)
+
+        assertTrue(labelled.top > unlabelled.top, "a lane with a named member must reserve extra top padding")
+        assertEquals(unlabelled.top, unlabelled.bottom, "an unlabelled lane's padding is symmetric (no correction needed)")
+        assertEquals(labelled.right, unlabelled.right)
+        assertEquals(labelled.bottom, unlabelled.bottom)
+        assertEquals(labelled.left, unlabelled.left)
+    }
+
+    // ── Artifacts (annotations via ELK comment attachment) ─────────────────────
+
+    @Test
+    fun `an annotation with one association becomes a real comment-box sibling of its host, with a real edge`() {
+        val xml = """<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="D" targetNamespace="https://groknull.dev/bpmner">
+  <bpmn:process id="P">
+    <bpmn:userTask id="Task_1"/>
+    <bpmn:textAnnotation id="Anno_1"><bpmn:text>Note</bpmn:text></bpmn:textAnnotation>
+    <bpmn:association id="Assoc_1" sourceRef="Task_1" targetRef="Anno_1"/>
+  </bpmn:process>
+</bpmn:definitions>"""
+
+        val result = BpmnToElkMapper.map(parseXml(xml))
+
+        val annotation = result.nodeMap.getValue("Anno_1")
+        val host = result.nodeMap.getValue("Task_1")
+        assertEquals(host.parent, annotation.parent, "annotation must be a sibling of its host")
+        assertTrue(annotation.getProperty(CoreOptions.COMMENT_BOX), "annotation must be marked as a comment box")
+        val edge = result.edgeMap.getValue("Assoc_1")
+        assertTrue(
+            (edge.sources.single() == annotation || edge.sources.single() == host) &&
+                (edge.targets.single() == annotation || edge.targets.single() == host),
+            "the association edge must connect the annotation and its host",
+        )
+    }
+
+    @Test
+    fun `an annotation with no association keeps a detached placeholder and no edge`() {
+        val xml = """<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="D" targetNamespace="https://groknull.dev/bpmner">
+  <bpmn:process id="P">
+    <bpmn:userTask id="Task_1"/>
+    <bpmn:textAnnotation id="Anno_1"><bpmn:text>Note</bpmn:text></bpmn:textAnnotation>
+  </bpmn:process>
+</bpmn:definitions>"""
+
+        val result = BpmnToElkMapper.map(parseXml(xml))
+
+        val annotation = result.nodeMap.getValue("Anno_1")
+        assertNull(annotation.parent, "an un-associated annotation stays a detached size carrier")
+        assertTrue(result.edgeMap.values.none { it.sources.contains(annotation) || it.targets.contains(annotation) })
+    }
+
+    @Test
+    fun `an annotation with two associations gets a real edge for each, not just the first`() {
+        // CommentPreprocessor decides single- vs multi-connection treatment itself by counting
+        // edges incident to the comment node; mapping every association (not just the first) is
+        // what lets that decision run on real data instead of being made for it.
+        val xml = """<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="D" targetNamespace="https://groknull.dev/bpmner">
+  <bpmn:process id="P">
+    <bpmn:userTask id="Task_1"/>
+    <bpmn:userTask id="Task_2"/>
+    <bpmn:textAnnotation id="Anno_1"><bpmn:text>Note</bpmn:text></bpmn:textAnnotation>
+    <bpmn:association id="Assoc_1" sourceRef="Task_1" targetRef="Anno_1"/>
+    <bpmn:association id="Assoc_2" sourceRef="Task_2" targetRef="Anno_1"/>
+  </bpmn:process>
+</bpmn:definitions>"""
+
+        val result = BpmnToElkMapper.map(parseXml(xml))
+
+        val annotation = result.nodeMap.getValue("Anno_1")
+        val task1 = result.nodeMap.getValue("Task_1")
+        val task2 = result.nodeMap.getValue("Task_2")
+        assertTrue(annotation.getProperty(CoreOptions.COMMENT_BOX))
+        val edge1 = result.edgeMap.getValue("Assoc_1")
+        val edge2 = result.edgeMap.getValue("Assoc_2")
+        assertTrue(edge1.sources.contains(annotation) || edge1.targets.contains(annotation))
+        assertTrue(edge1.sources.contains(task1) || edge1.targets.contains(task1))
+        assertTrue(edge2.sources.contains(annotation) || edge2.targets.contains(annotation))
+        assertTrue(edge2.sources.contains(task2) || edge2.targets.contains(task2))
+    }
+
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     @Suppress("MaxLineLength")
@@ -439,6 +529,17 @@ class BpmnToElkMapperTest {
     <bpmn:serviceTask id="Task_pick"><bpmn:incoming>Flow_1</bpmn:incoming><bpmn:outgoing>Flow_3</bpmn:outgoing></bpmn:serviceTask>
     <bpmn:endEvent id="End_1"><bpmn:incoming>Flow_3</bpmn:incoming></bpmn:endEvent>
     <bpmn:sequenceFlow id="Flow_1" sourceRef="Start_1" targetRef="Task_pick"/><bpmn:sequenceFlow id="Flow_3" sourceRef="Task_pick" targetRef="End_1"/>
+  </bpmn:process>
+</bpmn:definitions>"""
+
+        const val LANE_LABEL_PADDING_XML = """<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="D3" targetNamespace="https://groknull.dev/bpmner">
+  <bpmn:collaboration id="C1"><bpmn:participant id="Participant_1" name="Participant" processRef="P1"/></bpmn:collaboration>
+  <bpmn:process id="P1" isExecutable="true">
+    <bpmn:laneSet id="LS"><bpmn:lane id="Lane_sales" name="Sales"><bpmn:flowNodeRef>Task_review</bpmn:flowNodeRef></bpmn:lane><bpmn:lane id="Lane_empty" name="Empty"><bpmn:flowNodeRef>Start_1</bpmn:flowNodeRef></bpmn:lane></bpmn:laneSet>
+    <bpmn:startEvent id="Start_1"><bpmn:outgoing>Flow_1</bpmn:outgoing></bpmn:startEvent>
+    <bpmn:userTask id="Task_review" name="Review Order"><bpmn:incoming>Flow_1</bpmn:incoming></bpmn:userTask>
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="Start_1" targetRef="Task_review"/>
   </bpmn:process>
 </bpmn:definitions>"""
 

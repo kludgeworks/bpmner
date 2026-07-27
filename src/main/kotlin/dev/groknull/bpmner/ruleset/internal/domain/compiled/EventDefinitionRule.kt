@@ -74,7 +74,9 @@ internal class EventDefinitionRule : BpmnRule {
             DEF_INVALID_SIGNAL_REF to "Signal event definitions must reference an existing signal.",
             DEF_INVALID_ERROR_REF to "Error event definitions must reference an existing error.",
             DEF_INVALID_ESCALATION_REF to "Escalation event definitions must reference an existing escalation.",
-            DEF_INVALID_ACTIVITY_REF to "Compensate event definition activityRef must not be blank when present.",
+            DEF_INVALID_ACTIVITY_REF to
+                "Compensate event definition activityRef, when present, must reference an existing task " +
+                "with isForCompensation=true.",
         ),
         severity = RuleSeverity.ERROR,
         repair = RepairMetadata(kind = RepairKind.LLM_MODEL_PATCH, safety = RepairSafety.LLM_ONLY),

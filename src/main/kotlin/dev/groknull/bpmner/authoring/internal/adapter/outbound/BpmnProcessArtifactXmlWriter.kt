@@ -17,6 +17,10 @@ internal class BpmnProcessArtifactXmlWriter {
         definition: BpmnDefinition,
     ) {
         writeLanes(document, process, definition)
+        // BPMN's tProcess groups all flowElements before all artifacts (see the ordering test
+        // in BpmnDefinitionToXmlConverterTest); dataObjectReference/dataStoreReference are
+        // flowElements, so this call must precede the artifact loop below.
+        writeDataElements(document, root, process, definition)
         definition.annotations.forEach { annotation ->
             process.appendChild(
                 document.bpmnElement("textAnnotation").also { el ->
@@ -44,7 +48,81 @@ internal class BpmnProcessArtifactXmlWriter {
                 },
             )
         }
+        writeDataAssociations(document, definition)
         writeCollaboration(document, root, process, definition)
+    }
+
+    /**
+     * Writes `dataObjectReference`/`dataStoreReference` as process-scoped flowElements, plus
+     * each one's backing non-visual element: `dataObject` lives in the process alongside its
+     * reference; `dataStore` lives directly under `definitions`.
+     */
+    private fun writeDataElements(
+        document: Document,
+        root: Element,
+        process: Element,
+        definition: BpmnDefinition,
+    ) {
+        definition.dataObjectReferences.forEach { ref ->
+            val dataObjectId = "DataObject_${ref.id}"
+            process.appendChild(document.bpmnElement("dataObject").also { it.setAttribute("id", dataObjectId) })
+            process.appendChild(
+                document.bpmnElement("dataObjectReference").also { el ->
+                    el.setAttribute("id", ref.id)
+                    if (!ref.name.isNullOrBlank()) el.setAttribute("name", ref.name)
+                    el.setAttribute("dataObjectRef", dataObjectId)
+                },
+            )
+        }
+        definition.dataStoreReferences.forEach { ref ->
+            val dataStoreId = "DataStore_${ref.id}"
+            root.appendChild(
+                document.bpmnElement("dataStore").also { el ->
+                    el.setAttribute("id", dataStoreId)
+                    if (!ref.name.isNullOrBlank()) el.setAttribute("name", ref.name)
+                },
+            )
+            process.appendChild(
+                document.bpmnElement("dataStoreReference").also { el ->
+                    el.setAttribute("id", ref.id)
+                    if (!ref.name.isNullOrBlank()) el.setAttribute("name", ref.name)
+                    el.setAttribute("dataStoreRef", dataStoreId)
+                },
+            )
+        }
+    }
+
+    /**
+     * `dataInputAssociation`/`dataOutputAssociation` nest inside their owning activity element,
+     * not the process, so these are found by id and appended directly to that element.
+     * `sourceRef`/`targetRef` are child elements carrying the referenced id as text content (an
+     * IDREF), not attributes — unlike `association`, which uses attributes.
+     *
+     * `tDataAssociation` requires exactly one `targetRef` regardless of direction; `sourceRef`
+     * is optional. We don't model an activity's `ioSpecification`/`dataInput`, so a
+     * `dataInputAssociation`'s `targetRef` self-references the owning activity's own id —
+     * satisfying the schema's ID-reference syntax without that extra machinery.
+     */
+    private fun writeDataAssociations(document: Document, definition: BpmnDefinition) {
+        definition.dataInputAssociations.forEach { assoc ->
+            val activity = document.bpmnElementById(assoc.activityRef) ?: return@forEach
+            activity.appendChild(
+                document.bpmnElement("dataInputAssociation").also { el ->
+                    el.setAttribute("id", assoc.id)
+                    el.appendChild(document.bpmnElement("sourceRef").also { it.textContent = assoc.sourceRef })
+                    el.appendChild(document.bpmnElement("targetRef").also { it.textContent = assoc.activityRef })
+                },
+            )
+        }
+        definition.dataOutputAssociations.forEach { assoc ->
+            val activity = document.bpmnElementById(assoc.activityRef) ?: return@forEach
+            activity.appendChild(
+                document.bpmnElement("dataOutputAssociation").also { el ->
+                    el.setAttribute("id", assoc.id)
+                    el.appendChild(document.bpmnElement("targetRef").also { it.textContent = assoc.targetRef })
+                },
+            )
+        }
     }
 
     private fun writeLanes(

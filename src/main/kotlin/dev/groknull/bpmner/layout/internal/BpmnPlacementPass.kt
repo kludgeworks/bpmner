@@ -7,18 +7,15 @@ package dev.groknull.bpmner.layout.internal
 
 import dev.groknull.bpmner.layout.internal.BpmnToElkMapper.ElkSkeleton
 import dev.groknull.bpmner.layout.internal.placement.ArtifactPlacement
-import dev.groknull.bpmner.layout.internal.placement.AssociationEdges
 import dev.groknull.bpmner.layout.internal.placement.BoundaryLabelPlacement
 import dev.groknull.bpmner.layout.internal.placement.BoundaryShapePlacement
-import dev.groknull.bpmner.layout.internal.placement.CollaborationShapePlacement
+import dev.groknull.bpmner.layout.internal.placement.CollaborationFramePlacement
 import dev.groknull.bpmner.layout.internal.placement.ElkLayoutResultCopy
-import dev.groknull.bpmner.layout.internal.placement.ExternalBlackBoxBandPlacement
 import dev.groknull.bpmner.layout.internal.placement.LabelMetrics
 import dev.groknull.bpmner.layout.internal.placement.LabelWrap
 import dev.groknull.bpmner.layout.internal.placement.NodeShapeCopy
 import dev.groknull.bpmner.layout.internal.placement.PlacementContext
 import dev.groknull.bpmner.layout.internal.placement.SequenceEdgeElkCopy
-import dev.groknull.bpmner.layout.internal.placement.WhiteBoxPoolBandPlacement
 import org.camunda.bpm.model.bpmn.BpmnModelInstance
 import org.eclipse.elk.graph.ElkEdge
 import org.eclipse.elk.graph.ElkNode
@@ -90,17 +87,15 @@ internal object BpmnPlacementPass {
         pipeline.forEach { it.process(ctx) }
     }
 
+    /** Order matters: CollaborationFramePlacement must precede ElkLayoutResultCopy's post-stacking label copy. */
     private val pipeline = listOf(
         NodeShapeCopy,
         SequenceEdgeElkCopy,
         BoundaryShapePlacement,
-        CollaborationShapePlacement,
-        WhiteBoxPoolBandPlacement,
+        CollaborationFramePlacement,
         ElkLayoutResultCopy,
-        ExternalBlackBoxBandPlacement,
         BoundaryLabelPlacement,
         ArtifactPlacement,
-        AssociationEdges,
     )
 
     /**

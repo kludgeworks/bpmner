@@ -65,6 +65,18 @@ data class BpmnDefinition(
     @get:JsonPropertyDescription("Association edges linking text annotations to the flow elements they explain")
     val associations: List<BpmnAssociation> = emptyList(),
     @field:Valid
+    @get:JsonPropertyDescription("Data object references read or written by activities")
+    val dataObjectReferences: List<BpmnDataObjectReference> = emptyList(),
+    @field:Valid
+    @get:JsonPropertyDescription("Data store references read or written by activities")
+    val dataStoreReferences: List<BpmnDataStoreReference> = emptyList(),
+    @field:Valid
+    @get:JsonPropertyDescription("Data input associations: an activity reading from a data object/store reference")
+    val dataInputAssociations: List<BpmnDataInputAssociation> = emptyList(),
+    @field:Valid
+    @get:JsonPropertyDescription("Data output associations: an activity writing to a data object/store reference")
+    val dataOutputAssociations: List<BpmnDataOutputAssociation> = emptyList(),
+    @field:Valid
     @get:JsonPropertyDescription(
         "Participants (pools): white-box (processRef set, owns the process) or black-box (external, processRef null)",
     )
@@ -83,24 +95,17 @@ data class BpmnDefinition(
 ) {
 
     /**
-     * Model-intrinsic structural validation — checks that are pure properties of the graph
-     * topology itself, with no external policy or naming knowledge required.
-     *
-     * Returns a (possibly empty) list of error messages following the
-     * [LaidOutProcessGraph.validateOwnership] idiom: never throws, callers accumulate errors.
-     * [dev.groknull.bpmner.conformance.internal.domain.BpmnDefinitionValidator] delegates to this method for
-     * these structural checks and handles non-intrinsic policy checks itself.
-     *
-     * Checks performed:
-     * - No duplicate node ids or edge ids in [nodes] / [sequences].
-     * - Every edge's [BpmnEdge.sourceRef] and [BpmnEdge.targetRef] resolve to a node id;
-     *   a self-referencing edge (sourceRef == targetRef) is also flagged.
-     * - At least one top-level [BpmnStartEvent] and at least one top-level [BpmnEndEvent]
-     *   (i.e. [BpmnNode.parentRef] == null for both).
+     * Model-intrinsic structural checks: duplicate node/edge ids, dangling or self-referencing
+     * edge refs, at least one top-level [BpmnStartEvent]/[BpmnEndEvent], and every data
+     * input/output association resolving its activity and data-reference ids. Never throws;
+     * returns a (possibly empty) list of error messages.
+     * [dev.groknull.bpmner.conformance.internal.domain.BpmnDefinitionValidator] delegates here for
+     * these checks and handles non-intrinsic policy checks itself.
      */
     @Tool
     fun validateStructure(): List<String> {
         val nodeIdSet = nodes.map { it.id }.toSet()
+        val dataRefIdSet = dataObjectReferences.map { it.id }.toSet() + dataStoreReferences.map { it.id }.toSet()
         return buildList {
             addAll(duplicateIdErrors(nodes.map { it.id.trim() }, "node"))
             addAll(duplicateIdErrors(sequences.map { it.id.trim() }, "edge"))
@@ -111,6 +116,8 @@ data class BpmnDefinition(
             if (nodes.none { it is BpmnEndEvent && it.parentRef == null }) {
                 add("definition must contain at least one END_EVENT")
             }
+            dataInputAssociations.forEach { addAll(dataInputAssociationErrors(it, nodeIdSet, dataRefIdSet)) }
+            dataOutputAssociations.forEach { addAll(dataOutputAssociationErrors(it, nodeIdSet, dataRefIdSet)) }
         }
     }
 
@@ -119,12 +126,48 @@ data class BpmnDefinition(
         .keys.map { "duplicate $kind id: $it" }
 
     private fun edgeReferenceErrors(edge: BpmnEdge, nodeIdSet: Set<String>): List<String> = buildList {
-        val label = edge.id.ifBlank { "<blank>" }
+        val label = edge.id.ifBlank { BLANK_ID_LABEL }
         if (edge.sourceRef !in nodeIdSet) add("edge $label sourceRef '${edge.sourceRef}' does not match any node id")
         if (edge.targetRef !in nodeIdSet) add("edge $label targetRef '${edge.targetRef}' does not match any node id")
         if (edge.sourceRef == edge.targetRef) add("edge $label must not self-reference source and target")
     }
+
+    private fun dataInputAssociationErrors(
+        assoc: BpmnDataInputAssociation,
+        nodeIdSet: Set<String>,
+        dataRefIdSet: Set<String>,
+    ): List<String> = buildList {
+        val label = assoc.id.ifBlank { BLANK_ID_LABEL }
+        if (assoc.activityRef !in nodeIdSet) {
+            add("data input association $label activityRef '${assoc.activityRef}' does not match any node id")
+        }
+        if (assoc.sourceRef !in dataRefIdSet) {
+            add(
+                "data input association $label sourceRef '${assoc.sourceRef}' does not match any " +
+                    "data object/store reference id",
+            )
+        }
+    }
+
+    private fun dataOutputAssociationErrors(
+        assoc: BpmnDataOutputAssociation,
+        nodeIdSet: Set<String>,
+        dataRefIdSet: Set<String>,
+    ): List<String> = buildList {
+        val label = assoc.id.ifBlank { BLANK_ID_LABEL }
+        if (assoc.activityRef !in nodeIdSet) {
+            add("data output association $label activityRef '${assoc.activityRef}' does not match any node id")
+        }
+        if (assoc.targetRef !in dataRefIdSet) {
+            add(
+                "data output association $label targetRef '${assoc.targetRef}' does not match any " +
+                    "data object/store reference id",
+            )
+        }
+    }
 }
+
+private const val BLANK_ID_LABEL: String = "<blank>"
 
 data class BpmnMessageRef(
     @field:NotBlank
@@ -251,6 +294,7 @@ data class BpmnUnrecognizedEventDefinition(
     JsonSubTypes.Type(value = BpmnBoundaryEvent::class, name = "BOUNDARY_EVENT"),
     JsonSubTypes.Type(value = BpmnEndEvent::class, name = "END_EVENT"),
     JsonSubTypes.Type(value = BpmnSubProcess::class, name = "SUB_PROCESS"),
+    JsonSubTypes.Type(value = BpmnEventSubProcess::class, name = "EVENT_SUB_PROCESS"),
     JsonSubTypes.Type(value = BpmnCallActivity::class, name = "CALL_ACTIVITY"),
 )
 sealed interface BpmnNode {
@@ -284,6 +328,11 @@ private const val STANDARD_LOOP_DESCRIPTION: String =
     "Optional standard-loop marker. Set only when the activity repeats until a condition is met " +
         "(a while/until/retry loop); leave null for an ordinary single-run task. Distinct from " +
         "multiInstance, which runs once per item in a collection."
+
+private const val IS_FOR_COMPENSATION_DESCRIPTION: String =
+    "Whether this task is a compensation handler, invoked only via a compensation event and " +
+        "never through normal sequence flow. Defaults to false for an ordinary task on the " +
+        "happy path or exception flow."
 
 private const val PARENT_REF_DESCRIPTION: String =
     "Id of the enclosing subprocess when this node is nested inside one; leave null for a top-level node. " +
@@ -360,6 +409,8 @@ data class BpmnUserTask(
     @field:Valid
     @get:JsonPropertyDescription(STANDARD_LOOP_DESCRIPTION)
     override val standardLoop: StandardLoopCharacteristics? = null,
+    @get:JsonPropertyDescription(IS_FOR_COMPENSATION_DESCRIPTION)
+    override val isForCompensation: Boolean = false,
     @get:JsonPropertyDescription(PARENT_REF_DESCRIPTION)
     override val parentRef: String? = null,
 ) : BpmnNode,
@@ -379,6 +430,8 @@ data class BpmnServiceTask(
     @field:Valid
     @get:JsonPropertyDescription(STANDARD_LOOP_DESCRIPTION)
     override val standardLoop: StandardLoopCharacteristics? = null,
+    @get:JsonPropertyDescription(IS_FOR_COMPENSATION_DESCRIPTION)
+    override val isForCompensation: Boolean = false,
     @get:JsonPropertyDescription(PARENT_REF_DESCRIPTION)
     override val parentRef: String? = null,
 ) : BpmnNode,
@@ -398,6 +451,8 @@ data class BpmnScriptTask(
     @field:Valid
     @get:JsonPropertyDescription(STANDARD_LOOP_DESCRIPTION)
     override val standardLoop: StandardLoopCharacteristics? = null,
+    @get:JsonPropertyDescription(IS_FOR_COMPENSATION_DESCRIPTION)
+    override val isForCompensation: Boolean = false,
     @get:JsonPropertyDescription(PARENT_REF_DESCRIPTION)
     override val parentRef: String? = null,
 ) : BpmnNode,
@@ -423,6 +478,8 @@ data class BpmnBusinessRuleTask(
     @field:Valid
     @get:JsonPropertyDescription(STANDARD_LOOP_DESCRIPTION)
     override val standardLoop: StandardLoopCharacteristics? = null,
+    @get:JsonPropertyDescription(IS_FOR_COMPENSATION_DESCRIPTION)
+    override val isForCompensation: Boolean = false,
     @get:JsonPropertyDescription(PARENT_REF_DESCRIPTION)
     override val parentRef: String? = null,
 ) : BpmnNode,
@@ -447,6 +504,8 @@ data class BpmnSendTask(
     @field:Valid
     @get:JsonPropertyDescription(STANDARD_LOOP_DESCRIPTION)
     override val standardLoop: StandardLoopCharacteristics? = null,
+    @get:JsonPropertyDescription(IS_FOR_COMPENSATION_DESCRIPTION)
+    override val isForCompensation: Boolean = false,
     @get:JsonPropertyDescription(PARENT_REF_DESCRIPTION)
     override val parentRef: String? = null,
 ) : BpmnNode,
@@ -471,6 +530,8 @@ data class BpmnReceiveTask(
     @field:Valid
     @get:JsonPropertyDescription(STANDARD_LOOP_DESCRIPTION)
     override val standardLoop: StandardLoopCharacteristics? = null,
+    @get:JsonPropertyDescription(IS_FOR_COMPENSATION_DESCRIPTION)
+    override val isForCompensation: Boolean = false,
     @get:JsonPropertyDescription(PARENT_REF_DESCRIPTION)
     override val parentRef: String? = null,
 ) : BpmnNode,
@@ -490,6 +551,8 @@ data class BpmnManualTask(
     @field:Valid
     @get:JsonPropertyDescription(STANDARD_LOOP_DESCRIPTION)
     override val standardLoop: StandardLoopCharacteristics? = null,
+    @get:JsonPropertyDescription(IS_FOR_COMPENSATION_DESCRIPTION)
+    override val isForCompensation: Boolean = false,
     @get:JsonPropertyDescription(PARENT_REF_DESCRIPTION)
     override val parentRef: String? = null,
 ) : BpmnNode,
@@ -634,6 +697,23 @@ data class BpmnSubProcess(
     override fun withName(name: String?): BpmnNode = copy(name = name)
 }
 
+@JsonClassDescription(
+    "BPMN event subprocess: a subprocess with no incoming/outgoing sequence flow, started by " +
+        "its own start event and triggered when that event occurs (e.g. an error or message " +
+        "arriving anywhere in the enclosing scope)",
+)
+data class BpmnEventSubProcess(
+    @field:NotBlank
+    @get:JsonPropertyDescription(NODE_ID_DESCRIPTION)
+    override val id: String,
+    @get:JsonPropertyDescription(NODE_NAME_DESCRIPTION)
+    override val name: String? = null,
+    @get:JsonPropertyDescription(PARENT_REF_DESCRIPTION)
+    override val parentRef: String? = null,
+) : BpmnNode {
+    override fun withName(name: String?): BpmnNode = copy(name = name)
+}
+
 @JsonClassDescription("BPMN call activity that delegates to another process referenced by id")
 data class BpmnCallActivity(
     @field:NotBlank
@@ -722,6 +802,50 @@ data class BpmnAssociation(
     val sourceRef: String,
     @field:NotBlank
     @get:JsonPropertyDescription("Target element id (the text annotation)")
+    val targetRef: String,
+)
+
+@JsonClassDescription("BPMN data object reference: a process-scoped placeholder for data an activity reads or writes")
+data class BpmnDataObjectReference(
+    @field:NotBlank
+    @get:JsonPropertyDescription("Unique data-object-reference id, e.g. DataObjectRef_Order")
+    val id: String,
+    @get:JsonPropertyDescription("Label, e.g. \"Order\"")
+    val name: String? = null,
+)
+
+@JsonClassDescription("BPMN data store reference: a placeholder for a persistent data store an activity reads or writes")
+data class BpmnDataStoreReference(
+    @field:NotBlank
+    @get:JsonPropertyDescription("Unique data-store-reference id, e.g. DataStoreRef_Orders")
+    val id: String,
+    @get:JsonPropertyDescription("Label, e.g. \"Orders DB\"")
+    val name: String? = null,
+)
+
+@JsonClassDescription("BPMN data input association: an activity reads from a data object/store reference")
+data class BpmnDataInputAssociation(
+    @field:NotBlank
+    @get:JsonPropertyDescription("Unique id, e.g. DataInputAssociation_1")
+    val id: String,
+    @field:NotBlank
+    @get:JsonPropertyDescription("Id of the data-object/data-store reference being read")
+    val sourceRef: String,
+    @field:NotBlank
+    @get:JsonPropertyDescription("Id of the activity that reads it")
+    val activityRef: String,
+)
+
+@JsonClassDescription("BPMN data output association: an activity writes to a data object/store reference")
+data class BpmnDataOutputAssociation(
+    @field:NotBlank
+    @get:JsonPropertyDescription("Unique id, e.g. DataOutputAssociation_1")
+    val id: String,
+    @field:NotBlank
+    @get:JsonPropertyDescription("Id of the activity that writes it")
+    val activityRef: String,
+    @field:NotBlank
+    @get:JsonPropertyDescription("Id of the data-object/data-store reference being written")
     val targetRef: String,
 )
 

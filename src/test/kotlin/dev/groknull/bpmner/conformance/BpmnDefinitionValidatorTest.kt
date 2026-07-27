@@ -718,6 +718,59 @@ class BpmnDefinitionValidatorTest {
     }
 
     @Test
+    fun `validator resolves compensateEventDefinition activityRef to a real compensation-handler task`() {
+        // V4 (#622-Y): the handler is floating — no incoming/outgoing sequence flow, invoked only
+        // by the compensation event — so it must not trip the connectivity checks either.
+        val base =
+            minimalDefinition(
+                end =
+                BpmnEndEvent(
+                    "EndEvent_1",
+                    "Compensate",
+                    eventDefinition = BpmnCompensateEventDefinition(activityRef = "Task_refund"),
+                ),
+            )
+        val definition =
+            base.copy(
+                nodes = base.nodes + BpmnUserTask("Task_refund", "Refund payment", isForCompensation = true),
+            )
+
+        val errors = validator.validate(definition)
+        assertTrue(errors.isEmpty(), "Expected no errors, got: $errors")
+    }
+
+    @Test
+    fun `validator rejects compensateEventDefinition activityRef that does not resolve to a compensation handler`() {
+        val notAHandler =
+            minimalDefinition(
+                end =
+                BpmnEndEvent(
+                    "EndEvent_1",
+                    "Compensate",
+                    eventDefinition = BpmnCompensateEventDefinition(activityRef = "Task_1"),
+                ),
+            )
+        assertContains(
+            validator.validate(notAHandler).joinToString("\n"),
+            "activityRef 'Task_1' must reference a task with isForCompensation=true",
+        )
+
+        val missing =
+            minimalDefinition(
+                end =
+                BpmnEndEvent(
+                    "EndEvent_1",
+                    "Compensate",
+                    eventDefinition = BpmnCompensateEventDefinition(activityRef = "Nope"),
+                ),
+            )
+        assertContains(
+            validator.validate(missing).joinToString("\n"),
+            "activityRef 'Nope' does not match any node id",
+        )
+    }
+
+    @Test
     fun `validator flags missing attachedToRef on boundary event`() {
         // Same trap: BoundaryEvent(attachedToRef = "") used to surface as
         // "attachedToRef '' does not match any node id" — a referential-integrity message that

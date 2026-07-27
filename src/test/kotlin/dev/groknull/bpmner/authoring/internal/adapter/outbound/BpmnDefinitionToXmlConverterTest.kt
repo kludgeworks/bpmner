@@ -10,6 +10,10 @@ package dev.groknull.bpmner.authoring.internal.adapter.outbound
 import dev.groknull.bpmner.bpmn.BpmnAssociation
 import dev.groknull.bpmner.bpmn.BpmnBoundaryEvent
 import dev.groknull.bpmner.bpmn.BpmnCompensateEventDefinition
+import dev.groknull.bpmner.bpmn.BpmnDataInputAssociation
+import dev.groknull.bpmner.bpmn.BpmnDataObjectReference
+import dev.groknull.bpmner.bpmn.BpmnDataOutputAssociation
+import dev.groknull.bpmner.bpmn.BpmnDataStoreReference
 import dev.groknull.bpmner.bpmn.BpmnDefinition
 import dev.groknull.bpmner.bpmn.BpmnEdge
 import dev.groknull.bpmner.bpmn.BpmnEndEvent
@@ -37,6 +41,7 @@ import dev.groknull.bpmner.bpmn.MultiInstanceLoopCharacteristics
 import dev.groknull.bpmner.bpmn.MultiInstanceMode
 import dev.groknull.bpmner.bpmn.RetryableBpmnGenerationException
 import dev.groknull.bpmner.bpmn.StandardLoopCharacteristics
+import dev.groknull.bpmner.conformance.internal.adapter.outbound.BpmnXsdValidator
 import org.xmlunit.assertj.XmlAssert
 import org.xmlunit.assertj.XmlAssert.assertThat
 import kotlin.test.Test
@@ -46,6 +51,7 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 @Suppress("LargeClass")
 class BpmnDefinitionToXmlConverterTest {
@@ -141,6 +147,110 @@ class BpmnDefinitionToXmlConverterTest {
 
         assertEquals(original.annotations, parsed.annotations)
         assertEquals(original.associations, parsed.associations)
+    }
+
+    @Test
+    fun `data object and data store references render with data input-output associations nested in their activity`() {
+        val definition = dataDefinition()
+
+        val xml = converter.render(definition).xml
+
+        assertXml(xml).nodesByXPath("//bpmn:dataObjectReference[@id='DataObjectRef_Order']").exist()
+        assertXml(xml)
+            .valueByXPath("//bpmn:dataObjectReference[@id='DataObjectRef_Order']/@dataObjectRef")
+            .isEqualTo("DataObject_DataObjectRef_Order")
+        assertXml(xml).nodesByXPath("//bpmn:dataObject[@id='DataObject_DataObjectRef_Order']").exist()
+        assertXml(xml).nodesByXPath("//bpmn:dataStoreReference[@id='DataStoreRef_Orders']").exist()
+        assertXml(xml)
+            .valueByXPath("//bpmn:dataStoreReference[@id='DataStoreRef_Orders']/@dataStoreRef")
+            .isEqualTo("DataStore_DataStoreRef_Orders")
+        assertXml(xml).nodesByXPath("//bpmn:dataStore[@id='DataStore_DataStoreRef_Orders']").exist()
+        // Nested inside the owning activity, not the process — the defining trait of a data
+        // association versus a plain (process-level) association.
+        assertXml(xml)
+            .valueByXPath("//bpmn:userTask[@id='act-place']/bpmn:dataOutputAssociation/bpmn:targetRef/text()")
+            .isEqualTo("DataObjectRef_Order")
+        assertXml(xml)
+            .valueByXPath("//bpmn:serviceTask[@id='act-archive']/bpmn:dataInputAssociation/bpmn:sourceRef/text()")
+            .isEqualTo("DataObjectRef_Order")
+        assertXml(xml)
+            .valueByXPath("//bpmn:serviceTask[@id='act-archive']/bpmn:dataOutputAssociation/bpmn:targetRef/text()")
+            .isEqualTo("DataStoreRef_Orders")
+    }
+
+    @Test
+    fun `data objects, stores, and data associations round-trip through render and parse`() {
+        val original = dataDefinition()
+
+        val parsed = BpmnXmlToDefinitionConverter().parse(converter.render(original).xml)
+
+        assertEquals(original.dataObjectReferences, parsed.dataObjectReferences)
+        assertEquals(original.dataStoreReferences, parsed.dataStoreReferences)
+        assertEquals(original.dataInputAssociations.toSet(), parsed.dataInputAssociations.toSet())
+        assertEquals(original.dataOutputAssociations.toSet(), parsed.dataOutputAssociations.toSet())
+    }
+
+    // A two-task process: "Place Order" writes a DataObjectReference, "Archive Order" reads that
+    // same reference and writes a DataStoreReference — exercising both association directions on
+    // both a userTask and a serviceTask host.
+    private fun dataDefinition(): BpmnDefinition = BpmnDefinition(
+        processId = "Process_Data",
+        processName = "Data objects sample",
+        nodes =
+        listOf(
+            BpmnStartEvent("StartEvent_1", "Start"),
+            BpmnUserTask("act-place", "Place Order"),
+            BpmnServiceTask("act-archive", "Archive Order"),
+            BpmnEndEvent("EndEvent_1", "End"),
+        ),
+        sequences =
+        listOf(
+            BpmnEdge("F1", "StartEvent_1", "act-place"),
+            BpmnEdge("F2", "act-place", "act-archive"),
+            BpmnEdge("F3", "act-archive", "EndEvent_1"),
+        ),
+        dataObjectReferences = listOf(BpmnDataObjectReference("DataObjectRef_Order", "Order")),
+        dataStoreReferences = listOf(BpmnDataStoreReference("DataStoreRef_Orders", "Orders DB")),
+        dataInputAssociations = listOf(
+            BpmnDataInputAssociation("DataInputAssociation_archive", "DataObjectRef_Order", "act-archive"),
+        ),
+        dataOutputAssociations = listOf(
+            BpmnDataOutputAssociation("DataOutputAssociation_place", "act-place", "DataObjectRef_Order"),
+            BpmnDataOutputAssociation("DataOutputAssociation_archive", "act-archive", "DataStoreRef_Orders"),
+        ),
+    )
+
+    @Test
+    fun `data flow elements are written before artifacts per BPMN's tProcess content model`() {
+        // Semantic.xsd's tProcess type is a sequence of flowElement* followed by artifact* —
+        // the two groups may not be interleaved. dataObjectReference/dataStoreReference are
+        // flowElements; textAnnotation/association are artifacts. A definition exercising both
+        // groups together must still produce schema-valid BPMN, or the writer has regressed to
+        // emitting them out of order.
+        val definition = BpmnDefinition(
+            processId = "Process_DataAndArtifacts",
+            processName = "Data elements alongside artifacts",
+            nodes =
+            listOf(
+                BpmnStartEvent("StartEvent_1", "Start"),
+                BpmnUserTask("act-place", "Place Order"),
+                BpmnEndEvent("EndEvent_1", "End"),
+            ),
+            sequences =
+            listOf(
+                BpmnEdge("F1", "StartEvent_1", "act-place"),
+                BpmnEdge("F2", "act-place", "EndEvent_1"),
+            ),
+            dataObjectReferences = listOf(BpmnDataObjectReference("DataObjectRef_Order", "Order")),
+            dataStoreReferences = listOf(BpmnDataStoreReference("DataStoreRef_Orders", "Orders DB")),
+            annotations = listOf(BpmnTextAnnotation("TextAnnotation_1", "Note about the order")),
+            associations = listOf(BpmnAssociation("Association_1", "act-place", "TextAnnotation_1")),
+        )
+
+        val xml = converter.render(definition).xml
+
+        val issues = BpmnXsdValidator().validateDetailed(xml)
+        assertTrue(issues.isEmpty(), "expected schema-valid BPMN but XSD validation reported: $issues")
     }
 
     @Test
@@ -543,6 +653,38 @@ class BpmnDefinitionToXmlConverterTest {
             "//bpmn:startEvent[@id='StartEvent_1']/bpmn:compensateEventDefinition",
         ).exist()
         assertFalse(compensateAllXml.contains("activityRef"))
+    }
+
+    @Test
+    fun `converter renders isForCompensation on a task and defaults it false otherwise`() {
+        val definition =
+            BpmnDefinition(
+                processId = "Process_compensation",
+                processName = "Refund on cancellation",
+                nodes =
+                listOf(
+                    BpmnStartEvent("StartEvent_1", "Start"),
+                    BpmnUserTask("Task_ship", "Ship order"),
+                    BpmnEndEvent("EndEvent_1", "Done"),
+                    BpmnUserTask("Task_refund", "Refund payment", isForCompensation = true),
+                ),
+                sequences =
+                listOf(
+                    BpmnEdge("Flow_1", "StartEvent_1", "Task_ship"),
+                    BpmnEdge("Flow_2", "Task_ship", "EndEvent_1"),
+                ),
+            )
+
+        val xml = converter.toXml(definition)
+
+        assertXml(xml).nodesByXPath("//bpmn:userTask[@id='Task_refund' and @isForCompensation='true']").exist()
+        assertXml(xml).nodesByXPath("//bpmn:userTask[@id='Task_ship' and @isForCompensation='false']").exist()
+
+        val parsed = BpmnXmlToDefinitionConverter().parse(xml)
+        val refund = parsed.nodes.single { it.id == "Task_refund" } as BpmnUserTask
+        val ship = parsed.nodes.single { it.id == "Task_ship" } as BpmnUserTask
+        assertTrue(refund.isForCompensation)
+        assertFalse(ship.isForCompensation)
     }
 
     @Test

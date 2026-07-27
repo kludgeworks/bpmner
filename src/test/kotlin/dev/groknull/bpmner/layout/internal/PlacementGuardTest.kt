@@ -36,9 +36,7 @@ class PlacementGuardTest {
         }
 
         private val DECLARED_OWNERS = setOf(
-            "CollaborationShapePlacement",
-            "WhiteBoxPoolBandPlacement",
-            "ExternalBlackBoxBandPlacement",
+            "CollaborationFramePlacement",
         )
 
         private val EPS = BpmnPlacementPass.POSITION_EPSILON
@@ -81,13 +79,7 @@ class PlacementGuardTest {
         val boundaryIds = model.getModelElementsByType(org.camunda.bpm.model.bpmn.instance.BoundaryEvent::class.java)
             .mapTo(mutableSetOf()) { it.id }
         val laneBoundaryIds = laneBoundaryIds(model)
-        val artifactIds = (
-            model.getModelElementsByType(org.camunda.bpm.model.bpmn.instance.TextAnnotation::class.java)
-                .map { it.id } +
-                model.getModelElementsByType(org.camunda.bpm.model.bpmn.instance.Group::class.java)
-                    .map { it.id }
-            ).toSet()
-        val excluded = (boundaryIds - laneBoundaryIds) + artifactIds
+        val excluded = (boundaryIds - laneBoundaryIds) + nonFlowNodeArtifactIds(model)
 
         // Guard: every flow-node shape that moved must have a ledger entry with a declared owner.
         // Filtered to only the IDs that are subject to the guard (non-excluded, present, and moved).
@@ -137,6 +129,16 @@ class PlacementGuardTest {
                 "(${placed.x - elkRect.x},${placed.y - elkRect.y})",
         )
     }
+
+    /** Ids of comment-box artifacts (annotations, groups, data references) exempt from the guard. */
+    private fun nonFlowNodeArtifactIds(model: org.camunda.bpm.model.bpmn.BpmnModelInstance): Set<String> = (
+        model.getModelElementsByType(org.camunda.bpm.model.bpmn.instance.TextAnnotation::class.java).map { it.id } +
+            model.getModelElementsByType(org.camunda.bpm.model.bpmn.instance.Group::class.java).map { it.id } +
+            model.getModelElementsByType(org.camunda.bpm.model.bpmn.instance.DataObjectReference::class.java)
+                .map { it.id } +
+            model.getModelElementsByType(org.camunda.bpm.model.bpmn.instance.DataStoreReference::class.java)
+                .map { it.id }
+        ).toSet()
 
     private fun laneBoundaryIds(model: org.camunda.bpm.model.bpmn.BpmnModelInstance): Set<String> {
         val laneMemberIds = mutableSetOf<String>()

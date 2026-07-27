@@ -211,6 +211,9 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          # cpd.exclusions below: FlatBpmnDefinitionMapper's mapping arms and BpmnDomain's
+          # task-type properties repeat by necessity — each concrete type's annotations publish
+          # that type's own JSON schema; hoisting them into a shared base class would delete it.
           bazel run //:sonar \
             --remote_header=x-buildbuddy-api-key="${BUILDBUDDY_API_KEY}" \
             -- \
@@ -219,7 +222,7 @@ jobs:
             -Dsonar.token="${SONAR_TOKEN}" \
             -Dsonar.coverageReportPaths="$GITHUB_WORKSPACE/coverage_report.dat" \
             -Dsonar.coverage.exclusions="**/*Module.kt" \
-            -Dsonar.cpd.exclusions="**/repair/internal/adapter/FlatBpmnDefinition*"
+            -Dsonar.cpd.exclusions="**/repair/internal/adapter/FlatBpmnDefinition*,**/bpmn/BpmnDomain.kt"
 
       - name: SonarCloud Scan — Web
         if: success() && steps.coverage.outcome == 'success'

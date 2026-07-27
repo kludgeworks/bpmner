@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  id="Definitions_data" targetNamespace="https://groknull.dev/bpmner">
+  <bpmn:process id="Process_data" name="Data Object And Store" isExecutable="true">
+    <bpmn:startEvent id="Start_1" name="Start">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:userTask id="Task_place" name="Place Order">
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+      <bpmn:dataOutputAssociation id="DataOutputAssociation_place">
+        <bpmn:targetRef>DataObjectRef_Order</bpmn:targetRef>
+      </bpmn:dataOutputAssociation>
+    </bpmn:userTask>
+    <bpmn:serviceTask id="Task_archive" name="Archive Order">
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+      <bpmn:outgoing>Flow_3</bpmn:outgoing>
+      <bpmn:dataInputAssociation id="DataInputAssociation_archive">
+        <bpmn:sourceRef>DataObjectRef_Order</bpmn:sourceRef>
+        <bpmn:targetRef>Task_archive</bpmn:targetRef>
+      </bpmn:dataInputAssociation>
+      <bpmn:dataOutputAssociation id="DataOutputAssociation_archive">
+        <bpmn:targetRef>DataStoreRef_Orders</bpmn:targetRef>
+      </bpmn:dataOutputAssociation>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="End_1" name="Done">
+      <bpmn:incoming>Flow_3</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="Start_1" targetRef="Task_place"/>
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="Task_place" targetRef="Task_archive"/>
+    <bpmn:sequenceFlow id="Flow_3" sourceRef="Task_archive" targetRef="End_1"/>
+    <bpmn:dataObject id="DataObject_Order"/>
+    <bpmn:dataObjectReference id="DataObjectRef_Order" name="Order" dataObjectRef="DataObject_Order"/>
+    <bpmn:dataStoreReference id="DataStoreRef_Orders" name="Orders DB" dataStoreRef="DataStore_Orders"/>
+  </bpmn:process>
+  <bpmn:dataStore id="DataStore_Orders" name="Orders DB"/>
+</bpmn:definitions>

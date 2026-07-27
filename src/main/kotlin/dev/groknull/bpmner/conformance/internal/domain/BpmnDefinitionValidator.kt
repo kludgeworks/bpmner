@@ -14,6 +14,7 @@ import dev.groknull.bpmner.bpmn.BpmnEndEvent
 import dev.groknull.bpmner.bpmn.BpmnErrorEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnEscalationEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnEventDefinition
+import dev.groknull.bpmner.bpmn.BpmnEventSubProcess
 import dev.groknull.bpmner.bpmn.BpmnExclusiveGateway
 import dev.groknull.bpmner.bpmn.BpmnInclusiveGateway
 import dev.groknull.bpmner.bpmn.BpmnIntermediateCatchEvent
@@ -27,6 +28,7 @@ import dev.groknull.bpmner.bpmn.BpmnSendTask
 import dev.groknull.bpmner.bpmn.BpmnSignalEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnStartEvent
 import dev.groknull.bpmner.bpmn.BpmnSubProcess
+import dev.groknull.bpmner.bpmn.BpmnTask
 import dev.groknull.bpmner.bpmn.BpmnTerminateEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnTimerEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnUnrecognizedEventDefinition
@@ -100,7 +102,7 @@ internal class BpmnDefinitionValidator {
 
         val boundaryEventIds = definition.nodes.filterIsInstance<BpmnBoundaryEvent>().map { it.id }.toSet()
         definition.nodes
-            .filterNot { it is BpmnBoundaryEvent }
+            .filter { it.participatesInSequenceFlow() }
             .groupBy { it.parentRef }
             .forEach { (parentRef, nodes) ->
                 validateScopeWeakConnectivity(parentRef, nodes, definition.sequences, boundaryEventIds, errors)
@@ -157,16 +159,40 @@ internal class BpmnDefinitionValidator {
             nodes.any { it is BpmnEndEvent && it.parentRef == null }
     }
 
-    private fun BpmnNode.requiresIncomingSequenceFlow(): Boolean = when (this) {
-        is BpmnStartEvent, is BpmnBoundaryEvent -> false
+    private fun BpmnNode.isCompensationHandler(): Boolean = this is BpmnTask && isForCompensation
 
-        is BpmnSubProcess -> true
+    /**
+     * Whether this node is reached by ordinary sequence flow from its enclosing scope. A boundary
+     * event is attached to an activity rather than flowed into; an event subprocess starts on its
+     * own trigger; a compensation-handler task is invoked by a compensation event. All three are
+     * floating and excluded from the weak-connectivity requirement.
+     */
+    private fun BpmnNode.participatesInSequenceFlow(): Boolean =
+        !(this is BpmnBoundaryEvent || this is BpmnEventSubProcess || isCompensationHandler())
+
+    private fun BpmnNode.requiresIncomingSequenceFlow(): Boolean = when {
+        this is BpmnStartEvent || this is BpmnBoundaryEvent -> false
+
+        // An event subprocess is floating: it starts on its own trigger, never on an incoming
+        // sequence flow from its enclosing scope.
+        this is BpmnEventSubProcess -> false
+
+        isCompensationHandler() -> false
+
+        this is BpmnSubProcess -> true
         else -> true
     }
 
-    private fun BpmnNode.requiresOutgoingSequenceFlow(): Boolean = when (this) {
-        is BpmnEndEvent, is BpmnBoundaryEvent -> false
-        is BpmnSubProcess -> true
+    private fun BpmnNode.requiresOutgoingSequenceFlow(): Boolean = when {
+        this is BpmnEndEvent || this is BpmnBoundaryEvent -> false
+
+        // An event subprocess is floating: its handling ends inside its own scope, never on an
+        // outgoing sequence flow into its enclosing scope.
+        this is BpmnEventSubProcess -> false
+
+        isCompensationHandler() -> false
+
+        this is BpmnSubProcess -> true
         else -> true
     }
 
@@ -178,7 +204,11 @@ internal class BpmnDefinitionValidator {
         definition: BpmnDefinition,
         errors: MutableList<String>,
     ) {
-        val subProcessesById = definition.nodes.filterIsInstance<BpmnSubProcess>().associateBy { it.id }
+        // An event subprocess counts as a container too — it holds start/end events and nests via parentRef.
+        val subProcessesById =
+            definition.nodes
+                .filter { it is BpmnSubProcess || it is BpmnEventSubProcess }
+                .associateBy { it.id }
         val nodesById = definition.nodes.associateBy { it.id }
 
         validateParentRefTargets(definition, nodesById.keys, subProcessesById.keys, errors)
@@ -228,7 +258,7 @@ internal class BpmnDefinitionValidator {
     // Walk each subprocess's parentRef chain; revisiting an id means the containment forms a cycle,
     // which would otherwise loop forever / corrupt the rendered tree.
     private fun validateNoSubProcessCycles(
-        subProcessesById: Map<String, BpmnSubProcess>,
+        subProcessesById: Map<String, BpmnNode>,
         errors: MutableList<String>,
     ) {
         subProcessesById.keys.forEach { startId ->
@@ -248,17 +278,26 @@ internal class BpmnDefinitionValidator {
     // nodes that name it via parentRef — the subprocess analogue of validateRequiredEvents.
     private fun validateSubProcessRequiredEvents(
         definition: BpmnDefinition,
-        subProcesses: Collection<BpmnSubProcess>,
+        subProcesses: Collection<BpmnNode>,
         errors: MutableList<String>,
     ) {
         val childrenByParent = definition.nodes.filter { it.parentRef != null }.groupBy { it.parentRef }
         subProcesses.forEach { subProcess ->
             val children = childrenByParent[subProcess.id].orEmpty()
-            if (children.none { it is BpmnStartEvent }) {
+            val startEvents = children.filterIsInstance<BpmnStartEvent>()
+            if (startEvents.isEmpty()) {
                 errors.add("subprocess '${subProcess.id}' must contain at least one START_EVENT")
             }
             if (children.none { it is BpmnEndEvent }) {
                 errors.add("subprocess '${subProcess.id}' must contain at least one END_EVENT")
+            }
+            if (subProcess is BpmnEventSubProcess &&
+                startEvents.any { it.eventDefinition is BpmnNoneEventDefinition }
+            ) {
+                errors.add(
+                    "event subprocess '${subProcess.id}' start event must declare a triggering " +
+                        "event definition",
+                )
             }
         }
     }
@@ -386,17 +425,43 @@ internal class BpmnDefinitionValidator {
             is BpmnEscalationEventDefinition ->
                 errors.addRefCatalogError(nodeId, "escalationRef", eventDefinition.escalationRef, context.escalationIds)
 
-            is BpmnCompensateEventDefinition -> {
-                if (eventDefinition.activityRef?.isBlank() == true) {
-                    errors.add("event $nodeId compensateEventDefinition activityRef must not be blank when present")
-                }
-            }
+            is BpmnCompensateEventDefinition ->
+                validateCompensateActivityRef(nodeId, eventDefinition.activityRef, context, errors)
 
             // Unrecognized event definitions have no fields this structural validator can
             // check; the `BpmnSubset` rule flags them.
             is BpmnUnrecognizedEventDefinition -> {
                 Unit
             }
+        }
+    }
+
+    /**
+     * A blank [activityRef] reports the missing attribute; `null` (omitted) is valid — compensate-all.
+     * A non-blank ref must resolve to a real node that is a compensation handler
+     * (`isForCompensation=true`), otherwise the engine has nothing to invoke.
+     */
+    private fun validateCompensateActivityRef(
+        nodeId: String,
+        activityRef: String?,
+        context: EventValidationContext,
+        errors: MutableList<String>,
+    ) {
+        if (activityRef == null) return
+        if (activityRef.isBlank()) {
+            errors.add("event $nodeId compensateEventDefinition activityRef must not be blank when present")
+            return
+        }
+        val target = context.nodesById[activityRef]
+        if (target == null) {
+            errors.add(
+                "event $nodeId compensateEventDefinition activityRef '$activityRef' does not match any node id",
+            )
+        } else if (target !is BpmnTask || !target.isForCompensation) {
+            errors.add(
+                "event $nodeId compensateEventDefinition activityRef '$activityRef' must reference " +
+                    "a task with isForCompensation=true",
+            )
         }
     }
 

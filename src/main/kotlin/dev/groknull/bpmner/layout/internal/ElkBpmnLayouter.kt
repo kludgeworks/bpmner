@@ -8,18 +8,13 @@ package dev.groknull.bpmner.layout.internal
 import dev.groknull.bpmner.layout.BpmnAutoLayoutException
 import dev.groknull.bpmner.layout.BpmnLayoutPort
 import dev.groknull.bpmner.layout.internal.adapter.inbound.referentialIntegrityErrors
-import dev.groknull.bpmner.layout.internal.elk.BPMNER_LAYERED_ALGORITHM_ID
-import dev.groknull.bpmner.layout.internal.elk.BpmnerLayeredProvider
 import jakarta.annotation.PostConstruct
 import org.camunda.bpm.model.bpmn.Bpmn
 import org.camunda.bpm.model.bpmn.BpmnModelInstance
 import org.camunda.bpm.model.bpmn.instance.bpmndi.BpmnDiagram
 import org.eclipse.elk.alg.layered.options.LayeredMetaDataProvider
 import org.eclipse.elk.core.RecursiveGraphLayoutEngine
-import org.eclipse.elk.core.data.ILayoutMetaDataProvider
-import org.eclipse.elk.core.data.LayoutAlgorithmData
 import org.eclipse.elk.core.data.LayoutMetaDataService
-import org.eclipse.elk.core.util.AlgorithmFactory
 import org.eclipse.elk.core.util.BasicProgressMonitor
 import org.jmolecules.architecture.onion.simplified.InfrastructureRing
 import org.springframework.stereotype.Service
@@ -34,22 +29,13 @@ import java.io.ByteArrayOutputStream
 @Service
 internal class ElkBpmnLayouter : BpmnLayoutPort {
 
+    /**
+     * ELK requires algorithm registration outside OSGi. [LayoutMetaDataService] is a
+     * singleton that ignores duplicate registrations, so construction-time registration is safe.
+     */
     @PostConstruct
     fun registerElkLayoutAlgorithm() {
-        // ELK requires algorithm registration outside OSGi. LayoutMetaDataService is a
-        // singleton that ignores duplicate registrations, so construction-time registration is safe.
-        LayoutMetaDataService.getInstance().registerLayoutMetaDataProviders(
-            LayeredMetaDataProvider(),
-            ILayoutMetaDataProvider { registry ->
-                registry.register(
-                    LayoutAlgorithmData.Builder()
-                        .id(BPMNER_LAYERED_ALGORITHM_ID)
-                        .name("BPMN layered (bpmner carrier)")
-                        .providerFactory(AlgorithmFactory(BpmnerLayeredProvider::class.java))
-                        .create(),
-                )
-            },
-        )
+        LayoutMetaDataService.getInstance().registerLayoutMetaDataProviders(LayeredMetaDataProvider())
     }
 
     override fun layout(xml: String): String {

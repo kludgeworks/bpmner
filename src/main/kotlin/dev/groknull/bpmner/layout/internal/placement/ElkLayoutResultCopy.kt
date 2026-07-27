@@ -8,7 +8,10 @@ package dev.groknull.bpmner.layout.internal.placement
 import dev.groknull.bpmner.layout.internal.BpmnPlacementPass
 import dev.groknull.bpmner.layout.internal.BpmnPlacementPass.Point
 import dev.groknull.bpmner.layout.internal.BpmnPlacementPass.Rect
+import org.camunda.bpm.model.bpmn.instance.Association
 import org.camunda.bpm.model.bpmn.instance.BoundaryEvent
+import org.camunda.bpm.model.bpmn.instance.DataInputAssociation
+import org.camunda.bpm.model.bpmn.instance.DataOutputAssociation
 import org.camunda.bpm.model.bpmn.instance.FlowNode
 import org.camunda.bpm.model.bpmn.instance.MessageFlow
 import org.camunda.bpm.model.bpmn.instance.SequenceFlow
@@ -37,7 +40,10 @@ internal object ElkLayoutResultCopy : PlacementProcessor {
 
     private fun copyEdgeLabelsAndMessageSections(ctx: PlacementContext) {
         val edgeIds = ctx.model.getModelElementsByType(SequenceFlow::class.java).map { it.id } +
-            ctx.model.getModelElementsByType(MessageFlow::class.java).map { it.id }
+            ctx.model.getModelElementsByType(MessageFlow::class.java).map { it.id } +
+            ctx.model.getModelElementsByType(Association::class.java).map { it.id } +
+            ctx.model.getModelElementsByType(DataInputAssociation::class.java).map { it.id } +
+            ctx.model.getModelElementsByType(DataOutputAssociation::class.java).map { it.id }
         edgeIds.sorted().forEach { id ->
             val edge = ctx.skeleton.edgeMap[id] ?: return@forEach
             if (id !in ctx.labels) edge.labels.firstOrNull()?.let { label -> ctx.labels[id] = labelBounds(edge, label) }

@@ -15,6 +15,7 @@ import dev.groknull.bpmner.bpmn.BpmnErrorEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnEscalationEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnEventBasedGateway
 import dev.groknull.bpmner.bpmn.BpmnEventDefinition
+import dev.groknull.bpmner.bpmn.BpmnEventSubProcess
 import dev.groknull.bpmner.bpmn.BpmnExclusiveGateway
 import dev.groknull.bpmner.bpmn.BpmnInclusiveGateway
 import dev.groknull.bpmner.bpmn.BpmnIntermediateCatchEvent
@@ -72,6 +73,7 @@ public fun FlatBpmnNode.toSealed(): BpmnNode = when (type) {
     in TASK_KINDS -> toTaskNode()
     in GATEWAY_KINDS -> toGatewayNode()
     FlatBpmnNodeKind.SUB_PROCESS -> toSubProcessNode()
+    FlatBpmnNodeKind.EVENT_SUB_PROCESS -> BpmnEventSubProcess(id = id, name = name, parentRef = parentRef)
     FlatBpmnNodeKind.CALL_ACTIVITY -> BpmnCallActivity(
         id = id,
         name = name,
@@ -98,41 +100,63 @@ private val GATEWAY_KINDS: Set<FlatBpmnNodeKind> = setOf(
     FlatBpmnNodeKind.EVENT_BASED_GATEWAY,
 )
 
+// Cross-cutting fields shared by every task kind, computed once per node so each `when`
+// arm below reuses `common.*` instead of recomputing multiInstance/standardLoop per arm.
+private data class TaskCommon(
+    val id: String,
+    val name: String?,
+    val multiInstance: MultiInstanceLoopCharacteristics?,
+    val standardLoop: StandardLoopCharacteristics?,
+    val isForCompensation: Boolean,
+    val parentRef: String?,
+)
+
 internal fun FlatBpmnNode.toTaskNode(): BpmnNode {
-    val mi = multiInstance?.toSealed()
-    val sl = standardLoop?.toSealed()
+    val common = TaskCommon(
+        id = id,
+        name = name,
+        multiInstance = multiInstance?.toSealed(),
+        standardLoop = standardLoop?.toSealed(),
+        isForCompensation = isForCompensation ?: false,
+        parentRef = parentRef,
+    )
+
+    // Local to this function only, so it doesn't add to the file's declared-function count.
+    fun TaskCommon.build(
+        factory: (String, String?, MultiInstanceLoopCharacteristics?, StandardLoopCharacteristics?, Boolean, String?) -> BpmnNode,
+    ): BpmnNode = factory(id, name, multiInstance, standardLoop, isForCompensation, parentRef)
+
     return when (type) {
-        FlatBpmnNodeKind.USER_TASK ->
-            BpmnUserTask(id = id, name = name, multiInstance = mi, standardLoop = sl, parentRef = parentRef)
-        FlatBpmnNodeKind.SERVICE_TASK ->
-            BpmnServiceTask(id = id, name = name, multiInstance = mi, standardLoop = sl, parentRef = parentRef)
-        FlatBpmnNodeKind.SCRIPT_TASK ->
-            BpmnScriptTask(id = id, name = name, multiInstance = mi, standardLoop = sl, parentRef = parentRef)
-        FlatBpmnNodeKind.MANUAL_TASK ->
-            BpmnManualTask(id = id, name = name, multiInstance = mi, standardLoop = sl, parentRef = parentRef)
+        FlatBpmnNodeKind.USER_TASK -> common.build(::BpmnUserTask)
+        FlatBpmnNodeKind.SERVICE_TASK -> common.build(::BpmnServiceTask)
+        FlatBpmnNodeKind.SCRIPT_TASK -> common.build(::BpmnScriptTask)
+        FlatBpmnNodeKind.MANUAL_TASK -> common.build(::BpmnManualTask)
         FlatBpmnNodeKind.BUSINESS_RULE_TASK -> BpmnBusinessRuleTask(
-            id = id,
-            name = name,
+            id = common.id,
+            name = common.name,
             decisionRef = requireField(decisionRef, type, "decisionRef", id),
-            multiInstance = mi,
-            standardLoop = sl,
-            parentRef = parentRef,
+            multiInstance = common.multiInstance,
+            standardLoop = common.standardLoop,
+            isForCompensation = common.isForCompensation,
+            parentRef = common.parentRef,
         )
         FlatBpmnNodeKind.SEND_TASK -> BpmnSendTask(
-            id = id,
-            name = name,
+            id = common.id,
+            name = common.name,
             messageRef = requireField(messageRef, type, "messageRef", id),
-            multiInstance = mi,
-            standardLoop = sl,
-            parentRef = parentRef,
+            multiInstance = common.multiInstance,
+            standardLoop = common.standardLoop,
+            isForCompensation = common.isForCompensation,
+            parentRef = common.parentRef,
         )
         FlatBpmnNodeKind.RECEIVE_TASK -> BpmnReceiveTask(
-            id = id,
-            name = name,
+            id = common.id,
+            name = common.name,
             messageRef = requireField(messageRef, type, "messageRef", id),
-            multiInstance = mi,
-            standardLoop = sl,
-            parentRef = parentRef,
+            multiInstance = common.multiInstance,
+            standardLoop = common.standardLoop,
+            isForCompensation = common.isForCompensation,
+            parentRef = common.parentRef,
         )
         else ->
             throw RetryableBpmnGenerationException("toTaskNode called with non-task kind $type")
