@@ -24,10 +24,30 @@ bazel_dep(name = "rules_pkl", version = "0.15.0")
 bazel_dep(name = "rules_detekt", version = "0.8.1.13")
 bazel_dep(name = "rules_pmd", version = "0.4.0")
 bazel_dep(name = "toolchains_buildbuddy", version = "0.0.4")
+bazel_dep(name = "rules_oci", version = "2.0.0")
+bazel_dep(name = "tar.bzl", version = "0.6.0")
+bazel_dep(name = "aspect_bazel_lib", version = "2.22.5")
 
 use_extension("@toolchains_buildbuddy//:extensions.bzl", "buildbuddy")
 
 register_toolchains("@toolchains_buildbuddy//toolchains/cc:ubuntu_gcc_x86_64")
+
+oci = use_extension("@rules_oci//oci:extensions.bzl", "oci")
+oci.pull(
+    name = "distroless_java21_debian12",
+    digest = "sha256:f34fd3e4e2d7a246d764d0614f5e6ffb3a735930723fac4cfc25a72798950262",
+    image = "gcr.io/distroless/java21-debian12",
+    platforms = [
+        "linux/amd64",
+        "linux/arm64/v8",
+    ],
+)
+use_repo(
+    oci,
+    "distroless_java21_debian12",
+    "distroless_java21_debian12_linux_amd64",
+    "distroless_java21_debian12_linux_arm64_v8",
+)
 
 bazel_dep(name = "buildifier_prebuilt", version = "8.2.1.1", dev_dependency = True)
 
