@@ -1,5 +1,25 @@
 # Changelog
 
+## [0.3.0](https://github.com/kludgeworks/bpmner/compare/bpmner-v0.2.0...bpmner-v0.3.0) (2026-07-27)
+
+
+### Features
+
+* **bpmn:** 622-X units 0/A/B — boundary non-interrupting + signal/escalation/compensate event definitions ([#634](https://github.com/kludgeworks/bpmner/issues/634)) ([47bfd2a](https://github.com/kludgeworks/bpmner/commit/47bfd2a35aef0ba8cb423209edb2793dac63f45d))
+* **layout:** 622-4 increment 1 — gate-0 hygiene (dense probe, label/edge-geometry invariant) ([#633](https://github.com/kludgeworks/bpmner/issues/633)) ([8bc676b](https://github.com/kludgeworks/bpmner/commit/8bc676b8bbe927ae9182159e73c3cffb1e60fe0d))
+* **layout:** 622-Y — event vocabulary remainder, lanes, and floating-element ordering ([#638](https://github.com/kludgeworks/bpmner/issues/638)) ([3528620](https://github.com/kludgeworks/bpmner/commit/35286203a292d8ca219c446f23cbdf4a25ace257))
+* **layout:** bound remaining exceptions, close [#591](https://github.com/kludgeworks/bpmner/issues/591) evidence gap ([#621](https://github.com/kludgeworks/bpmner/issues/621)) ([4cb3314](https://github.com/kludgeworks/bpmner/commit/4cb3314ec852485178eb760b83dabfc0d05c15e5))
+* **layout:** move labels and message flows into ELK ([#614](https://github.com/kludgeworks/bpmner/issues/614)) ([955055c](https://github.com/kludgeworks/bpmner/commit/955055c40244bebe5dc6adb095f8150d2b84e1a2))
+* **layout:** route loop-backs through ELK by reversal (AD-622-15) ([#624](https://github.com/kludgeworks/bpmner/issues/624)) ([4095a0e](https://github.com/kludgeworks/bpmner/commit/4095a0ef17702a11866bb7627dcd9e2f00056dd8))
+* **layout:** upgrade ELK to 0.12.0, land bpmner.layered carrier + tier-2 tripwires ([#623](https://github.com/kludgeworks/bpmner/issues/623)) ([cdb0a90](https://github.com/kludgeworks/bpmner/commit/cdb0a90eb2a561594500e451e7d3fb35f9ccca12))
+* publish multi-architecture container image ([#641](https://github.com/kludgeworks/bpmner/issues/641)) ([d78b4b7](https://github.com/kludgeworks/bpmner/commit/d78b4b7b5c768d6b3368c3e6ab680c7fb4df1233))
+
+
+### Bug Fixes
+
+* initialize boundary event attachments ([#636](https://github.com/kludgeworks/bpmner/issues/636)) ([bd5915a](https://github.com/kludgeworks/bpmner/commit/bd5915ab70ab92d2510d1c20fec4e9f96d4fb48b))
+* skip smoke tests on release-please pull requests ([#620](https://github.com/kludgeworks/bpmner/issues/620)) ([#625](https://github.com/kludgeworks/bpmner/issues/625)) ([02eca60](https://github.com/kludgeworks/bpmner/commit/02eca600abf4193387dab1d8aea30b786ca01a36))
+
 ## [0.2.0](https://github.com/kludgeworks/bpmner/compare/bpmner-v0.1.0...bpmner-v0.2.0) (2026-07-20)
 
 
