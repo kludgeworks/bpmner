@@ -199,8 +199,6 @@ class BpmnDefinitionValidateStructureTest {
         )
     }
 
-    // --- data association reference checks ---
-
     @Test
     fun `validateStructure accepts data input and output associations with resolvable references`() {
         val definition = minimalValid().copy(

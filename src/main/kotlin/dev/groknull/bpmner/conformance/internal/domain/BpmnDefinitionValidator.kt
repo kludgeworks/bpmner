@@ -102,11 +102,7 @@ internal class BpmnDefinitionValidator {
 
         val boundaryEventIds = definition.nodes.filterIsInstance<BpmnBoundaryEvent>().map { it.id }.toSet()
         definition.nodes
-            // An event subprocess has no sequence-flow connection to its scope's other nodes by
-            // BPMN definition — it is triggered by its own start event, not by flow. Same for a
-            // compensation-handler task: it is invoked by a compensation event, not sequence flow.
-            // Both are excluded from the weak-connectivity requirement, like boundary events.
-            .filterNot { it is BpmnBoundaryEvent || it is BpmnEventSubProcess || it.isCompensationHandler() }
+            .filter { it.participatesInSequenceFlow() }
             .groupBy { it.parentRef }
             .forEach { (parentRef, nodes) ->
                 validateScopeWeakConnectivity(parentRef, nodes, definition.sequences, boundaryEventIds, errors)
@@ -163,9 +159,16 @@ internal class BpmnDefinitionValidator {
             nodes.any { it is BpmnEndEvent && it.parentRef == null }
     }
 
-    // A compensation-handler task is floating, like an event subprocess: it is invoked by a
-    // compensation event, never reached through normal sequence flow.
     private fun BpmnNode.isCompensationHandler(): Boolean = this is BpmnTask && isForCompensation
+
+    /**
+     * Whether this node is reached by ordinary sequence flow from its enclosing scope. A boundary
+     * event is attached to an activity rather than flowed into; an event subprocess starts on its
+     * own trigger; a compensation-handler task is invoked by a compensation event. All three are
+     * floating and excluded from the weak-connectivity requirement.
+     */
+    private fun BpmnNode.participatesInSequenceFlow(): Boolean =
+        !(this is BpmnBoundaryEvent || this is BpmnEventSubProcess || isCompensationHandler())
 
     private fun BpmnNode.requiresIncomingSequenceFlow(): Boolean = when {
         this is BpmnStartEvent || this is BpmnBoundaryEvent -> false
@@ -201,9 +204,7 @@ internal class BpmnDefinitionValidator {
         definition: BpmnDefinition,
         errors: MutableList<String>,
     ) {
-        // An event subprocess is a container in exactly the same sense as an embedded one — it
-        // holds its own start/end events and can nest other nodes via parentRef — so it
-        // participates in every containment check below alongside BpmnSubProcess.
+        // An event subprocess counts as a container too — it holds start/end events and nests via parentRef.
         val subProcessesById =
             definition.nodes
                 .filter { it is BpmnSubProcess || it is BpmnEventSubProcess }
@@ -291,8 +292,7 @@ internal class BpmnDefinitionValidator {
                 errors.add("subprocess '${subProcess.id}' must contain at least one END_EVENT")
             }
             if (subProcess is BpmnEventSubProcess &&
-                startEvents.isNotEmpty() &&
-                startEvents.all { it.eventDefinition is BpmnNoneEventDefinition }
+                startEvents.any { it.eventDefinition is BpmnNoneEventDefinition }
             ) {
                 errors.add(
                     "event subprocess '${subProcess.id}' start event must declare a triggering " +
@@ -436,9 +436,11 @@ internal class BpmnDefinitionValidator {
         }
     }
 
-    // A blank activityRef reports the missing attribute; omitted (null) is valid (compensate-all).
-    // A non-blank activityRef must resolve to a real node that is a compensation handler
-    // (isForCompensation=true) — otherwise the engine has nothing to invoke.
+    /**
+     * A blank [activityRef] reports the missing attribute; `null` (omitted) is valid — compensate-all.
+     * A non-blank ref must resolve to a real node that is a compensation handler
+     * (`isForCompensation=true`), otherwise the engine has nothing to invoke.
+     */
     private fun validateCompensateActivityRef(
         nodeId: String,
         activityRef: String?,

@@ -17,10 +17,9 @@ internal class BpmnProcessArtifactXmlWriter {
         definition: BpmnDefinition,
     ) {
         writeLanes(document, process, definition)
-        // dataObjectReference/dataStoreReference are flowElements, not artifacts (confirmed
-        // against the camunda-bpm-model Java API: both extend FlowElement) — BPMN's tProcess
-        // content model groups all flowElements before all artifacts, so these must land before
-        // the textAnnotation/group/association loop below, not after it.
+        // BPMN's tProcess groups all flowElements before all artifacts (see the ordering test
+        // in BpmnDefinitionToXmlConverterTest); dataObjectReference/dataStoreReference are
+        // flowElements, so this call must precede the artifact loop below.
         writeDataElements(document, root, process, definition)
         definition.annotations.forEach { annotation ->
             process.appendChild(
@@ -54,10 +53,9 @@ internal class BpmnProcessArtifactXmlWriter {
     }
 
     /**
-     * `dataObjectReference`/`dataStoreReference` (process-scoped flowElements) plus each one's
-     * backing non-visual element: `dataObject` (a `FlowElement`, so it lives in the process
-     * alongside its reference) and `dataStore` (a `RootElement`, so it lives directly under
-     * `definitions`, per the camunda-bpm-model Java API's declared supertypes).
+     * Writes `dataObjectReference`/`dataStoreReference` as process-scoped flowElements, plus
+     * each one's backing non-visual element: `dataObject` lives in the process alongside its
+     * reference; `dataStore` lives directly under `definitions`.
      */
     private fun writeDataElements(
         document: Document,
@@ -95,22 +93,15 @@ internal class BpmnProcessArtifactXmlWriter {
     }
 
     /**
-     * `dataInputAssociation`/`dataOutputAssociation` nest inside their owning activity element
-     * (`tActivity`'s own content model — confirmed via the Java API's
-     * `Activity.getDataInputAssociations()`/`getDataOutputAssociations()`), not the process, so
-     * these are found by id and appended directly to that element rather than to `process`.
+     * `dataInputAssociation`/`dataOutputAssociation` nest inside their owning activity element,
+     * not the process, so these are found by id and appended directly to that element.
      * `sourceRef`/`targetRef` are child elements carrying the referenced id as text content (an
-     * IDREF), not attributes — unlike `association`, which is a plain `BaseElement`-to-
-     * `BaseElement` edge and uses attributes.
+     * IDREF), not attributes — unlike `association`, which uses attributes.
      *
-     * `tDataAssociation` (confirmed against the bundled `Semantic.xsd`, not assumed) requires
-     * exactly one `targetRef` (`minOccurs="1"`) regardless of direction; `sourceRef` is optional
-     * (`minOccurs="0" maxOccurs="unbounded"`). The fully correct BPMN model routes a
-     * `dataInputAssociation`'s `targetRef` to the activity's own `ioSpecification`/`dataInput`
-     * id, which we don't model (no session has needed an activity's data *quantity/state*
-     * constraints yet) — self-referencing the owning activity's own id satisfies the schema's
-     * ID-reference syntax (XSD does not check the referenced element's semantic type) without
-     * that extra machinery.
+     * `tDataAssociation` requires exactly one `targetRef` regardless of direction; `sourceRef`
+     * is optional. We don't model an activity's `ioSpecification`/`dataInput`, so a
+     * `dataInputAssociation`'s `targetRef` self-references the owning activity's own id —
+     * satisfying the schema's ID-reference syntax without that extra machinery.
      */
     private fun writeDataAssociations(document: Document, definition: BpmnDefinition) {
         definition.dataInputAssociations.forEach { assoc ->

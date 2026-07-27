@@ -440,7 +440,7 @@ class BpmnToElkMapperTest {
         assertEquals(labelled.left, unlabelled.left)
     }
 
-    // ── Artifacts (group E: annotations via ELK comment attachment) ───────────
+    // ── Artifacts (annotations via ELK comment attachment) ─────────────────────
 
     @Test
     fun `an annotation with one association becomes a real comment-box sibling of its host, with a real edge`() {

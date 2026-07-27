@@ -9,23 +9,17 @@ import org.junit.jupiter.api.Test
 import kotlin.test.assertTrue
 
 /**
- * Group E probe (622-Y, AD-622-09): pins ELK's own 0/N-connection comment-attachment fallback
- * on real data, rather than assuming it from the source.
- *
  * `CommentPreprocessor` lifts a comment box out for `CommentPostprocessor`'s above/below
- * placement only when it has *exactly one* connection to a port of degree 1. `annotation-and-
- * group.bpmn` (the enrolled golden) exercises that single-connection path. `annotation-multi-
- * host.bpmn` has one `TextAnnotation` with **two** associations — `Task_1` and `Task_2` each
- * point at it — which disqualifies the lift-out, so ELK's own documented fallback applies:
- * "processed normally, i.e. they are treated as regular nodes". `BpmnToElkMapper.trackAnnotations`
- * maps every association regardless of count (622-Y group E), so this is what actually runs
- * through the engine rather than a guess at what *would* happen.
+ * placement only when it has *exactly one* connection to a port of degree 1.
+ * `annotation-multi-host.bpmn` has one `TextAnnotation` with **two** associations —
+ * `Task_1` and `Task_2` each point at it — which disqualifies the lift-out, so ELK's own
+ * documented fallback applies: annotations with more than one connection are processed
+ * normally, i.e. treated as regular nodes. `BpmnToElkMapper.trackAnnotations` maps every
+ * association regardless of count, so both routes reach the engine.
  *
- * Un-enrolled: no golden, no [LAYOUT_CORPUS_FIXTURES] entry, no baseline row (AD-622-24's
- * generalised rule) — this probe only asserts the fixture lays out to structurally valid DI and
- * that both associations produced a real edge, recording the annotation's resulting geometry so
- * a future session enrolling this fixture (or investigating a `Group_1`-scale defect) starts
- * from measured fact.
+ * This fixture is not enrolled in the layout corpus (no golden, no baseline row); this probe
+ * only asserts the fixture lays out to structurally valid DI and that both associations
+ * produced a real edge, recording the annotation's resulting geometry for reference.
  */
 class AnnotationMultiHostProbeTest {
 
@@ -49,7 +43,7 @@ class AnnotationMultiHostProbeTest {
             "[annotation-multi-host] Anno_1 laid out at $annotation; " +
                 "Assoc_1=${assoc1!!.waypoints}, Assoc_2=${assoc2!!.waypoints} " +
                 "(un-enrolled probe — no baseline; pins ELK's regular-node fallback for a " +
-                "multi-connection comment box, per PLAN-622-Y.md group E)",
+                "multi-connection comment box)",
         )
     }
 

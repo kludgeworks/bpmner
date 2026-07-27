@@ -205,6 +205,52 @@ class BpmnSubProcessValidationTest {
     }
 
     @Test
+    fun `validator rejects an event subprocess with a mixed triggered and plain start event`() {
+        // Row 1 (REVIEW-622-Y): `startEvents.all { NONE }` missed the mixed case where one start
+        // is triggered and another is plain — `all()` evaluates false and the plain start's
+        // missing trigger goes unflagged.
+        val definition =
+            BpmnDefinition(
+                processId = "Process_1",
+                processName = "Handle request",
+                nodes =
+                listOf(
+                    BpmnStartEvent("StartEvent_1", "Received"),
+                    BpmnUserTask("Task_work", "Work"),
+                    BpmnEndEvent("EndEvent_1", "Completed"),
+                    BpmnEventSubProcess("SubProcess_handler", "Handle error"),
+                    BpmnStartEvent(
+                        "Inner_start_triggered",
+                        "On error",
+                        eventDefinition = BpmnErrorEventDefinition("Error_1"),
+                        parentRef = "SubProcess_handler",
+                    ),
+                    BpmnStartEvent("Inner_start_plain", "Begin", parentRef = "SubProcess_handler"),
+                    BpmnEndEvent("Inner_end", "Handled", parentRef = "SubProcess_handler"),
+                ),
+                sequences =
+                listOf(
+                    BpmnEdge("Flow_1", "StartEvent_1", "Task_work"),
+                    BpmnEdge("Flow_2", "Task_work", "EndEvent_1"),
+                    BpmnEdge(
+                        "Flow_in_triggered",
+                        "Inner_start_triggered",
+                        "Inner_end",
+                        parentRef = "SubProcess_handler",
+                    ),
+                    BpmnEdge("Flow_in_plain", "Inner_start_plain", "Inner_end", parentRef = "SubProcess_handler"),
+                ),
+                errors = listOf(BpmnErrorRef(id = "Error_1", code = "ERR")),
+            )
+
+        val errors = validator.validate(definition).joinToString("\n")
+        assertContains(
+            errors,
+            "event subprocess 'SubProcess_handler' start event must declare a triggering event definition",
+        )
+    }
+
+    @Test
     fun `validator rejects a cyclic subprocess parentRef chain`() {
         val definition =
             BpmnDefinition(

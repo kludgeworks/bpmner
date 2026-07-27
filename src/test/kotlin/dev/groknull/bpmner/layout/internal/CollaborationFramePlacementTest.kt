@@ -17,8 +17,6 @@ import kotlin.test.assertTrue
 
 class CollaborationFramePlacementTest {
 
-    // ---- lanes: single participant, no pool stacking triggered ----
-
     @Test
     fun `projects ordered full-width lane bands and ledgers member translations`() {
         val model = PlacementTestSkeletons.parse(BpmnToElkMapperTest.COLLABORATION_LANES_XML)
@@ -188,8 +186,6 @@ class CollaborationFramePlacementTest {
         assertEquals(Rect(440.0, 260.0, 30.0, 60.0), ctx.labels["Participant_external"])
     }
 
-    // ---- pools: >=2 white-box participants stack into a shared column ----
-
     @Test
     fun `stacks two white-box pools into a shared full-width band and ledgers the move`() {
         val ctx = twoPoolContext()
@@ -292,8 +288,6 @@ class CollaborationFramePlacementTest {
             mutableSetOf(),
         )
     }
-
-    // ---- black box: bands below the white-box union, message flows regenerated ----
 
     @Test
     fun `regenerates a direct route from the fixed task to the relocated band`() {

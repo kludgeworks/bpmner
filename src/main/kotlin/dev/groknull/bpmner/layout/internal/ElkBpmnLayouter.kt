@@ -29,16 +29,12 @@ import java.io.ByteArrayOutputStream
 @Service
 internal class ElkBpmnLayouter : BpmnLayoutPort {
 
-    // AD-622-20/L2 (622-Y): the bpmner.layered carrier (custom-registered algorithm wrapping
-    // stock ElkLayered for processor injection) is deleted — four stages shipped zero
-    // injected processors, and its one remaining candidate consumer (lane banding, via
-    // IN_LAYER_SUCCESSOR_CONSTRAINTS) is unbuilt and the carrier could not have served it
-    // anyway (its injection path refuses hierarchical graphs). Stock `layered` registration
-    // is all production needs.
+    /**
+     * ELK requires algorithm registration outside OSGi. [LayoutMetaDataService] is a
+     * singleton that ignores duplicate registrations, so construction-time registration is safe.
+     */
     @PostConstruct
     fun registerElkLayoutAlgorithm() {
-        // ELK requires algorithm registration outside OSGi. LayoutMetaDataService is a
-        // singleton that ignores duplicate registrations, so construction-time registration is safe.
         LayoutMetaDataService.getInstance().registerLayoutMetaDataProviders(LayeredMetaDataProvider())
     }
 

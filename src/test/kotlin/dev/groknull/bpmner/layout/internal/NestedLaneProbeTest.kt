@@ -11,25 +11,15 @@ import kotlin.test.assertContains
 import kotlin.test.assertFailsWith
 
 /**
- * L5 spike (622-Y): what is the current stance on nested lanes (`tLane/childLaneSet`, XSD
- * `Semantic.xsd:941`)? Nothing in `src/main` referenced `childLaneSet` before this probe.
+ * A lane carrying a `childLaneSet` (`tLane/childLaneSet`) throws rather than mapping
+ * silently: a parent lane with nested lanes carries no `flowNodeRef`s of its own, and
+ * without this check its descendants — never claimed by any lane's `flowNodeRefs` — would
+ * silently fall through to the top-level process mapping and render as ordinary unlaned
+ * nodes. `mapLane` fails loudly instead.
  *
- * **Verdict: nested lanes are unsupported, and before this probe that failed *silently* —
- * a real defect this probe fixes rather than merely records.** A lane that delegates to a
- * `childLaneSet` (the BPMN-conformant shape: a parent lane with nested lanes carries no
- * `flowNodeRef`s of its own) mapped to a zero-height ghost `ElkNode` compound, while its
- * descendants (never claimed by any lane's `flowNodeRefs`) silently fell through to the
- * top-level process mapping and rendered as ordinary unlaned nodes — a broken diagram with
- * no error, confirmed empirically on the fixture below before the fix. `mapLane` now
- * throws when a lane carries a `childLaneSet`, converting a silent bad diagram into a loud,
- * clear failure (AD-622-10's "assert, don't mutate" applied to a construct this epic never
- * implements, not one it renders wrong).
- *
- * Nested lanes are out of this epic's supported profile — not named as a goal in the epic
- * issue, and #591's lane work never claimed it. Should nested-lane support become a real
- * requirement, this probe is the starting point: `mapLane` needs to recurse into
- * `childLaneSet` and `CollaborationFramePlacement.projectLaneBands` needs a nested-band
- * layout, neither of which this epic scopes.
+ * Nested lanes are outside the currently supported profile; adding support would require
+ * `mapLane` to recurse into `childLaneSet` and `CollaborationFramePlacement.projectLaneBands`
+ * to lay out nested bands.
  */
 class NestedLaneProbeTest {
 

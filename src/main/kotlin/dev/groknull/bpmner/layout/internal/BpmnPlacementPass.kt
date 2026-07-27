@@ -87,9 +87,7 @@ internal object BpmnPlacementPass {
         pipeline.forEach { it.process(ctx) }
     }
 
-    // CollaborationFramePlacement must run before ElkLayoutResultCopy: the latter's
-    // copyNodeLabels reads each node's FINAL (post-stacking) ctx.shapes position, so
-    // white-box lane/pool stacking must already be settled by the time it runs.
+    /** Order matters: CollaborationFramePlacement must precede ElkLayoutResultCopy's post-stacking label copy. */
     private val pipeline = listOf(
         NodeShapeCopy,
         SequenceEdgeElkCopy,

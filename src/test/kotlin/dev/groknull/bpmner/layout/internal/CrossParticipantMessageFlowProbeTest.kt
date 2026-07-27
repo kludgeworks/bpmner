@@ -10,42 +10,16 @@ import kotlin.math.abs
 import kotlin.test.assertTrue
 
 /**
- * P1 probe (622-Y, AD-622-19): does including cross-participant message flows as real ELK
- * edges (option B — `mapMessageFlows`'s guard at `:416` removed) perturb a participant's own
- * *internal* layout, or is the exclusion in the current docstring just unproven caution?
+ * Cross-participant message flows are deliberately excluded from the ELK graph
+ * (`BpmnToElkMapper.mapMessageFlows` guards against mapping them as real ELK edges): mapping
+ * them measurably perturbs a participant's own internal layout. Laying out
+ * `miwg-c2-four-pools.bpmn` with the guard removed moves `Task_receive_order` ~58px
+ * vertically relative to its own pool (`Participant_retailer`) — a real internal reordering
+ * from the cross-hierarchy edges' port dummies feeding the shared crossing minimisation, not
+ * a uniform resize.
  *
- * **Verdict: perturbation is real — the falsifying half of AD-622-19's upgraded probe fires.**
- * Laid out `miwg-c2-four-pools.bpmn` with the guard removed and compared each participant's
- * children's bounds *relative to their own participant* against the guard-in-place baseline
- * (this test's committed assertion). Three of four participants (customer, warehouse,
- * carrier) were unchanged relative to their own bounds. `Participant_retailer` was not:
- *
- * | Node | Guard in place (rel. x, y) | Guard removed (rel. x, y) |
- * | --- | --- | --- |
- * | `Task_receive_order` | (224.0, 117.3) | (224.0, 59.2) |
- * | `SubProcess_fulfil` | (414.0, 54.8) | (419.0, 32.5) |
- *
- * `Task_receive_order` moved ~58px vertically relative to its own pool — a real internal
- * reordering from the cross-hierarchy edges' port dummies feeding the shared crossing
- * minimisation, not a uniform resize (every participant also grew taller, which is expected
- * and not perturbation by itself). This confirms PR #614's docstring rationale rather than
- * falsifying it: naive option B measurably perturbs `Participant_retailer`'s internal layout
- * for a route that would be routed once and never revisited.
- *
- * Per AD-622-19's own pre-recorded decision rule ("if internal layouts are perturbed
- * materially ... the corrected-C fallback is selected on evidence rather than on taste"),
- * this session's evidence selects the fallback. It does **not** settle whether the plan's
- * refinement — explicit `ElkPort`s with a declared `PORT_SIDE` on the participant (§2.2(b)),
- * rather than letting auto-generated hierarchical port dummies free-float — would avoid this
- * specific perturbation; that prototype is unbuilt and is the next probe, not this one.
- * Scoping corrected-C's extent, or building and re-probing §2.2(b), is the architect's call
- * (AD-622-13 already names corrected-C's extra scope as something to be named explicitly,
- * not absorbed into this session).
- *
- * The guard stays in place. This test pins the guard-in-place baseline as a regression
- * guard: if `Task_receive_order`'s position ever drifts from this baseline absent an
- * intentional mapper change, that is a signal this probe's premise has changed and P1
- * should be re-run.
+ * This test pins `Task_receive_order`'s position relative to `Participant_retailer` as a
+ * regression guard for the guard-in-place baseline.
  */
 class CrossParticipantMessageFlowProbeTest {
     @Test
@@ -67,14 +41,6 @@ class CrossParticipantMessageFlowProbeTest {
     private companion object {
         const val TOLERANCE = 0.1
         const val EXPECTED_REL_X = 224.03515625
-
-        // Was 117.25 before P3/AD-622-42 deleted CollaborationShapePlacement.centerContentInBand:
-        // that compensation was not quite the zero vector AD-622-42 predicted for this fixture,
-        // so removing it shifts the row down by the amount the compensation had been pulling it
-        // up. This is the deliberate P3 deletion, not a mapper regression.
-        // Was 127.0 before Q2/AD-622-43 declared SPACING_LABEL_NODE (and the other previously
-        // undeclared dependent spacings) via LayeredSpacings.withBaseValue — a corpus-wide
-        // spacing change that grows every participant, including this one, deliberately.
         const val EXPECTED_REL_Y = 137.0
     }
 }

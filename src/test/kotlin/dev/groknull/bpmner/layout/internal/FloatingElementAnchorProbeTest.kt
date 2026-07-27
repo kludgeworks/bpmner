@@ -9,12 +9,12 @@ import org.junit.jupiter.api.Test
 import kotlin.test.assertTrue
 
 /**
- * V6 (622-Y, AD-622-35): a floating element (no incoming/outgoing sequence flow to its
- * enclosing scope — an event subprocess or a compensation-handler task) becomes its own ELK
- * component. `SEPARATE_CONNECTED_COMPONENTS = true` already guarantees it never overlaps the
- * main flow; `CONSIDER_MODEL_ORDER_COMPONENTS = MODEL_ORDER` (`BpmnToElkMapper.kt`) additionally
- * orders the packer's rows by BPMN declaration order, so the main flow — declared first — sets
- * row 1 and the floating element wraps to the row below it.
+ * A floating element (no incoming/outgoing sequence flow to its enclosing scope — an event
+ * subprocess or a compensation-handler task) becomes its own ELK component.
+ * `SEPARATE_CONNECTED_COMPONENTS = true` guarantees it never overlaps the main flow;
+ * `CONSIDER_MODEL_ORDER_COMPONENTS = MODEL_ORDER` (`BpmnToElkMapper.kt`) additionally orders
+ * the packer's rows by BPMN declaration order, so the main flow — declared first — sets row 1
+ * and the floating element wraps to the row below it.
  *
  * Live only on the flat (non-collaboration) path — the root's `HIERARCHY_HANDLING` is
  * `SEPARATE_CHILDREN`, so a `process` fixture exercises it; `applyParticipantProfile`/
@@ -100,8 +100,8 @@ class FloatingElementAnchorProbeTest {
         }
     }
 
-    // AD-622-35: the model-order rule. The main flow is declared first, so the floating
-    // component (declared after it) must land below the main flow's bottom edge.
+    // Model-order rule: the main flow is declared first, so the floating component
+    // (declared after it) must land below the main flow's bottom edge.
     private fun assertBelow(precedingInModelOrder: List<Map<String, Double>>, floating: Map<String, Double>) {
         val precedingBottom = precedingInModelOrder.maxOf { it["y"]!! + it["height"]!! }
         assertTrue(

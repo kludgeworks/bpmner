@@ -41,6 +41,7 @@ import dev.groknull.bpmner.bpmn.MultiInstanceLoopCharacteristics
 import dev.groknull.bpmner.bpmn.MultiInstanceMode
 import dev.groknull.bpmner.bpmn.RetryableBpmnGenerationException
 import dev.groknull.bpmner.bpmn.StandardLoopCharacteristics
+import dev.groknull.bpmner.conformance.internal.adapter.outbound.BpmnXsdValidator
 import org.xmlunit.assertj.XmlAssert
 import org.xmlunit.assertj.XmlAssert.assertThat
 import kotlin.test.Test
@@ -218,6 +219,39 @@ class BpmnDefinitionToXmlConverterTest {
             BpmnDataOutputAssociation("DataOutputAssociation_archive", "act-archive", "DataStoreRef_Orders"),
         ),
     )
+
+    @Test
+    fun `data flow elements are written before artifacts per BPMN's tProcess content model`() {
+        // Semantic.xsd's tProcess type is a sequence of flowElement* followed by artifact* —
+        // the two groups may not be interleaved. dataObjectReference/dataStoreReference are
+        // flowElements; textAnnotation/association are artifacts. A definition exercising both
+        // groups together must still produce schema-valid BPMN, or the writer has regressed to
+        // emitting them out of order.
+        val definition = BpmnDefinition(
+            processId = "Process_DataAndArtifacts",
+            processName = "Data elements alongside artifacts",
+            nodes =
+            listOf(
+                BpmnStartEvent("StartEvent_1", "Start"),
+                BpmnUserTask("act-place", "Place Order"),
+                BpmnEndEvent("EndEvent_1", "End"),
+            ),
+            sequences =
+            listOf(
+                BpmnEdge("F1", "StartEvent_1", "act-place"),
+                BpmnEdge("F2", "act-place", "EndEvent_1"),
+            ),
+            dataObjectReferences = listOf(BpmnDataObjectReference("DataObjectRef_Order", "Order")),
+            dataStoreReferences = listOf(BpmnDataStoreReference("DataStoreRef_Orders", "Orders DB")),
+            annotations = listOf(BpmnTextAnnotation("TextAnnotation_1", "Note about the order")),
+            associations = listOf(BpmnAssociation("Association_1", "act-place", "TextAnnotation_1")),
+        )
+
+        val xml = converter.render(definition).xml
+
+        val issues = BpmnXsdValidator().validateDetailed(xml)
+        assertTrue(issues.isEmpty(), "expected schema-valid BPMN but XSD validation reported: $issues")
+    }
 
     @Test
     fun `task without multiInstance emits no loop characteristics`() {

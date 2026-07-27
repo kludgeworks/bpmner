@@ -95,23 +95,12 @@ data class BpmnDefinition(
 ) {
 
     /**
-     * Model-intrinsic structural validation — checks that are pure properties of the graph
-     * topology itself, with no external policy or naming knowledge required.
-     *
-     * Returns a (possibly empty) list of error messages following the
-     * [LaidOutProcessGraph.validateOwnership] idiom: never throws, callers accumulate errors.
-     * [dev.groknull.bpmner.conformance.internal.domain.BpmnDefinitionValidator] delegates to this method for
-     * these structural checks and handles non-intrinsic policy checks itself.
-     *
-     * Checks performed:
-     * - No duplicate node ids or edge ids in [nodes] / [sequences].
-     * - Every edge's [BpmnEdge.sourceRef] and [BpmnEdge.targetRef] resolve to a node id;
-     *   a self-referencing edge (sourceRef == targetRef) is also flagged.
-     * - At least one top-level [BpmnStartEvent] and at least one top-level [BpmnEndEvent]
-     *   (i.e. [BpmnNode.parentRef] == null for both).
-     * - Every [BpmnDataInputAssociation]/[BpmnDataOutputAssociation] resolves its activity
-     *   reference to a node id and its data reference to a [BpmnDataObjectReference] or
-     *   [BpmnDataStoreReference] id.
+     * Model-intrinsic structural checks: duplicate node/edge ids, dangling or self-referencing
+     * edge refs, at least one top-level [BpmnStartEvent]/[BpmnEndEvent], and every data
+     * input/output association resolving its activity and data-reference ids. Never throws;
+     * returns a (possibly empty) list of error messages.
+     * [dev.groknull.bpmner.conformance.internal.domain.BpmnDefinitionValidator] delegates here for
+     * these checks and handles non-intrinsic policy checks itself.
      */
     @Tool
     fun validateStructure(): List<String> {
@@ -137,7 +126,7 @@ data class BpmnDefinition(
         .keys.map { "duplicate $kind id: $it" }
 
     private fun edgeReferenceErrors(edge: BpmnEdge, nodeIdSet: Set<String>): List<String> = buildList {
-        val label = edge.id.ifBlank { "<blank>" }
+        val label = edge.id.ifBlank { BLANK_ID_LABEL }
         if (edge.sourceRef !in nodeIdSet) add("edge $label sourceRef '${edge.sourceRef}' does not match any node id")
         if (edge.targetRef !in nodeIdSet) add("edge $label targetRef '${edge.targetRef}' does not match any node id")
         if (edge.sourceRef == edge.targetRef) add("edge $label must not self-reference source and target")
@@ -148,7 +137,7 @@ data class BpmnDefinition(
         nodeIdSet: Set<String>,
         dataRefIdSet: Set<String>,
     ): List<String> = buildList {
-        val label = assoc.id.ifBlank { "<blank>" }
+        val label = assoc.id.ifBlank { BLANK_ID_LABEL }
         if (assoc.activityRef !in nodeIdSet) {
             add("data input association $label activityRef '${assoc.activityRef}' does not match any node id")
         }
@@ -165,7 +154,7 @@ data class BpmnDefinition(
         nodeIdSet: Set<String>,
         dataRefIdSet: Set<String>,
     ): List<String> = buildList {
-        val label = assoc.id.ifBlank { "<blank>" }
+        val label = assoc.id.ifBlank { BLANK_ID_LABEL }
         if (assoc.activityRef !in nodeIdSet) {
             add("data output association $label activityRef '${assoc.activityRef}' does not match any node id")
         }
@@ -177,6 +166,8 @@ data class BpmnDefinition(
         }
     }
 }
+
+private const val BLANK_ID_LABEL: String = "<blank>"
 
 data class BpmnMessageRef(
     @field:NotBlank
@@ -406,9 +397,6 @@ data class BpmnStartEvent(
     override fun withName(name: String?): BpmnNode = copy(name = name)
 }
 
-// This file is excluded from Sonar's cpd (duplication) check: the task-type properties below
-// repeat by necessity, since each concrete type's annotations publish that type's JSON schema
-// (AD-622-41). Hoisting them into a shared base class would delete the schema they generate.
 data class BpmnUserTask(
     @field:NotBlank
     @get:JsonPropertyDescription(NODE_ID_DESCRIPTION)

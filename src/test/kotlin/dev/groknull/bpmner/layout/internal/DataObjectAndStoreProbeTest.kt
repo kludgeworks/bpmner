@@ -9,18 +9,17 @@ import org.junit.jupiter.api.Test
 import kotlin.test.assertTrue
 
 /**
- * Group E item 2 probe (622-Y, form 1): pins that DataObjectReference/DataStoreReference lay out
- * via the same real ELK comment-attachment mechanism as TextAnnotation (`BpmnToElkMapper.
- * trackDataReferences`), on real data rather than assumed.
+ * `DataObjectReference`/`DataStoreReference` lay out via the same ELK comment-attachment
+ * mechanism as `TextAnnotation` (`BpmnToElkMapper.trackDataReferences`).
  *
  * `data-object-and-store.bpmn`: `Task_place` writes `DataObjectRef_Order` (one connection —
  * lifted out, real comment box); `Task_archive` reads `DataObjectRef_Order` and writes
- * `DataStoreRef_Orders`. `DataObjectRef_Order` has *two* associations (from `Task_place` and to
- * `Task_archive`) — the same 0/N-connection fallback `AnnotationMultiHostProbeTest` already pinned
- * for annotations, now exercised for a data reference.
+ * `DataStoreRef_Orders`. `DataObjectRef_Order` has *two* associations (from `Task_place` and
+ * to `Task_archive`) — the same 0/N-connection fallback `AnnotationMultiHostProbeTest` pins
+ * for annotations, exercised here for a data reference.
  *
- * Un-enrolled for now: no golden, no [LAYOUT_CORPUS_FIXTURES] entry, no baseline row (AD-622-24) —
- * this probe records the resulting geometry so a follow-up session can enrol it once reviewed.
+ * This fixture is not enrolled in the layout corpus (no golden, no baseline row); this probe
+ * records the resulting geometry for reference.
  */
 class DataObjectAndStoreProbeTest {
 
@@ -69,7 +68,7 @@ class DataObjectAndStoreProbeTest {
 
         println(
             "[data-object-and-store] DataObjectRef_Order=$dataObjectRef, DataStoreRef_Orders=$dataStoreRef " +
-                "(un-enrolled probe — no baseline; pins the group E item 2 layout mechanism per PLAN-622-Y.md)",
+                "(un-enrolled probe — no baseline; pins the data-reference layout mechanism)",
         )
     }
 
