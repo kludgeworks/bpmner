@@ -8,6 +8,7 @@
 	"updateExistingSummaryComment": true,
 	"fixWithAI": true,
 	"excludeAuthors": ["dependabot[bot]", "renovate[bot]"],
+	"disabledLabels": ["autorelease:*"],
 	"ignorePatterns": "node_modules/**\ndist/**\ncoverage/**\nMODULE.bazel.lock\nmise.lock\npnpm-lock.yaml\n**/*.generated.*",
 	"rules": [
 		{
