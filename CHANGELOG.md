@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.3.1](https://github.com/kludgeworks/bpmner/compare/bpmner-v0.3.0...bpmner-v0.3.1) (2026-07-27)
+
+
+### Bug Fixes
+
+* **release:** drop broken post-publish smoke test and clear Node 20 deprecation warning ([#648](https://github.com/kludgeworks/bpmner/issues/648)) ([99a1db4](https://github.com/kludgeworks/bpmner/commit/99a1db4ed98e972c64611a4de44f1b05c9d9b65a))
+* skip Greptile reviews on release-please PRs ([#646](https://github.com/kludgeworks/bpmner/issues/646)) ([a5fc9ea](https://github.com/kludgeworks/bpmner/commit/a5fc9eac8936aacce705234b24cedb6a661773d5))
+
 ## [0.3.0](https://github.com/kludgeworks/bpmner/compare/bpmner-v0.2.0...bpmner-v0.3.0) (2026-07-27)
 
 
