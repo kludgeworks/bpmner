@@ -111,10 +111,10 @@ springboot(
 
 tar(
     name = "bpmner_jar_layer",
-    srcs = [":bpmner_app"],
+    srcs = [":bpmner_app.jar"],
     mtree = [
         "app type=dir",
-        "app/bpmner.jar type=file content=$(location :bpmner_app)",
+        "app/bpmner.jar type=file content=$(location :bpmner_app.jar)",
     ],
 )
 
