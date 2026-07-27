@@ -200,7 +200,7 @@ The release also publishes a minimal Java OCI image index to `ghcr.io/kludgework
 
 ```bash
 docker pull ghcr.io/kludgeworks/bpmner:<version>
-docker run --rm -p 8080:8080 ghcr.io/kludgeworks/bpmner:<version>
+docker run --rm -p 8080:8080 ghcr.io/kludgeworks/bpmner:<version> --spring.profiles.active=web
 ```
 
 ## Contributing
