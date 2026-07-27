@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.2](https://github.com/kludgeworks/bpmner/compare/bpmner-v0.3.1...bpmner-v0.3.2) (2026-07-27)
+
+
+### Bug Fixes
+
+* **release:** package the springboot fat jar into the OCI image ([#651](https://github.com/kludgeworks/bpmner/issues/651)) ([9960946](https://github.com/kludgeworks/bpmner/commit/9960946a2a44e9c66303ef19c9ee20a440d7e976))
+
 ## [0.3.1](https://github.com/kludgeworks/bpmner/compare/bpmner-v0.3.0...bpmner-v0.3.1) (2026-07-27)
 
 
