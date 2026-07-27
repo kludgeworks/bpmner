@@ -11,6 +11,7 @@ on:
 permissions:
   contents: write
   issues: write
+  packages: write
   pull-requests: write
 
 jobs:
@@ -67,3 +68,31 @@ jobs:
         run: |
           gh release upload ${{ steps.release.outputs.tag_name }} \
             "bpmner-${{ steps.release.outputs.version }}.jar" SHA256SUMS
+
+      - name: Authenticate to GitHub Container Registry
+        if: ${{ steps.release.outputs.release_created == 'true' }}
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish multi-architecture container image
+        if: ${{ steps.release.outputs.release_created == 'true' }}
+        run: bazel run --stamp --embed_label="${{ steps.release.outputs.version }}" //src:push_bpmner_image
+
+      - name: Enable arm64 image smoke test
+        if: ${{ steps.release.outputs.release_created == 'true' }}
+        uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3
+
+      - name: Smoke test published container image
+        if: ${{ steps.release.outputs.release_created == 'true' }}
+        env:
+          IMAGE: ghcr.io/kludgeworks/bpmner:${{ steps.release.outputs.version }}
+        run: |
+          platforms="$(docker manifest inspect "$IMAGE" | jq -r '.manifests[] | select(.platform.os == "linux") | "\(.platform.os)/\(.platform.architecture)"' | sort)"
+          test "$platforms" = $'linux/amd64\nlinux/arm64'
+          for platform in linux/amd64 linux/arm64; do
+            docker pull --platform "$platform" "$IMAGE"
+            docker run --rm --platform "$platform" "$IMAGE" --spring.main.web-application-type=none
+          done

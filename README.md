@@ -196,6 +196,13 @@ Merges to `main` feed [release-please](https://github.com/googleapis/release-ple
 
 When a release is created, the workflow builds `//src:bpmner_app` and attaches the versioned jar plus a `SHA256SUMS` checksum file to the GitHub release. The workflow authenticates as the `kludgebot` GitHub App rather than the repository-provided `GITHUB_TOKEN`, since GitHub does not let `GITHUB_TOKEN`-authored events trigger other workflows — a real actor identity is required so status checks actually run against the release pull request.
 
+The release also publishes a minimal Java OCI image index to `ghcr.io/kludgeworks/bpmner` with the immutable release version and `latest` tags. Both `linux/amd64` and `linux/arm64` are supported; Docker selects the matching platform automatically. Select a provider profile and supply its API key; this example uses OpenAI.
+
+```bash
+docker pull ghcr.io/kludgeworks/bpmner:<version>
+docker run --rm -p 8080:8080 -e SPRING_PROFILES_ACTIVE=web,openai -e OPENAI_API_KEY ghcr.io/kludgeworks/bpmner:<version>
+```
+
 ## Contributing
 
 We follow [Conventional Commits](https://www.conventionalcommits.org/). Please refer to the [Linter README](linter/README.md) for details on adding new rules.

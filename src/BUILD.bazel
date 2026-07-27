@@ -1,11 +1,14 @@
 # Copyright 2026 The Project Contributors
 # SPDX-License-Identifier: MIT
 
+load("@aspect_bazel_lib//lib:expand_template.bzl", "expand_template")
 load("@rules_java//java:defs.bzl", "java_library")
 load("@rules_kotlin//kotlin:core.bzl", "kt_compiler_plugin", "kt_plugin_cfg")
 load("@rules_kotlin//kotlin:jvm.bzl", "kt_jvm_binary", "kt_jvm_library")
 load("@rules_kotlin//kotlin:lint.bzl", "ktlint_test")
+load("@rules_oci//oci:defs.bzl", "oci_image", "oci_image_index", "oci_push")
 load("@rules_spring//springboot:springboot.bzl", "springboot")
+load("@tar.bzl//tar:tar.bzl", "tar")
 load("//tools/kotlin:spring.bzl", "SPRING_OPEN_ANNOTATIONS", "spring_allopen_plugins")
 
 package(default_visibility = ["//visibility:public"])
@@ -104,6 +107,62 @@ springboot(
     boot_app_class = "dev.groknull.bpmner.BpmnerApplicationKt",
     boot_launcher_class = "org.springframework.boot.loader.launch.JarLauncher",
     java_library = ":bpmner_core",
+)
+
+tar(
+    name = "bpmner_jar_layer",
+    srcs = [":bpmner_app"],
+    mtree = [
+        "app type=dir",
+        "app/bpmner.jar type=file content=$(location :bpmner_app)",
+    ],
+)
+
+oci_image(
+    name = "bpmner_image_amd64",
+    base = "@distroless_java21_debian12_linux_amd64",
+    cmd = ["/app/bpmner.jar"],
+    entrypoint = [
+        "/usr/bin/java",
+        "-jar",
+    ],
+    tars = [":bpmner_jar_layer"],
+)
+
+oci_image(
+    name = "bpmner_image_arm64",
+    base = "@distroless_java21_debian12_linux_arm64_v8",
+    cmd = ["/app/bpmner.jar"],
+    entrypoint = [
+        "/usr/bin/java",
+        "-jar",
+    ],
+    tars = [":bpmner_jar_layer"],
+)
+
+oci_image_index(
+    name = "bpmner_image",
+    images = [
+        ":bpmner_image_amd64",
+        ":bpmner_image_arm64",
+    ],
+)
+
+expand_template(
+    name = "bpmner_image_tags",
+    out = "bpmner_image_tags.txt",
+    stamp_substitutions = {"0.0.0": "{{BUILD_EMBED_LABEL}}"},
+    template = [
+        "0.0.0",
+        "latest",
+    ],
+)
+
+oci_push(
+    name = "push_bpmner_image",
+    image = ":bpmner_image",
+    remote_tags = ":bpmner_image_tags",
+    repository = "ghcr.io/kludgeworks/bpmner",
 )
 
 # Dev-only plain JVM binary so IntelliJ's Bazel plugin renders a run/debug gutter
