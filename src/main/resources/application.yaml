@@ -38,6 +38,9 @@ bpmner:
     # Default off. Override via env (`BPMNER_LOGGING_DUMP_ARTIFACTS=true`) or a dev/diagnostic
     # profile when investigating a failing run — intermediate XML is verbose at production scale.
     dump-artifacts: ${BPMNER_LOGGING_DUMP_ARTIFACTS:false}
+    # Includes user prose, full prompts, and structured LLM responses. Opt in only for local
+    # diagnostics because process descriptions and model messages may contain sensitive data.
+    llm-interactions: ${BPMNER_LOGGING_LLM_INTERACTIONS:false}
   # Rule profile and per-rule severity overrides are now sourced from bpmner.pkl (via
   # BpmnerLintConfig). To override the conventions source, set bpmner.rules.config-uri to a
   # file: URI pointing at a local bpmner.pkl that amends the packaged BpmnerLintConfig.pkl.

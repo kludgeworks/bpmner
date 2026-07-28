@@ -5,3 +5,7 @@ logging:
   level:
     com.embabel.agent.core.ActionRunner: DEBUG
     dev.groknull.bpmner: DEBUG
+
+bpmner:
+  logging:
+    llm-interactions: true

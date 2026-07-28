@@ -9,10 +9,12 @@ import com.embabel.agent.api.common.autonomy.AgentProcessExecution
 import com.embabel.agent.core.AgentPlatform
 import com.embabel.agent.core.Budget
 import com.embabel.agent.core.ProcessOptions
+import com.embabel.agent.core.Verbosity
 import dev.groknull.bpmner.authoring.BpmnAgentInvoker
 import dev.groknull.bpmner.authoring.BpmnResult
 import dev.groknull.bpmner.authoring.internal.BpmnAuthoringBudgetConfig
 import dev.groknull.bpmner.bpmn.BpmnRequest
+import dev.groknull.bpmner.llm.LlmInteractionLoggingConfig
 import dev.groknull.bpmner.readiness.ProcessInputAssessment
 import org.jmolecules.architecture.onion.simplified.InfrastructureRing
 import org.springframework.stereotype.Component
@@ -22,6 +24,7 @@ import org.springframework.stereotype.Component
 internal class AgentPlatformBpmnAgentInvoker(
     private val agentPlatform: AgentPlatform,
     private val config: BpmnAuthoringBudgetConfig,
+    private val logging: LlmInteractionLoggingConfig,
 ) : BpmnAgentInvoker {
     override fun generate(
         request: BpmnRequest,
@@ -96,6 +99,7 @@ internal class AgentPlatformBpmnAgentInvoker(
     // progress/cost lines in the web UI.
     private fun syncGenerationProcessOptions(): ProcessOptions = ProcessOptions(
         budget = Budget(actions = config.generation),
+        verbosity = llmVerbosity(),
         ephemeral = true,
     )
 
@@ -103,7 +107,13 @@ internal class AgentPlatformBpmnAgentInvoker(
     // process must be persisted — `ephemeral = false`. See the note above on listeners.
     private fun asyncGenerationProcessOptions(): ProcessOptions = ProcessOptions(
         budget = Budget(actions = config.generation),
+        verbosity = llmVerbosity(),
         ephemeral = false,
+    )
+
+    private fun llmVerbosity(): Verbosity = Verbosity(
+        showPrompts = logging.llmInteractions,
+        showLlmResponses = logging.llmInteractions,
     )
 
     companion object {
