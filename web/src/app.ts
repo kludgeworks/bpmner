@@ -4,6 +4,11 @@
  */
 
 import BpmnViewer from "bpmn-js"
+import {
+	type CanvasViewport,
+	fitInitialViewport,
+	zoomBy,
+} from "./canvas-viewport"
 import { type ClarifyState, renderClarifyForm } from "./clarify-form"
 import {
 	type Diagnostic,
@@ -32,6 +37,7 @@ type ProgressUpdateEvent = {
 
 type BpmnSnapshotEvent = {
 	type: "BpmnSnapshotEvent"
+	stage: string
 	xml?: string
 	diagnostics?: Diagnostic[]
 	attemptNumber?: number
@@ -87,10 +93,6 @@ type ServerEvent =
 	| BpmnClarificationRequestEvent
 	| { type?: string }
 
-type BpmnCanvas = {
-	zoom: (mode: "fit-viewport") => void
-}
-
 type BpmnOverlays = {
 	remove: (filter: string | { type?: string }) => void
 	add: (
@@ -130,6 +132,14 @@ const clarifyRegionEl = getRequiredElement<HTMLElement>("clarify-region")
 const stageRailEl = getRequiredElement<HTMLElement>("stage-rail")
 const canvasStatus = getRequiredElement<HTMLElement>("canvas-status")
 const canvasEl = getRequiredElement<HTMLElement>("canvas")
+const zoomInBtn = getRequiredElement<HTMLButtonElement>("zoom-in-btn")
+const zoomOutBtn = getRequiredElement<HTMLButtonElement>("zoom-out-btn")
+const canvasViewport = viewer.get("canvas") as CanvasViewport
+const ZOOM_FACTOR = 1.2
+zoomInBtn.addEventListener("click", () => zoomBy(canvasViewport, ZOOM_FACTOR))
+zoomOutBtn.addEventListener("click", () =>
+	zoomBy(canvasViewport, 1 / ZOOM_FACTOR),
+)
 // Optional attempt counter in the diagnostics panel header (absent → no-op).
 const diagnosticsAttemptEl = document.getElementById("diagnostics-attempt")
 // Optional version footer (absent → no-op).
@@ -140,7 +150,6 @@ if (versionFooterEl) {
 
 let eventSource: EventSource | null = null
 let currentXml = ""
-let snapshotCount = 0
 /**
  * Serializes snapshot application. Each SSE message triggers an independent async handler.
  * DI-less intermediate snapshots resolve immediately as `pending` (no client layout is ever
@@ -190,7 +199,6 @@ generateBtn.addEventListener("click", async () => {
 	renderResultBar(resultBarEl, resultBarState)
 	currentXml = ""
 	currentProcessId = null
-	snapshotCount = 0
 	snapshotQueue = Promise.resolve()
 	settle = initialSettle()
 	stages = initialStages()
@@ -439,17 +447,15 @@ async function handleSnapshot(event: BpmnSnapshotEvent) {
 	const redrawn = outcome.status === "drawn"
 
 	if (redrawn) {
-		snapshotCount += 1
 		canvasStatus.textContent = ""
 		canvasStatus.classList.add("hidden")
 		// Progressive entrance — CSS-only, honours prefers-reduced-motion.
 		triggerCanvasEntrance()
 
-		// Zoom to fit the new diagram geometry. We defer this slightly so the browser
-		// has time to apply the entrance class and lay out the container, ensuring
-		// the bounding box calculations are accurate (fixes the off-screen leftmost element).
+		// Fit the authoritative initial geometry after the container has settled.
+		// Later snapshots must not overwrite the user's viewport.
 		requestAnimationFrame(() => {
-			;(viewer.get("canvas") as BpmnCanvas).zoom("fit-viewport")
+			fitInitialViewport(canvasViewport, event.stage)
 		})
 	} else {
 		const msg =
