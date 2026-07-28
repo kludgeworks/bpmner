@@ -25,8 +25,8 @@ class AssessReadinessTemplateTest {
         val prompt = render(BpmnRequest("When an order is submitted, review it, then ship it."))
 
         assertTrue(prompt.contains("Return only a structured ProcessInputAssessment object."))
-        assertTrue(prompt.contains("Do not invent actors"))
-        assertTrue(prompt.contains("Mark unsupported facts as missing"))
+        assertTrue(prompt.contains("Do not invent process facts"))
+        assertTrue(prompt.contains("Mark a process fact as missing only when"))
         // ReadinessDimension enum names reach the LLM via the JSON schema, not the prompt prose.
         // The per-dimension calibration paragraph stays — anchor on the most-misjudged dimension name.
         assertTrue(prompt.contains("BPMN_SUITABILITY"))
@@ -82,6 +82,30 @@ class AssessReadinessTemplateTest {
     fun `template omits clarification section when history is empty`() {
         val prompt = render(BpmnRequest("Ship order"))
         assertTrue(!prompt.contains("Prior clarification answers"))
+    }
+
+    @Test
+    fun `template limits clarification to material modelling decisions`() {
+        val prompt = render(BpmnRequest("Applications are reviewed and may proceed to an interview."))
+
+        assertTrue(prompt.contains("would materially change participants, activities, ordering"))
+        assertTrue(prompt.contains("Supply 2–4 short answer options for every question"))
+        assertTrue(prompt.contains("Never ask the user to enumerate activities, steps"))
+        assertTrue(prompt.contains("If any check fails, remove the question"))
+        assertTrue(prompt.contains("Refer to the relevant source statement"))
+        assertTrue(prompt.contains("Ask at most 3 questions"))
+        assertTrue(prompt.contains("BAD: What activities occur from reporting applications"))
+        assertTrue(prompt.contains("GOOD: Can multiple applications be active concurrently"))
+    }
+
+    @Test
+    fun `template permits harmless modelling defaults and inferred ordering`() {
+        val prompt = render(BpmnRequest("After probation, both parties submit ratings."))
+
+        assertTrue(prompt.contains("Infer order from ordinary language"))
+        assertTrue(prompt.contains("none start event is valid"))
+        assertTrue(prompt.contains("Do not ask for an explicit start trigger unless"))
+        assertTrue(prompt.contains("Score modelling sufficiency"))
     }
 
     private fun render(request: BpmnRequest): String {
