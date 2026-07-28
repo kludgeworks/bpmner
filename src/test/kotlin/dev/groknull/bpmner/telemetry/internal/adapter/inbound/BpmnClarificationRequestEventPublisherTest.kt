@@ -11,6 +11,8 @@ import com.embabel.agent.api.event.AgentProcessWaitingEvent
 import com.embabel.agent.core.AgentProcess
 import com.embabel.agent.core.hitl.FormBindingRequest
 import com.embabel.ux.form.Form
+import com.embabel.ux.form.RadioGroup
+import com.embabel.ux.form.RadioOption
 import dev.groknull.bpmner.readiness.BpmnClarificationAnswers
 import dev.groknull.bpmner.telemetry.BpmnClarificationRequestEvent
 import dev.groknull.bpmner.telemetry.BpmnStageEvent
@@ -53,6 +55,18 @@ class BpmnClarificationRequestEventPublisherTest {
         assertEquals(2, published.size)
         assertEquals(1, (published[0] as BpmnClarificationRequestEvent).round)
         assertEquals(2, (published[1] as BpmnClarificationRequestEvent).round)
+    }
+
+    @Test
+    fun `publishes bounded answer options for the current form question`() {
+        val prompt = "Can applications run concurrently?"
+        val process = processWithForm(prompt, listOf("Concurrently", "One at a time"))
+
+        publisher.onProcessEvent(AgentProcessWaitingEvent(process))
+
+        val event = published.single() as BpmnClarificationRequestEvent
+        assertEquals(prompt, event.prompt)
+        assertEquals(listOf("Concurrently", "One at a time"), event.options)
     }
 
     @Test
@@ -115,11 +129,25 @@ class BpmnClarificationRequestEventPublisherTest {
     // Helpers
     // -------------------------------------------------------------------------
 
-    private fun processWithForm(promptText: String): AgentProcess {
+    private fun processWithForm(
+        promptText: String,
+        options: List<String> = emptyList(),
+    ): AgentProcess {
         val process = mock(AgentProcess::class.java)
         `when`(process.id).thenReturn("proc-${promptText.take(10).replace(" ", "-")}")
+        val controls = options.takeIf { it.isNotEmpty() }
+            ?.let { values ->
+                listOf(
+                    RadioGroup(
+                        label = "Answer",
+                        options = values.map { RadioOption(it, it) },
+                        required = true,
+                        id = "answers",
+                    ),
+                )
+            }.orEmpty()
         val form = FormBindingRequest(
-            Form(promptText, emptyList(), "f1"),
+            Form(promptText, controls, "f1"),
             BpmnClarificationAnswers::class.java,
         )
         `when`(process.last(FormBindingRequest::class.java)).thenReturn(form)

@@ -10,14 +10,16 @@ import com.embabel.agent.core.AgentProcess
 
 /**
  * Published when a BPMN generation run parks in `AwaitingClarification`, carrying the round number,
- * total rounds allowed, and the human-readable question text (ARCHITECTURE.md §ss-4, ADR-ss-003).
+ * total rounds allowed, the human-readable question text, and any bounded answer options
+ * (ARCHITECTURE.md §ss-4, ADR-ss-003).
  *
  * Wire contract (docs/architecture.md §wire-contract): the Kotlin simple class name
  * `"BpmnClarificationRequestEvent"` is the SSE `type` discriminator; class name and property
  * names are API — do not rename without a client update.
  *
- * Fields use `round`/`maxRounds`/`prompt` (not `status` — ADR-ss-008: `AbstractAgentProcessEvent`
- * already exposes a `status` getter returning `AgentProcessStatusReport`).
+ * Fields use `round`/`maxRounds`/`prompt`/`options` (not `status` — ADR-ss-008:
+ * `AbstractAgentProcessEvent` already exposes a `status` getter returning
+ * `AgentProcessStatusReport`).
  *
  * The `prompt` is sourced from `process.last(FormBindingRequest::class.java).payload.title` — the
  * `FormBindingRequest` is re-pushed on every park, so this is always the current-round question,
@@ -31,4 +33,5 @@ class BpmnClarificationRequestEvent(
     val round: Int,
     val maxRounds: Int,
     val prompt: String,
+    val options: List<String> = emptyList(),
 ) : AbstractAgentProcessEvent(process)

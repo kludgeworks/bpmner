@@ -10,6 +10,7 @@
  */
 export type ClarifyState = {
 	prompt: string
+	options: string[]
 	round: number
 	maxRounds: number
 	submitting: boolean
@@ -30,7 +31,17 @@ export function buildClarifyFormHtml(state: ClarifyState): string {
 
 	let html = `<p class="clarify-indicator">${escapeHtml(indicator)}</p>`
 	html += `<p class="clarify-prompt">${escapeHtml(state.prompt)}</p>`
-	html += `<textarea class="clarify-answer" rows="4" placeholder="Enter your answer…"${disabledAttr}></textarea>`
+	if (state.options.length > 0) {
+		html +=
+			'<fieldset class="clarify-options"><legend>Select an answer</legend>'
+		for (const [index, option] of state.options.entries()) {
+			const id = `clarify-option-${index}`
+			html += `<label class="clarify-option" for="${id}"><input id="${id}" name="clarify-option" type="radio" value="${escapeHtml(option)}"${disabledAttr}>${escapeHtml(option)}</label>`
+		}
+		html += "</fieldset>"
+	} else {
+		html += `<textarea class="clarify-answer" rows="4" placeholder="Enter your answer…"${disabledAttr}></textarea>`
+	}
 	html += `<button class="clarify-submit" type="button"${disabledAttr}>Submit answer</button>`
 
 	if (state.error) {
@@ -60,9 +71,12 @@ export function renderClarifyForm(
 	const textarea =
 		container.querySelector<HTMLTextAreaElement>(".clarify-answer")
 
-	if (btn && textarea) {
+	if (btn) {
 		btn.addEventListener("click", () => {
-			const answer = textarea.value.trim()
+			const selected = container.querySelector<HTMLInputElement>(
+				'input[name="clarify-option"]:checked',
+			)
+			const answer = (selected?.value ?? textarea?.value ?? "").trim()
 			if (answer) {
 				onSubmit(answer)
 			}

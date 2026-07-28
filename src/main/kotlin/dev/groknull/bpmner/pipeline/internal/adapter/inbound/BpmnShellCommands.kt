@@ -7,6 +7,7 @@ package dev.groknull.bpmner.pipeline.internal.adapter.inbound
 
 import com.embabel.agent.shell.ShellCommands
 import dev.groknull.bpmner.authoring.GENERATED_CONTENT_PREFIX
+import dev.groknull.bpmner.llm.LlmInteractionLoggingConfig
 import dev.groknull.bpmner.pipeline.internal.domain.BpmnPreviewOrchestrator
 import dev.groknull.bpmner.pipeline.internal.domain.BpmnPreviewOrchestrator.PreviewResult
 import org.jmolecules.architecture.onion.simplified.InfrastructureRing
@@ -39,6 +40,7 @@ import org.springframework.shell.standard.ShellOption
 internal class BpmnShellCommands(
     private val shellCommands: ObjectProvider<ShellCommands>,
     private val previewOrchestrator: BpmnPreviewOrchestrator,
+    private val logging: LlmInteractionLoggingConfig,
 ) {
     private val logger = LoggerFactory.getLogger(BpmnShellCommands::class.java)
 
@@ -57,8 +59,8 @@ internal class BpmnShellCommands(
         val rendered = shellCommands.getObject().execute(
             intent = intentFor(description, outputFile),
             open = false,
-            showPrompts = false,
-            showLlmResponses = false,
+            showPrompts = logging.llmInteractions,
+            showLlmResponses = logging.llmInteractions,
             debug = false,
             state = false,
             toolDelay = false,

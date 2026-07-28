@@ -487,6 +487,27 @@ button:disabled:hover {
 	margin-bottom: var(--space-2);
 }
 
+.clarify-options {
+	display: grid;
+	gap: var(--space-1);
+	margin: 0 0 var(--space-2) 0;
+	padding: 0;
+	border: 0;
+}
+
+.clarify-options legend {
+	margin-bottom: var(--space-1);
+	font-size: 12px;
+	color: var(--ink-70);
+}
+
+.clarify-option {
+	display: flex;
+	gap: var(--space-1);
+	align-items: center;
+	cursor: pointer;
+}
+
 .clarify-error {
 	margin: var(--space-2) 0 0 0;
 	font-size: 12px;

@@ -13,8 +13,13 @@ import com.embabel.agent.api.annotation.State
 import com.embabel.agent.api.common.ActionContext
 import com.embabel.agent.api.common.OperationContext
 import com.embabel.agent.core.ActionRetryPolicy
+import com.embabel.agent.core.hitl.FormBindingRequest
 import com.embabel.agent.core.hitl.WaitFor
 import com.embabel.agent.domain.io.UserInput
+import com.embabel.ux.form.Form
+import com.embabel.ux.form.RadioGroup
+import com.embabel.ux.form.RadioOption
+import com.embabel.ux.form.TextArea
 import dev.groknull.bpmner.alignment.AlignmentVerdict
 import dev.groknull.bpmner.alignment.BpmnAligner
 import dev.groknull.bpmner.alignment.BpmnAlignmentReport
@@ -223,7 +228,10 @@ data class AwaitingClarification(
 
     // Pauses the process into WAITING and asks for typed answers.
     @Action
-    fun ask(): BpmnClarificationAnswers = WaitFor.formSubmission(promptFrom(assessment), BpmnClarificationAnswers::class.java)
+    fun ask(): BpmnClarificationAnswers {
+        WaitFor.awaitable(clarificationFormFrom(assessment))
+        error("Clarification form returned without parking the process")
+    }
 }
 
 @State
@@ -276,14 +284,35 @@ data class ValidationFailed(
 }
 
 private const val MAX_ROUNDS = 3 // max clarification rounds before Blocked
+private const val MIN_CLARIFICATION_OPTIONS = 2
+private const val MAX_CLARIFICATION_OPTIONS = 4
 
-private fun promptFrom(assessment: ProcessInputAssessment): String {
-    val questions = assessment.clarificationQuestions
-    return if (questions.isEmpty()) {
-        assessment.rationale.ifBlank { "Please provide clarification." }
+private fun clarificationFormFrom(assessment: ProcessInputAssessment): FormBindingRequest<BpmnClarificationAnswers> {
+    val question = assessment.clarificationQuestions.firstOrNull()
+    val prompt = question?.questionText ?: assessment.rationale.ifBlank { "Please provide clarification." }
+    val control = if (
+        question != null &&
+        question.options.size in MIN_CLARIFICATION_OPTIONS..MAX_CLARIFICATION_OPTIONS
+    ) {
+        RadioGroup(
+            label = "Answer",
+            options = question.options.map { RadioOption(label = it, value = it) },
+            required = true,
+            id = "answers",
+        )
     } else {
-        questions.first().questionText
+        TextArea(
+            label = "Answer",
+            placeholder = "Enter your answer…",
+            rows = 4,
+            required = true,
+            id = "answers",
+        )
     }
+    return FormBindingRequest(
+        Form(title = prompt, controls = listOf(control), id = "bpmn-clarification"),
+        BpmnClarificationAnswers::class.java,
+    )
 }
 
 private fun BpmnRequest.withClarification(

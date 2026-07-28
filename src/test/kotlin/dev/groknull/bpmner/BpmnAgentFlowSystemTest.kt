@@ -15,6 +15,7 @@ import com.embabel.agent.core.hitl.FormBindingRequest
 import com.embabel.agent.domain.io.UserInput
 import com.embabel.agent.spi.common.Constants
 import com.embabel.agent.test.integration.EmbabelMockitoIntegrationTest
+import com.embabel.ux.form.RadioGroup
 import dev.groknull.bpmner.alignment.AlignmentFindings
 import dev.groknull.bpmner.authoring.BpmnGenerationStatus
 import dev.groknull.bpmner.authoring.BpmnRequestDraft
@@ -178,7 +179,7 @@ class BpmnAgentFlowSystemTest : EmbabelMockitoIntegrationTest() {
             ),
         )
         whenCreateObject(
-            { it.contains("Assess whether the source text describes a workflow that is ready for BPMN modelling") },
+            { it.contains("Assess whether the source describes a workflow ready for BPMN modelling") },
             ProcessInputAssessment::class.java,
         ).thenReturn(assessment)
 
@@ -242,7 +243,7 @@ class BpmnAgentFlowSystemTest : EmbabelMockitoIntegrationTest() {
     fun `interactive clarification loop converges to ready after an answer`() {
         // Re-assessment after the answer runs the readiness agent's LLM + deterministic post-check.
         whenCreateObject(
-            { it.contains("Assess whether the source text describes a workflow that is ready for BPMN modelling") },
+            { it.contains("Assess whether the source describes a workflow ready for BPMN modelling") },
             ProcessInputAssessment::class.java,
         ).thenReturn(
             ProcessInputAssessment(
@@ -272,6 +273,12 @@ class BpmnAgentFlowSystemTest : EmbabelMockitoIntegrationTest() {
             "What final state should the process reach?",
             (process.last(FormBindingRequest::class.java) as FormBindingRequest<*>).payload.title,
         )
+        val options = form.payload.controls
+            .filterIsInstance<RadioGroup>()
+            .single()
+            .options
+            .map { it.value }
+        assertEquals(listOf("The order is completed", "The order remains open"), options)
         form.bind(BpmnClarificationAnswers("Finally the order is completed."), process)
         process.run()
 
@@ -292,7 +299,7 @@ class BpmnAgentFlowSystemTest : EmbabelMockitoIntegrationTest() {
             )
 
         whenCreateObject(
-            { it.contains("Assess whether the source text describes a workflow that is ready for BPMN modelling") },
+            { it.contains("Assess whether the source describes a workflow ready for BPMN modelling") },
             ProcessInputAssessment::class.java,
         ).thenReturn(
             ProcessInputAssessment(
@@ -367,7 +374,13 @@ class BpmnAgentFlowSystemTest : EmbabelMockitoIntegrationTest() {
             dimensions = emptyList(),
             evidence = emptyList(),
             clarificationQuestions =
-            listOf(ClarificationQuestion(id = "q-end", questionText = "What final state should the process reach?")),
+            listOf(
+                ClarificationQuestion(
+                    id = "q-end",
+                    questionText = "What final state should the process reach?",
+                    options = listOf("The order is completed", "The order remains open"),
+                ),
+            ),
             rationale = "Needs clarification",
         )
 

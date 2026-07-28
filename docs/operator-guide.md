@@ -15,6 +15,16 @@ Every `bpmner.*` YAML key, default, range, when to tune.
 
 Both fields are bound at `bpmner.budget` via `@ConfigurationProperties` in the authoring and readiness capability config files.
 
+### Readiness and clarification
+
+| Key | Default | Range | When to tune |
+| --- | --- | --- | --- |
+| `bpmner.readiness.ready-threshold` | `75` | 0–100 | Raise to require stronger workflow evidence before generation, or lower when the deterministic and alignment checks provide sufficient downstream protection. |
+| `bpmner.readiness.max-clarification-questions` | `3` | ≥ 1 | Maximum questions returned by one readiness assessment. Questions are asked one at a time and should resolve a bounded modelling decision. |
+
+Both fields are bound at `bpmner.readiness`. Interactive generation permits at most three
+clarification rounds; the per-assessment question limit does not increase that round limit.
+
 ### Rule profile + severity overrides
 
 | Key | Default | Effect |
@@ -99,6 +109,11 @@ The `Persona` slot for each agent (`bpmner.generator`, `bpmner.repairer`, `bpmne
 | `bpmner.logging.dir` | `${BPMNER_LOG_DIR:${LOG_DIR:${BUILD_WORKING_DIRECTORY:${user.dir}}/logs}}` | Directory for run artifact dumps. |
 | `bpmner.logging.dump-artifacts` | `false` | When `true`, every intermediate artifact (outline JSON, rendered XML, repair attempts) is logged at DEBUG with a length cap. Off for production. Override via env: `BPMNER_LOGGING_DUMP_ARTIFACTS=true`. |
 | `bpmner.logging.artifact-preview-length` | `8000` | Truncation cap for dumped artifacts (characters). |
+| `bpmner.logging.llm-interactions` | `false` | When `true`, Embabel prints complete prompts and structured LLM responses for CLI and web generation. These messages can contain user process descriptions, style guides, clarification answers, and model output. Enable only in a trusted diagnostic environment. Override via env: `BPMNER_LOGGING_LLM_INTERACTIONS=true`. |
+
+The `verbose` Spring profile enables `bpmner.logging.llm-interactions`. Treat verbose logs as
+sensitive data: restrict access and retention, and do not use that profile in production unless
+content capture is explicitly intended.
 
 ### Observability
 

@@ -18,6 +18,7 @@ import {
 function makeState(overrides: Partial<ClarifyState> = {}): ClarifyState {
 	return {
 		prompt: "What starts the process?",
+		options: [],
 		round: 1,
 		maxRounds: 3,
 		submitting: false,
@@ -54,6 +55,24 @@ describe("buildClarifyFormHtml — textarea and submit", () => {
 	it("includes a textarea element", () => {
 		const html = buildClarifyFormHtml(makeState())
 		assert.ok(html.includes("<textarea"), "should include a <textarea>")
+	})
+
+	it("renders bounded choices instead of a textarea when options are supplied", () => {
+		const html = buildClarifyFormHtml(
+			makeState({ options: ["Run concurrently", "Run sequentially"] }),
+		)
+		assert.ok(html.includes('type="radio"'))
+		assert.ok(html.includes("Run concurrently"))
+		assert.ok(!html.includes("<textarea"))
+	})
+
+	it("HTML-escapes bounded choices", () => {
+		const html = buildClarifyFormHtml(
+			makeState({ options: ['<script>alert("x")</script>', "Sequential"] }),
+		)
+		assert.ok(!html.includes("<script>"))
+		assert.ok(html.includes("&lt;script&gt;"))
+		assert.ok(html.includes("&quot;x&quot;"))
 	})
 
 	it("includes a submit button", () => {
@@ -110,7 +129,7 @@ describe("buildClarifyFormHtml — inline error", () => {
 // renderClarifyForm — minimal DOM mock (no jsdom needed)
 // ---------------------------------------------------------------------------
 
-function makeContainer() {
+function makeContainer(selectedOption?: string) {
 	const classes = new Set<string>(["hidden"])
 	const listeners: Array<{
 		selector: string
@@ -139,6 +158,11 @@ function makeContainer() {
 			}
 			if (selector === ".clarify-answer") {
 				return { value: "  test answer  " } as unknown as T
+			}
+			if (selector === 'input[name="clarify-option"]:checked') {
+				return selectedOption === undefined
+					? null
+					: ({ value: selectedOption } as unknown as T)
 			}
 			return null
 		},
@@ -174,5 +198,23 @@ describe("renderClarifyForm — submit handler calls onSubmit with trimmed answe
 			"test answer",
 			"onSubmit should receive trimmed answer",
 		)
+	})
+
+	it("submits the selected bounded option", () => {
+		const { el, listeners } = makeContainer("Run concurrently")
+		let submitted: string | null = null
+		renderClarifyForm(
+			el,
+			makeState({ options: ["Run concurrently", "Run sequentially"] }),
+			(answer) => {
+				submitted = answer
+			},
+		)
+
+		const btnListener = listeners.find((l) => l.selector === ".clarify-submit")
+		assert.ok(btnListener)
+		;(btnListener.fn as EventListener)(new Event("click"))
+
+		assert.equal(submitted, "Run concurrently")
 	})
 })

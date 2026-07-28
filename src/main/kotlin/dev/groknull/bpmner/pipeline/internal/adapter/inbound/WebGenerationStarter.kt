@@ -8,17 +8,12 @@ package dev.groknull.bpmner.pipeline.internal.adapter.inbound
 import dev.groknull.bpmner.authoring.BpmnProcessGenerator
 import dev.groknull.bpmner.bpmn.BpmnRequest
 import dev.groknull.bpmner.bpmn.GenerationMode
-import dev.groknull.bpmner.llm.LlmInteractionLoggingConfig
-import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 
 @Service
 internal class WebGenerationStarter(
     private val processGenerator: BpmnProcessGenerator,
-    private val logging: LlmInteractionLoggingConfig,
 ) {
-    private val logger = LoggerFactory.getLogger(WebGenerationStarter::class.java)
-
     /**
      * Starts an async BPMN generation process and returns its process ID.
      *
@@ -28,13 +23,6 @@ internal class WebGenerationStarter(
      * ADR-003 option b).
      */
     fun start(request: WebGenerationRequest): String {
-        if (logging.llmInteractions) {
-            logger.info(
-                "BPMN generation user input:\nprocessDescription:\n{}\nstyleGuide:\n{}",
-                request.processDescription,
-                request.styleGuide ?: "<none>",
-            )
-        }
         val bpmnRequest =
             BpmnRequest(
                 processDescription = request.processDescription,

@@ -66,14 +66,15 @@ type BpmnResultEvent = {
 
 /**
  * Clarification request event — published when the agent parks in AwaitingClarification.
- * Wire contract (ARCHITECTURE.md §ss-4, ADR-ss-008): uses `round`/`maxRounds`/`prompt`,
- * not `status`.
+ * Wire contract (ARCHITECTURE.md §ss-4, ADR-ss-008): uses
+ * `round`/`maxRounds`/`prompt`/`options`, not `status`.
  */
 type BpmnClarificationRequestEvent = {
 	type: "BpmnClarificationRequestEvent"
 	round: number
 	maxRounds: number
 	prompt: string
+	options?: string[]
 }
 
 type ServerEvent =
@@ -317,6 +318,7 @@ function applyStageEvent(event: BpmnStageEvent): void {
 function applyClarificationEvent(event: BpmnClarificationRequestEvent): void {
 	const baseState: ClarifyState = {
 		prompt: event.prompt,
+		options: event.options ?? [],
 		round: event.round,
 		maxRounds: event.maxRounds,
 		submitting: false,
