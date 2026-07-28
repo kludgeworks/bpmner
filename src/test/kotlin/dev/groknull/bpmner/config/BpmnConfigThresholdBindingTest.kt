@@ -10,6 +10,7 @@ import dev.groknull.bpmner.authoring.internal.BpmnAuthoringBudgetConfig
 import dev.groknull.bpmner.conformance.BpmnConformanceConfig
 import dev.groknull.bpmner.conformance.BpmnLoggingConfig
 import dev.groknull.bpmner.contract.internal.BpmnContractThresholdsConfig
+import dev.groknull.bpmner.llm.LlmInteractionLoggingConfig
 import dev.groknull.bpmner.readiness.BpmnReadinessBudgetConfig
 import dev.groknull.bpmner.readiness.BpmnReadinessThresholdsConfig
 import dev.groknull.bpmner.repair.BpmnRepairBudgetConfig
@@ -42,6 +43,7 @@ import org.springframework.boot.test.context.SpringBootTest
         "bpmner.budget.max-repair-iterations=3",
         "bpmner.logging.dir=audit",
         "bpmner.logging.dump-artifacts=true",
+        "bpmner.logging.llm-interactions=true",
         "bpmner.logging.artifact-preview-length=4000",
         "bpmner.lint-batch-size=5",
     ],
@@ -55,6 +57,7 @@ class BpmnConfigThresholdBindingTest {
         BpmnAuthoringBudgetConfig::class,
         BpmnRepairBudgetConfig::class,
         BpmnLoggingConfig::class,
+        LlmInteractionLoggingConfig::class,
         BpmnConformanceConfig::class,
     )
     class Config
@@ -79,6 +82,9 @@ class BpmnConfigThresholdBindingTest {
 
     @Autowired
     internal lateinit var loggingConfig: BpmnLoggingConfig
+
+    @Autowired
+    internal lateinit var llmLoggingConfig: LlmInteractionLoggingConfig
 
     @Autowired
     internal lateinit var conformanceConfig: BpmnConformanceConfig
@@ -141,6 +147,11 @@ class BpmnConfigThresholdBindingTest {
     @Test
     fun `bpmner-logging-dump-artifacts binds`() {
         assertEquals(true, loggingConfig.dumpArtifacts)
+    }
+
+    @Test
+    fun `bpmner-logging-llm-interactions binds`() {
+        assertEquals(true, llmLoggingConfig.llmInteractions)
     }
 
     @Test

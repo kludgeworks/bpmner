@@ -101,6 +101,7 @@ describe("studio DOM accessibility (axe-core)", () => {
 			required(doc, "clarify-region"),
 			{
 				prompt: "What event starts the process?",
+				options: ["Message received", "Timer fires"],
 				round: 1,
 				maxRounds: 3,
 				submitting: false,

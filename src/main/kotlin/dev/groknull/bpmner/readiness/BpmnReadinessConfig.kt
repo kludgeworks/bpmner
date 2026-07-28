@@ -70,7 +70,7 @@ data class BpmnReadinessThresholdsConfig(
     @field:Max(MAX_PERCENT_SCORE)
     val readyThreshold: Int = 75,
     @field:Min(1)
-    val maxClarificationQuestions: Int = 5,
+    val maxClarificationQuestions: Int = 3,
 ) {
     companion object {
         const val MAX_PERCENT_SCORE = 100L

@@ -6,6 +6,7 @@
 package dev.groknull.bpmner.pipeline.internal.adapter.inbound
 
 import com.embabel.agent.shell.ShellCommands
+import dev.groknull.bpmner.llm.LlmInteractionLoggingConfig
 import dev.groknull.bpmner.pipeline.BpmnPreviewWriter
 import dev.groknull.bpmner.pipeline.BrowserOpenOutcome
 import dev.groknull.bpmner.pipeline.BrowserOpenPort
@@ -33,11 +34,12 @@ class BpmnShellCommandsTest {
     private fun commandDelegatingTo(
         shellCommands: ShellCommands,
         orchestrator: BpmnPreviewOrchestrator = nonInteractiveOrchestrator,
+        llmInteractions: Boolean = false,
     ): BpmnShellCommands {
         @Suppress("UNCHECKED_CAST")
         val provider = mock(ObjectProvider::class.java) as ObjectProvider<ShellCommands>
         `when`(provider.getObject()).thenReturn(shellCommands)
-        return BpmnShellCommands(provider, orchestrator)
+        return BpmnShellCommands(provider, orchestrator, LlmInteractionLoggingConfig(llmInteractions))
     }
 
     // ── Existing generation tests (must stay byte-for-byte unchanged in expectations) ───────────
@@ -68,6 +70,19 @@ class BpmnShellCommandsTest {
 
         assertEquals("ok", result)
         verify(shellCommands).execute(expectedIntent, false, false, false, false, false, false, false, true, null)
+    }
+
+    @Test
+    fun `generate shows LLM interactions when diagnostic logging is enabled`() {
+        val shellCommands = mock(ShellCommands::class.java)
+        `when`(
+            shellCommands.execute("Make toast", false, true, true, false, false, false, false, true, null),
+        ).thenReturn("Generated BPMN")
+
+        val result = commandDelegatingTo(shellCommands, llmInteractions = true).generate("Make toast")
+
+        assertEquals("Generated BPMN", result)
+        verify(shellCommands).execute("Make toast", false, true, true, false, false, false, false, true, null)
     }
 
     @Test

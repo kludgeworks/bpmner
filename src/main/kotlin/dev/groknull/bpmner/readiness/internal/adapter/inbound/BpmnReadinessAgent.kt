@@ -14,6 +14,7 @@ import com.embabel.agent.core.ActionRetryPolicy
 import com.embabel.agent.core.support.InvalidLlmReturnFormatException
 import com.embabel.agent.core.support.InvalidLlmReturnTypeException
 import com.embabel.common.ai.prompt.PromptContributor
+import com.fasterxml.jackson.databind.ObjectMapper
 import dev.groknull.bpmner.bpmn.BpmnRequest
 import dev.groknull.bpmner.bpmn.styleGuideContribution
 import dev.groknull.bpmner.llm.publishOnInvalidLlmReturn
@@ -34,6 +35,7 @@ internal class BpmnReadinessAgent(
     private val config: BpmnReadinessConfig,
     private val thresholds: BpmnReadinessThresholdsConfig,
     private val eventPublisher: ApplicationEventPublisher,
+    private val objectMapper: ObjectMapper,
 ) {
 
     /**
@@ -92,14 +94,17 @@ internal class BpmnReadinessAgent(
     private fun templateModel(request: BpmnRequest): Map<String, Any> = mapOf(
         "readyThreshold" to thresholds.readyThreshold,
         "maxClarificationQuestions" to thresholds.maxClarificationQuestions,
-        "processDescription" to request.processDescription,
-        "clarificationHistory" to request.clarificationHistory.map {
-            mapOf(
-                "questionId" to it.questionId,
-                "questionText" to it.questionText,
-                "answerText" to it.answerText,
-            )
-        },
+        "processDescriptionJson" to objectMapper.writeValueAsString(request.processDescription),
+        "hasClarificationHistory" to request.clarificationHistory.isNotEmpty(),
+        "clarificationHistoryJson" to objectMapper.writeValueAsString(
+            request.clarificationHistory.map {
+                mapOf(
+                    "questionId" to it.questionId,
+                    "questionText" to it.questionText,
+                    "answerText" to it.answerText,
+                )
+            },
+        ),
     )
 }
 
@@ -136,7 +141,16 @@ internal fun ProcessInputAssessment.normalize(readyThreshold: Int, maxClarificat
     }
 
     val normalizedQuestions = clarificationQuestions.mapIndexed { index, item ->
-        if (item.id.isBlank()) item.copy(id = "q${index + 1}") else item
+        val options = item.options.map { it.trim() }
+            .filter { it.isNotEmpty() }
+            .distinct()
+            .take(MAX_CLARIFICATION_OPTIONS)
+            .takeIf { it.size >= MIN_CLARIFICATION_OPTIONS }
+            .orEmpty()
+        item.copy(
+            id = item.id.ifBlank { "q${index + 1}" },
+            options = options,
+        )
     }.take(maxClarificationQuestions)
 
     return this.copy(
@@ -147,3 +161,6 @@ internal fun ProcessInputAssessment.normalize(readyThreshold: Int, maxClarificat
         clarificationQuestions = normalizedQuestions,
     )
 }
+
+private const val MIN_CLARIFICATION_OPTIONS = 2
+private const val MAX_CLARIFICATION_OPTIONS = 4

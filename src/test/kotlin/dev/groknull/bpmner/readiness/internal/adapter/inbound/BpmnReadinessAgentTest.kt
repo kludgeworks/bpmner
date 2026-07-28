@@ -9,6 +9,7 @@ import com.embabel.agent.api.annotation.Action
 import com.embabel.agent.core.ActionRetryPolicy
 import com.embabel.agent.core.support.InvalidLlmReturnFormatException
 import com.embabel.agent.test.unit.FakeOperationContext
+import com.fasterxml.jackson.databind.ObjectMapper
 import dev.groknull.bpmner.bpmn.BpmnRequest
 import dev.groknull.bpmner.readiness.BpmnReadinessAssessmentException
 import dev.groknull.bpmner.readiness.BpmnReadinessConfig
@@ -33,7 +34,12 @@ class BpmnReadinessAgentTest {
         val context = FakeOperationContext()
         context.expectResponse(assessment(ReadinessVerdict.READY, 92))
         val eventPublisher = mock(ApplicationEventPublisher::class.java)
-        val agent = BpmnReadinessAgent(BpmnReadinessConfig(), BpmnReadinessThresholdsConfig(), eventPublisher)
+        val agent = BpmnReadinessAgent(
+            BpmnReadinessConfig(),
+            BpmnReadinessThresholdsConfig(),
+            eventPublisher,
+            ObjectMapper(),
+        )
 
         val result =
             agent.assessReadiness(
@@ -117,6 +123,29 @@ class BpmnReadinessAgentTest {
 
         assertEquals(2, normalized.clarificationQuestions.size)
         assertEquals(listOf("q1", "q2"), normalized.clarificationQuestions.map { it.id })
+    }
+
+    @Test
+    fun `normalize exposes only two to four distinct nonblank options`() {
+        val assessment = ProcessInputAssessment(
+            verdict = ReadinessVerdict.NEEDS_CLARIFICATION,
+            overallScore = 60,
+            dimensions = emptyList(),
+            clarificationQuestions = listOf(
+                ClarificationQuestion("q1", "Choose one", options = listOf(" Yes ", "", "Yes")),
+                ClarificationQuestion(
+                    "q2",
+                    "Choose another",
+                    options = listOf("A", "B", "C", "D", "E"),
+                ),
+            ),
+            rationale = "Model rationale.",
+        )
+
+        val normalized = assessment.normalize(readyThreshold = 75, maxClarificationQuestions = 5)
+
+        assertEquals(emptyList(), normalized.clarificationQuestions[0].options)
+        assertEquals(listOf("A", "B", "C", "D"), normalized.clarificationQuestions[1].options)
     }
 
     @Test

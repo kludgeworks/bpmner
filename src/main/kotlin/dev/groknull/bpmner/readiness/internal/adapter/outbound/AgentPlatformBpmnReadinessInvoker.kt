@@ -9,7 +9,9 @@ import com.embabel.agent.api.common.autonomy.AgentProcessExecution
 import com.embabel.agent.core.AgentPlatform
 import com.embabel.agent.core.Budget
 import com.embabel.agent.core.ProcessOptions
+import com.embabel.agent.core.Verbosity
 import dev.groknull.bpmner.bpmn.BpmnRequest
+import dev.groknull.bpmner.llm.LlmInteractionLoggingConfig
 import dev.groknull.bpmner.readiness.BpmnReadinessBudgetConfig
 import dev.groknull.bpmner.readiness.BpmnReadinessInvoker
 import dev.groknull.bpmner.readiness.ProcessInputAssessment
@@ -21,6 +23,7 @@ import org.springframework.stereotype.Component
 internal class AgentPlatformBpmnReadinessInvoker(
     private val agentPlatform: AgentPlatform,
     private val config: BpmnReadinessBudgetConfig,
+    private val logging: LlmInteractionLoggingConfig,
 ) : BpmnReadinessInvoker {
     /**
      * Runs the readiness assessment as a sub-process scoped to **only** [BpmnReadinessAgent].
@@ -38,6 +41,10 @@ internal class AgentPlatformBpmnReadinessInvoker(
             // globally on the platform; passing them again would double every event delivery.
             ProcessOptions(
                 budget = Budget(actions = config.readiness),
+                verbosity = Verbosity(
+                    showPrompts = logging.llmInteractions,
+                    showLlmResponses = logging.llmInteractions,
+                ),
                 ephemeral = true,
             ),
             request,

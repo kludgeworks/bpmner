@@ -11,6 +11,7 @@ import com.embabel.agent.api.event.AgentProcessFinishedEvent
 import com.embabel.agent.api.event.AgentProcessWaitingEvent
 import com.embabel.agent.api.event.AgenticEventListener
 import com.embabel.agent.core.hitl.FormBindingRequest
+import com.embabel.ux.form.RadioGroup
 import dev.groknull.bpmner.telemetry.BpmnClarificationRequestEvent
 import org.jmolecules.architecture.onion.simplified.InfrastructureRing
 import org.springframework.context.ApplicationEventPublisher
@@ -52,6 +53,9 @@ class BpmnClarificationRequestEventPublisher(
             is AgentProcessWaitingEvent -> {
                 val process = event.agentProcess
                 val form = process.last(FormBindingRequest::class.java) ?: return
+                val options = form.payload.controls
+                    .filterIsInstance<RadioGroup>()
+                    .flatMap { control -> control.options.map { it.value } }
                 val round = rounds.merge(process.id, 1, Int::plus)!!
                 eventPublisher.publishEvent(
                     BpmnClarificationRequestEvent(
@@ -59,6 +63,7 @@ class BpmnClarificationRequestEventPublisher(
                         round = round,
                         maxRounds = MAX_ROUNDS,
                         prompt = form.payload.title,
+                        options = options,
                     ),
                 )
             }
