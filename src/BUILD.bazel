@@ -46,6 +46,12 @@ java_library(
     resources = ["//web:preview_bundle"],
 )
 
+java_library(
+    name = "web_version_resource",
+    resource_strip_prefix = "web/dist",
+    resources = ["//web:version_json"],
+)
+
 filegroup(
     name = "bazelrun_samples",
     srcs = [
@@ -67,6 +73,7 @@ kt_jvm_library(
         ":preview_bundle_resources",
         ":web_bundle_resources",
         ":web_static_resources",
+        ":web_version_resource",
         "//linter/pkl:pkl_runtime_resources",
         "@maven//:com_embabel_agent_embabel_agent_starter_anthropic",
         "@maven//:com_embabel_agent_embabel_agent_starter_gemini",

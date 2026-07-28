@@ -23,6 +23,7 @@ import { importSnapshot } from "./snapshot-import"
 import type { ChipState, StageKey } from "./stage-rail"
 import { initialStages, reduceStages, renderStageRail } from "./stage-rail"
 import { initialSettle, type SettleState, shouldClose } from "./stream-settle"
+import { populateVersionFooter } from "./version-footer"
 
 type ProgressUpdateEvent = {
 	type: "ProgressUpdateEvent"
@@ -130,6 +131,11 @@ const canvasStatus = getRequiredElement<HTMLElement>("canvas-status")
 const canvasEl = getRequiredElement<HTMLElement>("canvas")
 // Optional attempt counter in the diagnostics panel header (absent → no-op).
 const diagnosticsAttemptEl = document.getElementById("diagnostics-attempt")
+// Optional version footer (absent → no-op).
+const versionFooterEl = document.getElementById("version-footer")
+if (versionFooterEl) {
+	void populateVersionFooter(versionFooterEl)
+}
 
 let eventSource: EventSource | null = null
 let currentXml = ""

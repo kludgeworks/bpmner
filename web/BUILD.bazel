@@ -6,6 +6,7 @@ load("@bazel_sonarqube//:defs.bzl", "sonarqube")
 load("@npm//:defs.bzl", "npm_link_all_packages")
 load("//tools/js:test.bzl", "bpmner_node_test")
 load("//tools/js:ts.bzl", "bpmner_ts_configs", "bpmner_ts_project")
+load("//web:version.bzl", "version_json")
 
 package(default_visibility = [
     "//:__pkg__",
@@ -124,6 +125,13 @@ bpmner_node_test(
     deps = WEB_TS_DEPS,
 )
 
+bpmner_node_test(
+    name = "version_footer_test",
+    srcs = WEB_SRCS + WEB_TEST_SRCS,
+    entry_point = "test/version-footer.test.ts",
+    deps = WEB_TS_DEPS,
+)
+
 esbuild(
     name = "bundle",
     srcs = WEB_SRCS,
@@ -150,6 +158,11 @@ esbuild(
     platform = "browser",
     target = "es2022",
     deps = WEB_TS_DEPS,
+)
+
+version_json(
+    name = "version_json",
+    out = "dist/static/version.json",
 )
 
 filegroup(
