@@ -59,6 +59,7 @@ const STUDIO_BODY = `
       <div id="canvas"></div>
       <div id="canvas-status" class="canvas-status"></div>
     </main>
+    <footer id="version-footer" class="studio-version" aria-label="Application version">v0.3.2</footer>
   </div>
 `
 
