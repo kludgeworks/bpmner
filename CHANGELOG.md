@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.4.0](https://github.com/kludgeworks/bpmner/compare/bpmner-v0.3.2...bpmner-v0.4.0) (2026-07-29)
+
+
+### Features
+
+* readiness question guidance ([#656](https://github.com/kludgeworks/bpmner/issues/656)) ([f601cee](https://github.com/kludgeworks/bpmner/commit/f601cee878105e007ff66bd99234a12223145ac0))
+* **web:** show release version in studio footer ([#654](https://github.com/kludgeworks/bpmner/issues/654)) ([7a79b63](https://github.com/kludgeworks/bpmner/commit/7a79b63f5e3c6c58fa6c018994f83956b1cd21d8))
+
+
+### Bug Fixes
+
+* **web:** center diagram and add zoom controls ([#658](https://github.com/kludgeworks/bpmner/issues/658)) ([342f082](https://github.com/kludgeworks/bpmner/commit/342f082586d0aafb6ca694c650e5665f5badc7fe))
+
 ## [0.3.2](https://github.com/kludgeworks/bpmner/compare/bpmner-v0.3.1...bpmner-v0.3.2) (2026-07-27)
 
 
