@@ -31,7 +31,11 @@ kt_compiler_plugin(
 java_library(
     name = "web_bundle_resources",
     resource_strip_prefix = "web/dist",
-    resources = ["//web:bundle"],
+    resources = [
+        "//web:bundle",
+        "//web:index_html",
+        "//web:style_css",
+    ],
 )
 
 java_library(
