@@ -1,12 +1,15 @@
 # Copyright 2026 The Project Contributors
 # SPDX-License-Identifier: MIT
 
+load("@aspect_bazel_lib//lib:copy_file.bzl", "copy_file")
+load("@aspect_bazel_lib//lib:expand_template.bzl", "expand_template")
+load("@aspect_bazel_lib//lib:testing.bzl", "assert_contains")
 load("@aspect_rules_esbuild//esbuild:defs.bzl", "esbuild")
 load("@bazel_sonarqube//:defs.bzl", "sonarqube")
 load("@npm//:defs.bzl", "npm_link_all_packages")
 load("//tools/js:test.bzl", "bpmner_node_test")
 load("//tools/js:ts.bzl", "bpmner_ts_configs", "bpmner_ts_project")
-load("//web:version.bzl", "version_json")
+load("//web:version.bzl", "bpmner_module_version", "version_json")
 
 package(default_visibility = [
     "//:__pkg__",
@@ -44,7 +47,19 @@ WEB_SRCS = glob(
 
 WEB_TEST_SRCS = glob(["test/**/*.ts"])
 
-WEB_STATIC_ASSETS = glob(["src/static/**/*"])
+WEB_STATIC_ASSETS = glob(
+    ["src/static/**/*"],
+    exclude = [
+        "src/static/index.html",
+        "src/static/style.css",
+    ],
+)
+
+# The release version, single-sourced from MODULE.bazel's module(version = ...)
+# — reused below to version-suffix the app's own JS/CSS filenames so a CDN in
+# front of the deployed app can never serve a stale bundle at a URL that a
+# newer release also uses (issue #659).
+_VERSION = bpmner_module_version()
 
 WEB_TS_DEPS = [
     "//:node_modules/@types/jsdom",
@@ -165,7 +180,7 @@ esbuild(
     },
     entry_point = "src/app.ts",
     format = "iife",
-    output = "dist/static/js/app-bundle.js",
+    output = "dist/static/js/app-bundle-{}.js".format(_VERSION),
     platform = "browser",
     target = "es2022",
     deps = WEB_TS_DEPS,
@@ -193,4 +208,35 @@ version_json(
 filegroup(
     name = "static_assets",
     srcs = WEB_STATIC_ASSETS,
+)
+
+# style.css isn't esbuild-bundled, so it needs its own versioned copy (see
+# _VERSION above) to get the same stale-CDN protection as the JS bundle.
+copy_file(
+    name = "style_css",
+    src = "src/static/style.css",
+    out = "dist/static/style-{}.css".format(_VERSION),
+)
+
+# index.html's own markup is untouched: `href="style.css"` and
+# `src="js/app-bundle.js"` are already unique, single-occurrence, exact-match
+# substrings, so they're rewritten on the way from src/ to dist/ rather than
+# needing placeholder tokens in the source file.
+expand_template(
+    name = "index_html",
+    out = "dist/static/index.html",
+    substitutions = {
+        'href="style.css"': 'href="style-{}.css"'.format(_VERSION),
+        'src="js/app-bundle.js"': 'src="js/app-bundle-{}.js"'.format(_VERSION),
+    },
+    template = "src/static/index.html",
+)
+
+# Build-time regression guard for issue #659: fails if index.html's script tag
+# ever stops tracking the current release version (a reverted substitution, a
+# reverted esbuild `output` rename, etc.).
+assert_contains(
+    name = "index_html_assert_contains",
+    actual = ":index_html",
+    expected = 'src="js/app-bundle-{}.js"'.format(_VERSION),
 )
