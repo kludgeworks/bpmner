@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.1](https://github.com/kludgeworks/bpmner/compare/bpmner-v0.4.0...bpmner-v0.4.1) (2026-07-29)
+
+
+### Bug Fixes
+
+* **web:** version-suffix app-bundle.js/style.css so the CDN can't serve them stale ([#660](https://github.com/kludgeworks/bpmner/issues/660)) ([cc4924f](https://github.com/kludgeworks/bpmner/commit/cc4924fb60494ffc47cbdb4efbda365d6014e5cb))
+
 ## [0.4.0](https://github.com/kludgeworks/bpmner/compare/bpmner-v0.3.2...bpmner-v0.4.0) (2026-07-29)
 
 
