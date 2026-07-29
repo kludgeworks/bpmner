@@ -5,9 +5,12 @@
 
 import assert from "node:assert/strict"
 import { describe, it } from "node:test"
+import { JSDOM } from "jsdom"
 import {
+	bindZoomControls,
 	type CanvasViewport,
 	fitInitialViewport,
+	setZoomControlsEnabled,
 	zoomBy,
 } from "../src/canvas-viewport"
 
@@ -36,8 +39,8 @@ describe("canvas viewport", () => {
 	it("centers only the authoritative initial layout", () => {
 		const { canvas, calls } = fakeCanvas()
 
-		fitInitialViewport(canvas, "INITIAL_RENDER")
-		fitInitialViewport(canvas, "LAYOUT_COMPLETE")
+		assert.equal(fitInitialViewport(canvas, "INITIAL_RENDER"), false)
+		assert.equal(fitInitialViewport(canvas, "LAYOUT_COMPLETE"), true)
 
 		assert.deepEqual(calls, [["fit-viewport", true]])
 	})
@@ -48,6 +51,28 @@ describe("canvas viewport", () => {
 		zoomBy(canvas, 1.2)
 		zoomBy(canvas, 1 / 1.2)
 
+		assert.equal(calls[0]?.[0], 1.2)
+		assert.ok(Math.abs(Number(calls[1]?.[0]) - 1) < Number.EPSILON)
+	})
+
+	it("enables controls only after the initial fit", () => {
+		const dom = new JSDOM(
+			'<button id="in" type="button"></button><button id="out" type="button"></button>',
+		)
+		const zoomInButton = dom.window.document.querySelector("#in")
+		const zoomOutButton = dom.window.document.querySelector("#out")
+		assert.ok(zoomInButton instanceof dom.window.HTMLButtonElement)
+		assert.ok(zoomOutButton instanceof dom.window.HTMLButtonElement)
+		const { canvas, calls } = fakeCanvas()
+
+		bindZoomControls(canvas, zoomInButton, zoomOutButton)
+		setZoomControlsEnabled(zoomInButton, zoomOutButton, false)
+		zoomInButton.click()
+		assert.deepEqual(calls, [])
+
+		setZoomControlsEnabled(zoomInButton, zoomOutButton, true)
+		zoomInButton.click()
+		zoomOutButton.click()
 		assert.equal(calls[0]?.[0], 1.2)
 		assert.ok(Math.abs(Number(calls[1]?.[0]) - 1) < Number.EPSILON)
 	})

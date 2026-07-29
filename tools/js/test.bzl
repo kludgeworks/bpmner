@@ -38,7 +38,8 @@ def bpmner_node_test(
     # map V8 coverage ranges back to original TypeScript source file paths.
     # Without source maps the LCOV paths point to the bundled JS file only and
     # SonarCloud sees 0% coverage on the TypeScript sources.
-    config = {"sourcemap": "inline"}
+    sourcemap = "inline"
+    config = {}
     if loaders:
         config["loader"] = loaders
 
@@ -51,6 +52,8 @@ def bpmner_node_test(
         format = "cjs",
         output = bundle_output,
         platform = "node",
+        sourcemap = sourcemap,
+        sources_content = True,
         target = "es2022",
         deps = deps,
     )
@@ -58,7 +61,7 @@ def bpmner_node_test(
     data = [
         ":" + bundle_name,
         "//tools/js:test_wrapper",
-    ] + extra_data
+    ] + srcs + extra_data
 
     # Externalised packages are not in the bundle, so they must be present in
     # the runfiles for Node to resolve them from node_modules at runtime.

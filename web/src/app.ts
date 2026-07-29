@@ -5,9 +5,10 @@
 
 import BpmnViewer from "bpmn-js"
 import {
+	bindZoomControls,
 	type CanvasViewport,
 	fitInitialViewport,
-	zoomBy,
+	setZoomControlsEnabled,
 } from "./canvas-viewport"
 import { type ClarifyState, renderClarifyForm } from "./clarify-form"
 import {
@@ -135,11 +136,7 @@ const canvasEl = getRequiredElement<HTMLElement>("canvas")
 const zoomInBtn = getRequiredElement<HTMLButtonElement>("zoom-in-btn")
 const zoomOutBtn = getRequiredElement<HTMLButtonElement>("zoom-out-btn")
 const canvasViewport = viewer.get("canvas") as CanvasViewport
-const ZOOM_FACTOR = 1.2
-zoomInBtn.addEventListener("click", () => zoomBy(canvasViewport, ZOOM_FACTOR))
-zoomOutBtn.addEventListener("click", () =>
-	zoomBy(canvasViewport, 1 / ZOOM_FACTOR),
-)
+bindZoomControls(canvasViewport, zoomInBtn, zoomOutBtn)
 // Optional attempt counter in the diagnostics panel header (absent → no-op).
 const diagnosticsAttemptEl = document.getElementById("diagnostics-attempt")
 // Optional version footer (absent → no-op).
@@ -200,6 +197,7 @@ generateBtn.addEventListener("click", async () => {
 	currentXml = ""
 	currentProcessId = null
 	snapshotQueue = Promise.resolve()
+	setZoomControlsEnabled(zoomInBtn, zoomOutBtn, false)
 	settle = initialSettle()
 	stages = initialStages()
 	renderStageRail(stageRailEl, stages)
@@ -455,7 +453,9 @@ async function handleSnapshot(event: BpmnSnapshotEvent) {
 		// Fit the authoritative initial geometry after the container has settled.
 		// Later snapshots must not overwrite the user's viewport.
 		requestAnimationFrame(() => {
-			fitInitialViewport(canvasViewport, event.stage)
+			if (fitInitialViewport(canvasViewport, event.stage)) {
+				setZoomControlsEnabled(zoomInBtn, zoomOutBtn, true)
+			}
 		})
 	} else {
 		const msg =
