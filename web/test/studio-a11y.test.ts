@@ -58,6 +58,10 @@ const STUDIO_BODY = `
     <main class="studio-canvas" aria-label="Diagram canvas">
       <div id="canvas"></div>
       <div id="canvas-status" class="canvas-status"></div>
+      <div class="canvas-controls" role="group" aria-label="Diagram zoom controls">
+        <button id="zoom-in-btn" class="canvas-control" type="button" aria-label="Zoom in">+</button>
+        <button id="zoom-out-btn" class="canvas-control" type="button" aria-label="Zoom out">−</button>
+      </div>
     </main>
     <footer id="version-footer" class="studio-version" aria-label="Application version">v0.3.2</footer>
   </div>

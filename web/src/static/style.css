@@ -153,6 +153,32 @@ body {
 	height: 100%;
 }
 
+.canvas-controls {
+	position: absolute;
+	top: var(--space-3);
+	right: var(--space-3);
+	z-index: 2;
+	display: flex;
+	gap: var(--space-1);
+}
+
+.canvas-control {
+	width: 32px;
+	height: 32px;
+	margin: 0;
+	padding: 0;
+	font-size: 18px;
+	line-height: 1;
+	color: var(--ink);
+	background: var(--paper);
+	border: 1px solid var(--ink-12);
+}
+
+.canvas-control:hover {
+	color: var(--paper);
+	background: var(--oxide);
+}
+
 /* --------------------------------------------------------------------------
  * Panels
  * ------------------------------------------------------------------------ */

@@ -132,6 +132,31 @@ bpmner_node_test(
     deps = WEB_TS_DEPS,
 )
 
+bpmner_node_test(
+    name = "canvas_viewport_test",
+    srcs = WEB_SRCS + WEB_TEST_SRCS,
+    entry_point = "test/canvas-viewport.test.ts",
+    external = [
+        "../src/canvas-viewport",
+        "jsdom",
+    ],
+    extra_data = [":canvas_viewport_module"],
+    deps = WEB_TS_DEPS,
+)
+
+esbuild(
+    name = "canvas_viewport_module",
+    srcs = WEB_SRCS,
+    entry_point = "src/canvas-viewport.ts",
+    format = "cjs",
+    output = "dist/src/canvas-viewport.js",
+    platform = "node",
+    sourcemap = "inline",
+    sources_content = True,
+    target = "es2022",
+    deps = WEB_TS_DEPS,
+)
+
 esbuild(
     name = "bundle",
     srcs = WEB_SRCS,
