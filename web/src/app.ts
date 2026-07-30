@@ -12,99 +12,16 @@ import {
 } from "./canvas-viewport"
 import { type ClarifyState, renderClarifyForm } from "./clarify-form"
 import {
-	type Diagnostic,
-	type DiagnosticKey,
-	type DiffRow,
-	type DiffState,
-	initialDiff,
-	keyOf,
-	reduceDiagnostics,
-} from "./diagnostic-diff"
-import {
 	type ResultBarState,
 	type ResultStatus,
 	renderResultBar,
 } from "./result-bar"
+import { isTerminal, type RunUpdate } from "./run-update"
 import { importSnapshot } from "./snapshot-import"
 import type { ChipState, StageKey } from "./stage-rail"
 import { initialStages, reduceStages, renderStageRail } from "./stage-rail"
-import { initialSettle, type SettleState, shouldClose } from "./stream-settle"
+import { shouldClose } from "./stream-settle"
 import { populateVersionFooter } from "./version-footer"
-
-type ProgressUpdateEvent = {
-	type: "ProgressUpdateEvent"
-	name: string
-}
-
-type BpmnSnapshotEvent = {
-	type: "BpmnSnapshotEvent"
-	stage: string
-	xml?: string
-	diagnostics?: Diagnostic[]
-	attemptNumber?: number
-}
-
-type AgentProcessEvent = {
-	type: "AgentProcessFinishedEvent" | "AgentProcessFailedEvent"
-}
-
-type BpmnRunCostEvent = {
-	type: "BpmnRunCostEvent"
-	costSummary: string
-}
-
-type BpmnStageEvent = {
-	type: "BpmnStageEvent"
-	stage: string
-	stageStatus: string
-	label: string
-}
-
-/**
- * Terminal result event — wire contract: class simple name is the type discriminator.
- * `resultStatus` not `status` (ADR-ss-008: AbstractAgentProcessEvent already exposes `status`).
- */
-type BpmnResultEvent = {
-	type: "BpmnResultEvent"
-	resultStatus: string
-	alignmentVerdict?: string
-	alignmentReport?: string
-}
-
-/**
- * Clarification request event — published when the agent parks in AwaitingClarification.
- * Wire contract (ARCHITECTURE.md §ss-4, ADR-ss-008): uses
- * `round`/`maxRounds`/`prompt`/`options`, not `status`.
- */
-type BpmnClarificationRequestEvent = {
-	type: "BpmnClarificationRequestEvent"
-	round: number
-	maxRounds: number
-	prompt: string
-	options?: string[]
-}
-
-type ServerEvent =
-	| ProgressUpdateEvent
-	| BpmnSnapshotEvent
-	| AgentProcessEvent
-	| BpmnRunCostEvent
-	| BpmnStageEvent
-	| BpmnResultEvent
-	| BpmnClarificationRequestEvent
-	| { type?: string }
-
-type BpmnOverlays = {
-	remove: (filter: string | { type?: string }) => void
-	add: (
-		elementId: string,
-		type: string,
-		options: {
-			position: { bottom: number; right: number }
-			html: HTMLElement
-		},
-	) => string
-}
 
 const viewer = new BpmnViewer({
 	container: "#canvas",
@@ -124,10 +41,6 @@ const descriptionEl = getRequiredElement<HTMLTextAreaElement>(
 )
 const progressContainer = getRequiredElement<HTMLElement>("progress-container")
 const progressList = getRequiredElement<HTMLElement>("progress-list")
-const diagnosticsContainer = getRequiredElement<HTMLElement>(
-	"diagnostics-container",
-)
-const diagnosticsList = getRequiredElement<HTMLElement>("diagnostics-list")
 const resultBarEl = getRequiredElement<HTMLElement>("result-bar")
 const clarifyRegionEl = getRequiredElement<HTMLElement>("clarify-region")
 const stageRailEl = getRequiredElement<HTMLElement>("stage-rail")
@@ -137,8 +50,6 @@ const zoomInBtn = getRequiredElement<HTMLButtonElement>("zoom-in-btn")
 const zoomOutBtn = getRequiredElement<HTMLButtonElement>("zoom-out-btn")
 const canvasViewport = viewer.get("canvas") as CanvasViewport
 bindZoomControls(canvasViewport, zoomInBtn, zoomOutBtn)
-// Optional attempt counter in the diagnostics panel header (absent → no-op).
-const diagnosticsAttemptEl = document.getElementById("diagnostics-attempt")
 // Optional version footer (absent → no-op).
 const versionFooterEl = document.getElementById("version-footer")
 if (versionFooterEl) {
@@ -146,33 +57,10 @@ if (versionFooterEl) {
 }
 
 let eventSource: EventSource | null = null
-let currentXml = ""
-/**
- * Serializes snapshot application. Each SSE message triggers an independent async handler.
- * DI-less intermediate snapshots resolve immediately as `pending` (no client layout is ever
- * attempted), while the final DI-bearing `LAYOUT_COMPLETE` snapshot imports as-is. Without
- * serialization a slow earlier `importXML` can still resolve AFTER the fast final one and
- * clobber the authoritative server geometry. Chaining guarantees snapshots are applied in SSE
- * arrival order, so the last (server-laid-out) snapshot always wins.
- */
-let snapshotQueue: Promise<void> = Promise.resolve()
-let settle: SettleState = initialSettle()
-let closeTimer: number | null = null
 let stages: Record<StageKey, ChipState> = initialStages()
 let resultBarState: ResultBarState = {}
-/** Running fixed-diagnostic diff across snapshots (ADR-ss-002). */
-let diffState: DiffState = initialDiff()
-/** Live overlay ids keyed by diagnostic key, so fixed ones can be cleared surgically. */
-const overlayIds = new Map<DiagnosticKey, string>()
-/** processId captured from POST response; used to build the BPMN download URL. */
+/** processId captured from POST response; used to build the BPMN download/preview URL. */
 let currentProcessId: string | null = null
-
-// All three terminal signals (BpmnResultEvent, BpmnRunCostEvent, AgentProcessFinishedEvent)
-// fan out from the same server-side AgentProcessFinishedEvent, so their SSE order is
-// non-deterministic. The grace timer is a safety net for runs that never emit BpmnResultEvent
-// (budget-exhausted / stuck) — it closes the stream only when sawResult is still false,
-// leaving a real BpmnResultEvent free to arrive and render before the stream closes.
-const COST_EVENT_GRACE_MS = 4000
 
 generateBtn.addEventListener("click", async () => {
 	const desc = descriptionEl.value.trim()
@@ -182,31 +70,16 @@ generateBtn.addEventListener("click", async () => {
 	descriptionEl.disabled = true
 	progressContainer.classList.remove("hidden")
 	progressList.innerHTML = ""
-	progressContainer.querySelectorAll("pre.run-cost").forEach((el) => {
-		el.remove()
-	})
-	diagnosticsContainer.classList.add("hidden")
-	diagnosticsList.innerHTML = ""
-	diffState = initialDiff()
-	overlayIds.clear()
-	updateDiagnosticsHeader()
 	clarifyRegionEl.classList.add("hidden")
 	clarifyRegionEl.innerHTML = ""
 	resultBarState = {}
 	renderResultBar(resultBarEl, resultBarState)
-	currentXml = ""
 	currentProcessId = null
-	snapshotQueue = Promise.resolve()
 	setZoomControlsEnabled(zoomInBtn, zoomOutBtn, false)
-	settle = initialSettle()
 	stages = initialStages()
 	renderStageRail(stageRailEl, stages)
 	canvasStatus.textContent = ""
 	canvasStatus.classList.add("hidden")
-	if (closeTimer !== null) {
-		clearTimeout(closeTimer)
-		closeTimer = null
-	}
 	viewer.clear()
 
 	if (eventSource) {
@@ -238,71 +111,29 @@ generateBtn.addEventListener("click", async () => {
 function connectSse(url: string) {
 	eventSource = new EventSource(url)
 
-	const messageHandler = async (e: MessageEvent) => {
-		let event: ServerEvent
+	eventSource.onmessage = (e: MessageEvent) => {
+		let update: RunUpdate
 		try {
-			event = JSON.parse(e.data) as ServerEvent
+			update = JSON.parse(e.data) as RunUpdate
 		} catch (err) {
-			console.error("Failed to parse SSE message", err)
+			console.error("Failed to parse RunUpdate", err)
 			return
 		}
 
-		if (event.type === "ProgressUpdateEvent" && "name" in event) {
-			addProgress(event.name as string)
-		} else if (event.type === "BpmnStageEvent") {
-			applyStageEvent(event as BpmnStageEvent)
-		} else if (event.type === "BpmnSnapshotEvent" && "xml" in event) {
-			// Apply snapshots strictly in arrival order so a slow earlier auto-layout can't
-			// resolve after — and overwrite — the final server-laid-out diagram.
-			const snapshot = event as BpmnSnapshotEvent
-			snapshotQueue = snapshotQueue
-				.then(() => handleSnapshot(snapshot))
-				.catch((err) => {
-					console.error("Snapshot handling failed", err)
-				})
-		} else if (event.type === "BpmnClarificationRequestEvent") {
-			applyClarificationEvent(event as BpmnClarificationRequestEvent)
-		} else if (event.type === "BpmnResultEvent") {
-			applyResultEvent(event as BpmnResultEvent)
-		} else if (event.type === "AgentProcessFinishedEvent") {
-			addProgress("Process complete.")
-			generateBtn.disabled = false
-			descriptionEl.disabled = false
-			clarifyRegionEl.classList.add("hidden")
-			clarifyRegionEl.innerHTML = ""
-			settle = { ...settle, sawFinish: true }
-			if (closeTimer === null) {
-				closeTimer = window.setTimeout(() => {
-					// Safety net for stuck/failed runs that never emit BpmnResultEvent.
-					// Only closes if the real result event has not yet arrived; if it has,
-					// applyResultEvent() already called closeWhenSettled() and this is a no-op.
-					if (!settle.sawResult) {
-						closeStream()
-					}
-				}, COST_EVENT_GRACE_MS)
-			}
-			closeWhenSettled()
-		} else if (event.type === "BpmnRunCostEvent" && "costSummary" in event) {
-			const costEvent = event as BpmnRunCostEvent
-			// Render cost in the progress ticker (existing behaviour) and in the result bar.
-			renderCostSummary(costEvent.costSummary)
-			resultBarState = { ...resultBarState, costSummary: costEvent.costSummary }
-			renderResultBar(resultBarEl, resultBarState)
-			settle = { ...settle, sawCost: true }
-			closeWhenSettled()
-		} else if (event.type === "AgentProcessFailedEvent") {
-			addProgress("Process failed.")
-			generateBtn.disabled = false
-			descriptionEl.disabled = false
-			closeStream()
+		addProgress(update.summary)
+
+		stages = reduceStages(stages, update)
+		renderStageRail(stageRailEl, stages)
+
+		if (!isTerminal(update) && update.phase === "AWAITING_INPUT") {
+			applyClarificationEvent(update)
+			return
+		}
+
+		if (isTerminal(update)) {
+			void applyTerminalUpdate(update)
 		}
 	}
-
-	eventSource.onmessage = messageHandler
-	eventSource.addEventListener(
-		"agent-process-event",
-		messageHandler as unknown as EventListener,
-	)
 
 	eventSource.onerror = (e) => {
 		console.error("SSE Error", e)
@@ -313,20 +144,13 @@ function connectSse(url: string) {
 	}
 }
 
-function applyStageEvent(event: BpmnStageEvent): void {
-	stages = reduceStages(stages, {
-		stage: event.stage,
-		status: event.stageStatus,
-	})
-	renderStageRail(stageRailEl, stages)
-}
-
-function applyClarificationEvent(event: BpmnClarificationRequestEvent): void {
+function applyClarificationEvent(update: RunUpdate): void {
+	const detail = update.detail ?? {}
 	const baseState: ClarifyState = {
-		prompt: event.prompt,
-		options: event.options ?? [],
-		round: event.round,
-		maxRounds: event.maxRounds,
+		prompt: update.summary,
+		options: detail.options ? detail.options.split("|") : [],
+		round: Number(detail.round ?? "1"),
+		maxRounds: Number(detail.maxRounds ?? "1"),
 		submitting: false,
 	}
 
@@ -350,7 +174,7 @@ function applyClarificationEvent(event: BpmnClarificationRequestEvent): void {
 
 			if (res.status === 202) {
 				// Resume accepted — hide the form; progress resumes over SSE.
-				// A round-2 BpmnClarificationRequestEvent will re-show it if needed.
+				// A subsequent AWAITING_INPUT update will re-show it if needed.
 				clarifyRegionEl.classList.add("hidden")
 				clarifyRegionEl.innerHTML = ""
 			} else {
@@ -381,93 +205,77 @@ function applyClarificationEvent(event: BpmnClarificationRequestEvent): void {
 	renderClarifyForm(clarifyRegionEl, baseState, submitAnswers)
 }
 
-function applyResultEvent(event: BpmnResultEvent): void {
-	const status = event.resultStatus as ResultStatus
-	const downloadUrl = currentProcessId
-		? `api/bpmn/generations/${currentProcessId}/bpmn`
-		: undefined
-	// Hide the clarify region on terminal result (covers NEEDS_CLARIFICATION after round 3).
+/**
+ * Handles the one terminal `RunUpdate` for a run: renders the result bar from its whitelisted
+ * `detail`, fetches and imports the final diagram when one exists (`artifactState !== "NONE"`
+ * — `GET /generations/{id}/bpmn`, the only XML the browser ever receives, per ADR-605-05), and
+ * closes the stream.
+ */
+async function applyTerminalUpdate(update: RunUpdate): Promise<void> {
+	generateBtn.disabled = false
+	descriptionEl.disabled = false
 	clarifyRegionEl.classList.add("hidden")
 	clarifyRegionEl.innerHTML = ""
+
+	const detail = update.detail ?? {}
+	const hasArtifact = update.artifactState !== "NONE" && currentProcessId
+	const downloadUrl = hasArtifact
+		? `api/bpmn/generations/${currentProcessId}/bpmn`
+		: undefined
+
 	resultBarState = {
-		...resultBarState,
-		status,
-		alignmentVerdict: event.alignmentVerdict,
-		alignmentReport: event.alignmentReport,
+		status: detail.status as ResultStatus | undefined,
+		alignmentVerdict: detail.alignmentVerdict,
+		alignmentReport: detail.alignmentReport,
+		diagnosticsSummary: detail.diagnostics,
 		downloadUrl,
 	}
 	renderResultBar(resultBarEl, resultBarState)
-	// Mark result seen and attempt settlement — fixes the F1 race where the stream
-	// could close on sawFinish+sawCost before BpmnResultEvent arrived (REVIEW-ss-3).
-	settle = { ...settle, sawResult: true }
-	closeWhenSettled()
-}
 
-function closeStream() {
-	if (closeTimer !== null) {
-		clearTimeout(closeTimer)
-		closeTimer = null
+	if (downloadUrl) {
+		await loadFinalDiagram(downloadUrl)
 	}
-	eventSource?.close()
-}
 
-function closeWhenSettled() {
-	if (shouldClose(settle)) {
+	if (shouldClose(update)) {
 		closeStream()
 	}
 }
 
-function renderCostSummary(summary: string) {
-	const pre = document.createElement("pre")
-	pre.className = "run-cost"
-	pre.textContent = summary
-	progressContainer.appendChild(pre)
-}
+async function loadFinalDiagram(url: string): Promise<void> {
+	try {
+		const res = await fetch(url)
+		if (!res.ok) {
+			canvasStatus.textContent = "Diagram unavailable"
+			canvasStatus.classList.remove("hidden")
+			return
+		}
+		const xml = await res.text()
+		const outcome = await importSnapshot(
+			{ importXML: (x) => viewer.importXML(x) },
+			xml,
+		)
 
-function addProgress(msg: string) {
-	const li = document.createElement("li")
-	li.textContent = msg
-	progressList.appendChild(li)
-}
-
-async function handleSnapshot(event: BpmnSnapshotEvent) {
-	currentXml = event.xml || ""
-	if (!currentXml) return
-
-	const outcome = await importSnapshot(
-		{
-			importXML: (xml) => viewer.importXML(xml),
-		},
-		currentXml,
-		event.attemptNumber,
-	)
-
-	const redrawn = outcome.status === "drawn"
-
-	if (redrawn) {
-		canvasStatus.textContent = ""
-		canvasStatus.classList.add("hidden")
-		// Progressive entrance — CSS-only, honours prefers-reduced-motion.
-		triggerCanvasEntrance()
-
-		// Fit the authoritative initial geometry after the container has settled.
-		// Later snapshots must not overwrite the user's viewport.
-		requestAnimationFrame(() => {
-			if (fitInitialViewport(canvasViewport, event.stage)) {
+		if (outcome.status === "drawn") {
+			canvasStatus.textContent = ""
+			canvasStatus.classList.add("hidden")
+			triggerCanvasEntrance()
+			requestAnimationFrame(() => {
+				fitInitialViewport(canvasViewport)
 				setZoomControlsEnabled(zoomInBtn, zoomOutBtn, true)
-			}
-		})
-	} else {
-		const msg =
-			outcome.attemptNumber !== undefined
-				? `Diagram pending (attempt ${outcome.attemptNumber})`
-				: "Diagram pending"
-		canvasStatus.textContent = msg
+			})
+		} else {
+			canvasStatus.textContent = "Diagram unavailable"
+			canvasStatus.classList.remove("hidden")
+		}
+	} catch (e: unknown) {
+		console.error("Failed to load the final diagram", e)
+		canvasStatus.textContent = "Diagram unavailable"
 		canvasStatus.classList.remove("hidden")
 	}
+}
 
-	// Diagnostics are canvas-independent; the diff decides what is fixed/live.
-	renderDiagnostics(event.diagnostics || [], event.attemptNumber, redrawn)
+function closeStream() {
+	eventSource?.close()
 }
 
 /**
@@ -482,115 +290,8 @@ function triggerCanvasEntrance() {
 	canvasEl.classList.add("canvas--entrance")
 }
 
-/** ERROR|WARNING|INFO → a css modifier suffix; anything else → "unknown". */
-function severityModifier(severity: string | undefined): string {
-	switch ((severity ?? "").toUpperCase()) {
-		case "ERROR":
-			return "error"
-		case "WARNING":
-			return "warning"
-		case "INFO":
-			return "info"
-		default:
-			return "unknown"
-	}
-}
-
-function renderDiagnostics(
-	diagnostics: Diagnostic[],
-	attemptNumber: number | undefined,
-	redrawn: boolean,
-) {
-	const result = reduceDiagnostics(diffState, { diagnostics, attemptNumber })
-	diffState = result.state
-
-	renderDiagnosticList()
-	updateDiagnosticsHeader()
-
-	if (diffState.rows.length === 0) {
-		diagnosticsContainer.classList.add("hidden")
-	} else {
-		diagnosticsContainer.classList.remove("hidden")
-	}
-
-	const overlays = viewer.get("overlays") as BpmnOverlays
-
-	if (redrawn) {
-		// importXML wiped every overlay; the id map is stale. Rebuild for live rows.
-		overlayIds.clear()
-		for (const row of diffState.rows) {
-			if (!row.fixed) addDiagnosticOverlay(overlays, row)
-		}
-	} else {
-		// Diagram was kept (import failed): surgically clear only the newly-fixed
-		// overlays, then add overlays for any new live rows still missing one.
-		for (const key of result.newlyFixed) {
-			removeDiagnosticOverlay(overlays, key)
-		}
-		for (const row of diffState.rows) {
-			if (!row.fixed) addDiagnosticOverlay(overlays, row)
-		}
-	}
-}
-
-function renderDiagnosticList() {
-	diagnosticsList.innerHTML = ""
-	for (const row of diffState.rows) {
-		const li = document.createElement("li")
-		li.className = "diagnostic-item"
-		if (row.fixed) li.classList.add("diagnostic-item--fixed")
-
-		const dot = document.createElement("span")
-		dot.className = `severity-dot severity-dot--${severityModifier(
-			row.diagnostic.severity,
-		)}`
-		dot.setAttribute("aria-hidden", "true")
-		li.appendChild(dot)
-
-		const text = document.createElement("span")
-		text.className = "diagnostic-text"
-		const src = row.diagnostic.source ? `[${row.diagnostic.source}] ` : ""
-		text.textContent = `${src}${row.diagnostic.message}`
-		li.appendChild(text)
-
-		diagnosticsList.appendChild(li)
-	}
-}
-
-function updateDiagnosticsHeader() {
-	if (!diagnosticsAttemptEl) return
-	diagnosticsAttemptEl.textContent =
-		diffState.attemptNumber > 0 ? `attempt ${diffState.attemptNumber}` : ""
-}
-
-function addDiagnosticOverlay(overlays: BpmnOverlays, row: DiffRow) {
-	const elementId = row.diagnostic.elementId || row.diagnostic.objectRef
-	if (!elementId) return
-	const key = keyOf(row.diagnostic)
-	if (overlayIds.has(key)) return
-	try {
-		const el = document.createElement("div")
-		el.className = `diagnostic-overlay diagnostic-overlay--${severityModifier(
-			row.diagnostic.severity,
-		)}`
-		el.title = row.diagnostic.message
-		const id = overlays.add(elementId, "diagnostic", {
-			position: { bottom: 0, right: 0 },
-			html: el,
-		})
-		if (typeof id === "string") overlayIds.set(key, id)
-	} catch {
-		// Element might not exist in the diagram yet.
-	}
-}
-
-function removeDiagnosticOverlay(overlays: BpmnOverlays, key: DiagnosticKey) {
-	const id = overlayIds.get(key)
-	if (!id) return
-	try {
-		overlays.remove(id)
-	} catch {
-		// Overlay already gone (e.g. diagram was re-imported).
-	}
-	overlayIds.delete(key)
+function addProgress(msg: string) {
+	const li = document.createElement("li")
+	li.textContent = msg
+	progressList.appendChild(li)
 }

@@ -4,9 +4,10 @@
  */
 
 /**
- * State for the clarification form, built from BpmnClarificationRequestEvent.
- * Wire contract (ARCHITECTURE.md §ss-4): prompt is sourced from FormBindingRequest.payload.title,
- * round/maxRounds from the publisher's per-process counter.
+ * State for the clarification form, built from an `AWAITING_INPUT` `RunUpdate` (epic #605):
+ * `prompt` is the update's `summary` (sourced server-side from `FormBindingRequest.payload.title`),
+ * `round`/`maxRounds`/`options` come from its whitelisted `detail` map. Protocol-agnostic
+ * otherwise — this module itself has no wire-contract types.
  */
 export type ClarifyState = {
 	prompt: string

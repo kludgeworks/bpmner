@@ -36,11 +36,10 @@ function fakeCanvas(initialZoom = 1): {
 }
 
 describe("canvas viewport", () => {
-	it("centers only the authoritative initial layout", () => {
+	it("fits and centers the viewport on the imported diagram", () => {
 		const { canvas, calls } = fakeCanvas()
 
-		assert.equal(fitInitialViewport(canvas, "INITIAL_RENDER"), false)
-		assert.equal(fitInitialViewport(canvas, "LAYOUT_COMPLETE"), true)
+		fitInitialViewport(canvas)
 
 		assert.deepEqual(calls, [["fit-viewport", true]])
 	})

@@ -9,6 +9,7 @@ import com.embabel.agent.core.AgentPlatform
 import com.embabel.agent.core.AgentProcessStatusCode
 import com.embabel.agent.core.hitl.FormBindingRequest
 import dev.groknull.bpmner.authoring.BpmnResult
+import dev.groknull.bpmner.pipeline.RunUpdate
 import dev.groknull.bpmner.readiness.BpmnClarificationAnswers
 import jakarta.validation.Valid
 import jakarta.validation.constraints.NotBlank
@@ -26,6 +27,7 @@ import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
+import reactor.core.publisher.Flux
 
 data class WebGenerationRequest(
     @field:NotBlank
@@ -52,6 +54,7 @@ data class WebGenerationResponse(
 internal class BpmnWebController(
     private val generationStarter: WebGenerationStarter,
     private val agentPlatform: AgentPlatform,
+    private val runUpdates: RunUpdateSinkRegistry,
 ) {
     @PostMapping("/generations")
     fun startGeneration(
@@ -61,10 +64,21 @@ internal class BpmnWebController(
         return ResponseEntity.accepted().body(
             WebGenerationResponse(
                 processId = processId,
-                sseUrl = "events/process/$processId",
+                sseUrl = "api/bpmn/generations/$processId/updates",
             ),
         )
     }
+
+    /**
+     * Native Spring reactive SSE endpoint for the ordered [RunUpdate] stream (ADR-605-01):
+     * bpmner owns this delivery path outright — no reach into Embabel's `web.sse.SSEController`.
+     * Subscribes the bounded per-process replay sink ([RunUpdateSinkRegistry]) so a late
+     * subscriber (the browser connects only after this 202 response) still receives every prior
+     * update before the live tail (D4). Spring MVC natively streams a returned `Flux<T>` as
+     * `text/event-stream` — no `SseEmitter` bridging code is needed.
+     */
+    @GetMapping("/generations/{id}/updates", produces = [MediaType.TEXT_EVENT_STREAM_VALUE])
+    fun updates(@PathVariable id: String): Flux<RunUpdate> = runUpdates.subscribe(id)
 
     /**
      * Serves the terminal [BpmnResult.xml] for a finished generation as an `application/xml`

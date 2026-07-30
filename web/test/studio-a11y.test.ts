@@ -49,10 +49,6 @@ const STUDIO_BODY = `
         <h2 class="panel-title">Progress</h2>
         <ul id="progress-list"><li>Drafting…</li></ul>
       </div>
-      <div id="diagnostics-container" class="panel">
-        <h2 class="panel-title">Diagnostics <span id="diagnostics-attempt" class="panel-note">attempt 2</span></h2>
-        <ul id="diagnostics-list"></ul>
-      </div>
       <div id="result-bar"></div>
     </aside>
     <main class="studio-canvas" aria-label="Diagram canvas">
@@ -95,10 +91,8 @@ describe("studio DOM accessibility (axe-core)", () => {
 			contract: "active",
 		})
 		renderResultBar(required(doc, "result-bar"), {
-			status: "GENERATED",
-			alignmentVerdict: "PASS",
-			alignmentReport: "Aligned with the described intent.",
-			costSummary: "tokens: 1234  cost: $0.01",
+			status: "VALIDATION_FAILED",
+			diagnosticsSummary: "source=xsd: element is not well-formed",
 			downloadUrl: "api/bpmn/generations/abc/bpmn",
 		})
 		renderClarifyForm(
@@ -112,19 +106,6 @@ describe("studio DOM accessibility (axe-core)", () => {
 			},
 			() => undefined,
 		)
-
-		// A diagnostics row mirroring app.ts renderDiagnosticList output.
-		const li = doc.createElement("li")
-		li.className = "diagnostic-item"
-		const dot = doc.createElement("span")
-		dot.className = "severity-dot severity-dot--error"
-		dot.setAttribute("aria-hidden", "true")
-		li.appendChild(dot)
-		const txt = doc.createElement("span")
-		txt.className = "diagnostic-text"
-		txt.textContent = "[XSD] element is not well-formed"
-		li.appendChild(txt)
-		required(doc, "diagnostics-list").appendChild(li)
 
 		const results = await axe.run(doc.body, {
 			rules: { "color-contrast": { enabled: false } },

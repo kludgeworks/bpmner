@@ -26,10 +26,11 @@ import org.springframework.http.HttpStatus
 class BpmnWebControllerTest {
     private val generationStarter = mock(WebGenerationStarter::class.java)
     private val agentPlatform = mock(AgentPlatform::class.java)
-    private val controller = BpmnWebController(generationStarter, agentPlatform)
+    private val runUpdates = RunUpdateSinkRegistry()
+    private val controller = BpmnWebController(generationStarter, agentPlatform, runUpdates)
 
     // -------------------------------------------------------------------------
-    // POST /generations (existing tests — constructor updated to include agentPlatform)
+    // POST /generations (existing tests — constructor updated to include agentPlatform/runUpdates)
     // -------------------------------------------------------------------------
 
     @Test
@@ -42,7 +43,7 @@ class BpmnWebControllerTest {
         assertEquals(HttpStatus.ACCEPTED, response.statusCode)
         val body = response.body!!
         assertEquals("test-process-123", body.processId)
-        assertEquals("events/process/test-process-123", body.sseUrl)
+        assertEquals("api/bpmn/generations/test-process-123/updates", body.sseUrl)
     }
 
     @Test
@@ -62,6 +63,24 @@ class BpmnWebControllerTest {
         val request = captor.value
         assertEquals("Order is shipped", request.processDescription)
         assertEquals("Use verb-object task names", request.styleGuide)
+    }
+
+    // -------------------------------------------------------------------------
+    // GET /generations/{id}/updates
+    // -------------------------------------------------------------------------
+
+    @Test
+    fun `updates streams RunUpdates from the registry for the given process id`() {
+        runUpdates.emit(
+            "sse-proc",
+            dev.groknull.bpmner.pipeline.RunPhase.READINESS,
+            dev.groknull.bpmner.pipeline.ArtifactState.NONE,
+            "hello",
+        )
+
+        val first = controller.updates("sse-proc").blockFirst(java.time.Duration.ofSeconds(5))
+
+        assertEquals("hello", first?.summary)
     }
 
     // -------------------------------------------------------------------------

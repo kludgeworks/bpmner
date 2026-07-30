@@ -9,13 +9,12 @@ import org.springframework.modulith.ApplicationModule
 
 /**
  * Telemetry module — purely-outbound event listeners over the rest of the
- * pipeline. No other module imports telemetry; it consumes
- * authoring/conformance/alignment/layout/readiness events for metrics and
- * tracing.
+ * pipeline. No other module imports telemetry; it consumes framework
+ * lifecycle events for a per-run cost/timing summary and debug-level
+ * lifecycle logging. The author-facing progress stream (epic #605) is owned
+ * by `pipeline`'s `RunUpdate` anti-corruption layer, not by this module.
  */
 // bpmn.GenerationMode is referenced via BpmnRequest.mode at bytecode level — no direct
 // import; verify() confirms this grant is load-bearing (removal fails ApplicationModules.verify()).
-// layout is listed because BpmnPipelineObserver observes BpmnLayoutCompletedEvent (ss-2) to
-// emit the LAYOUT_COMPLETE snapshot; BpmnLayoutCompletedEvent is the layout module's published API.
 @ApplicationModule
 internal object TelemetryModule

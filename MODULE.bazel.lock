@@ -597,7 +597,7 @@
     "@@aspect_rules_ts+//ts:extensions.bzl%ext": {
       "general": {
         "bzlTransitiveDigest": "cqZ07zAB92ofKybw48WmPNKyNQHaGZ7YVkj1SNs+f7c=",
-        "usagesDigest": "jqWr5UwLxyjz6Vtya6ezx77mnQ7SIRzWvKoGYvLNNTU=",
+        "usagesDigest": "Fx0yLCuucleXiSmNO7fRNVUOT77bKf0e6QDw44hfvzY=",
         "recordedFileInputs": {},
         "recordedDirentsInputs": {},
         "envVariables": {},
@@ -921,7 +921,7 @@
     "@@rules_nodejs+//nodejs:extensions.bzl%node": {
       "general": {
         "bzlTransitiveDigest": "oZFClfRhTTwsYzpxVPkOpOt/r0+OzEfEV37au0jFZ0s=",
-        "usagesDigest": "XihlJzUGhle752NH/WaB+VGN+o9Ban3QtUASjvVmdXY=",
+        "usagesDigest": "+Cw4XQ7leeQtKxHUJyTGxtWHUhIe+BzbBSCXxMNwjAM=",
         "recordedFileInputs": {},
         "recordedDirentsInputs": {},
         "envVariables": {},
@@ -1055,7 +1055,7 @@
     "@@rules_oci+//oci:extensions.bzl%oci": {
       "general": {
         "bzlTransitiveDigest": "vGXVILdzmjpSu9TUsSyZYGHBH6GeNYZ/FHJVj5urdDE=",
-        "usagesDigest": "Unf7IGR/beqeG9XPYOnQdiUU0ai9lhzhljUlsy+Ol+8=",
+        "usagesDigest": "LOmS7iPnQmLxrIQ+CYk0kD0WbVOX0RSdchTRrwhIVj4=",
         "recordedFileInputs": {},
         "recordedDirentsInputs": {},
         "envVariables": {},
@@ -1584,7 +1584,7 @@
     "@@rules_pmd+//pmd:extensions.bzl%pmd": {
       "general": {
         "bzlTransitiveDigest": "UU1v0CSeh22O4JdYP5u9M6gyD6coR7gAQVjx6+ah86M=",
-        "usagesDigest": "gWZgMyIJM29AOf2nbag0lawVZsvxo+7H976HjBt5gPs=",
+        "usagesDigest": "vYYVZIrnYQxcAs+rSPvyb9JHn7BKQh1NppE6HwQiAg8=",
         "recordedFileInputs": {},
         "recordedDirentsInputs": {},
         "envVariables": {},
@@ -1813,7 +1813,7 @@
     "@@toolchains_buildbuddy+//:extensions.bzl%buildbuddy": {
       "general": {
         "bzlTransitiveDigest": "YThiSErJv+jiCHJzZIEyk0yegQRS/x+T/ce309eGTvA=",
-        "usagesDigest": "vh73NoNaLBfx+fQApKEtK71QqyesQuN91xpz7XfBnfw=",
+        "usagesDigest": "7Jf/NFIMid2esUc6WHQb3WLutFZuy1GvBnUVKE6xZAM=",
         "recordedFileInputs": {},
         "recordedDirentsInputs": {},
         "envVariables": {},

@@ -89,6 +89,7 @@ kt_jvm_library(
         "@maven//:io_micrometer_micrometer_registry_prometheus",
         "@maven//:io_micrometer_micrometer_tracing_bridge_otel",
         "@maven//:io_opentelemetry_opentelemetry_exporter_otlp",
+        "@maven//:io_projectreactor_reactor_core",
         "@maven//:org_apache_opennlp_opennlp_tools",
         "@maven//:org_camunda_bpm_model_camunda_bpmn_model",
         "@maven//:org_eclipse_elk_org_eclipse_elk_alg_layered",

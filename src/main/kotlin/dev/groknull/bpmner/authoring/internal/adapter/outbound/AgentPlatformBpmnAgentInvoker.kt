@@ -5,6 +5,7 @@
 
 package dev.groknull.bpmner.authoring.internal.adapter.outbound
 
+import com.embabel.agent.api.channel.OutputChannel
 import com.embabel.agent.api.common.autonomy.AgentProcessExecution
 import com.embabel.agent.core.AgentPlatform
 import com.embabel.agent.core.Budget
@@ -25,6 +26,11 @@ internal class AgentPlatformBpmnAgentInvoker(
     private val agentPlatform: AgentPlatform,
     private val config: BpmnAuthoringBudgetConfig,
     private val logging: LlmInteractionLoggingConfig,
+    // Wired by type only (com.embabel.agent.api.channel.OutputChannel is a third-party
+    // interface): the pipeline module's RunUpdate anti-corruption-layer bean satisfies this
+    // without authoring ever importing pipeline.internal.* (epic #605 plan §2 cross-module
+    // wiring wrinkle — resolved by depending on the framework port, not a bpmner type).
+    private val outputChannel: OutputChannel,
 ) : BpmnAgentInvoker {
     override fun generate(
         request: BpmnRequest,
@@ -92,23 +98,28 @@ internal class AgentPlatformBpmnAgentInvoker(
     // Sync CLI generation: blocks for a typed BpmnResult. `ephemeral = true` because the process
     // is short-lived and never queried for status.
     //
-    // Listeners are NOT set here: every AgenticEventListener @Component (SSEController, the
-    // telemetry publishers, the progress observer) is already auto-registered globally on the
-    // platform and receives events for every process. Also passing them via ProcessOptions.listeners
-    // registers them a second time, so each fires twice — which surfaced as duplicated SSE
-    // progress/cost lines in the web UI.
+    // Listeners are NOT set here: every AgenticEventListener @Component (the run-update channel,
+    // BpmnerRunSummaryListener, BpmnerLoggingAgenticEventListener) is already auto-registered
+    // globally on the platform and receives events for every process. Also passing them via
+    // ProcessOptions.listeners registers them a second time, so each fires twice — which
+    // surfaced as duplicated SSE progress/cost lines in the web UI previously.
+    //
+    // outputChannel IS set here (D1, epic #605): registering it on ProcessOptions is the one
+    // supported way to bind the run-update anti-corruption layer to this specific process.
     private fun syncGenerationProcessOptions(): ProcessOptions = ProcessOptions(
         budget = Budget(actions = config.generation),
         verbosity = llmVerbosity(),
         ephemeral = true,
+        outputChannel = outputChannel,
     )
 
     // Async web generation: returns the process id immediately; callers poll for status, so the
-    // process must be persisted — `ephemeral = false`. See the note above on listeners.
+    // process must be persisted — `ephemeral = false`. See the note above on listeners/outputChannel.
     private fun asyncGenerationProcessOptions(): ProcessOptions = ProcessOptions(
         budget = Budget(actions = config.generation),
         verbosity = llmVerbosity(),
         ephemeral = false,
+        outputChannel = outputChannel,
     )
 
     private fun llmVerbosity(): Verbosity = Verbosity(

@@ -14,12 +14,19 @@ export type ResultStatus =
 	| "ALIGNMENT_FAILED"
 	| "VALIDATION_FAILED"
 
-/** Accumulated state for the result bar, built from BpmnResultEvent + BpmnRunCostEvent. */
+/**
+ * Accumulated state for the result bar, built directly from the terminal `RunUpdate` (epic
+ * #605): `status`/`alignmentVerdict`/`alignmentReport`/`diagnosticsSummary` all come from its
+ * whitelisted `detail` map — never a run-cost figure. A cost/token summary could reveal the
+ * underlying LLM provider or model, which the `RunUpdate` leakage guard forbids by design, so
+ * it is intentionally not part of this contract (still logged server-side only, unchanged).
+ */
 export type ResultBarState = {
 	status?: ResultStatus
 	alignmentVerdict?: string
 	alignmentReport?: string
-	costSummary?: string
+	/** Preformatted, newline-joined diagnostic lines — only present for VALIDATION_FAILED. */
+	diagnosticsSummary?: string
 	downloadUrl?: string
 }
 
@@ -35,7 +42,11 @@ const STATUS_LABELS: Record<ResultStatus, string> = {
  * GENERATED, ALIGNMENT_FAILED, and VALIDATION_FAILED all produce a final BPMN artifact.
  */
 function hasDownload(status: ResultStatus): boolean {
-	return status === "GENERATED" || status === "ALIGNMENT_FAILED" || status === "VALIDATION_FAILED"
+	return (
+		status === "GENERATED" ||
+		status === "ALIGNMENT_FAILED" ||
+		status === "VALIDATION_FAILED"
+	)
 }
 
 /**
@@ -53,8 +64,8 @@ export function buildResultBarHtml(state: ResultBarState): string {
 		html += `<details class="alignment-report"><summary>Alignment${verdict}</summary><p>${escapeHtml(state.alignmentReport)}</p></details>`
 	}
 
-	if (state.costSummary) {
-		html += `<pre class="run-cost">${escapeHtml(state.costSummary)}</pre>`
+	if (state.diagnosticsSummary) {
+		html += `<details class="validation-diagnostics"><summary>Validation diagnostics</summary><pre>${escapeHtml(state.diagnosticsSummary)}</pre></details>`
 	}
 
 	if (state.downloadUrl && hasDownload(state.status)) {
