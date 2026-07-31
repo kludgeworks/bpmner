@@ -24,6 +24,7 @@ const STUDIO_BODY = `
   <div class="studio">
     <header class="studio-bar">
       <h1 class="studio-brand">bpmner</h1>
+      <span id="version-footer" class="studio-version" aria-label="Application version">v0.3.2</span>
       <p class="studio-tagline">Generation Studio</p>
     </header>
     <aside class="studio-sidebar" aria-label="Controls and status">
@@ -63,7 +64,6 @@ const STUDIO_BODY = `
         <button id="zoom-out-btn" class="canvas-control" type="button" aria-label="Zoom out">−</button>
       </div>
     </main>
-    <footer id="version-footer" class="studio-version" aria-label="Application version">v0.3.2</footer>
   </div>
 `
 
