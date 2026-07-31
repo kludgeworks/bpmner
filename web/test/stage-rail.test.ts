@@ -5,8 +5,26 @@
 
 import assert from "node:assert/strict"
 import { describe, it } from "node:test"
+import type { RunUpdate } from "../src/run-update"
 import type { ChipState, StageKey } from "../src/stage-rail"
 import { initialStages, reduceStages, STAGE_ORDER } from "../src/stage-rail"
+
+function progress(
+	phase: RunUpdate["phase"],
+	artifactState: RunUpdate["artifactState"] = "NONE",
+): RunUpdate {
+	return { seq: 1, phase, artifactState, summary: "s" }
+}
+
+function terminal(outcome: RunUpdate["outcome"] = "COMPLETED"): RunUpdate {
+	return {
+		seq: 99,
+		phase: "FINISHED",
+		artifactState: "FINAL",
+		summary: "done",
+		outcome,
+	}
+}
 
 // ---------------------------------------------------------------------------
 // Happy-path: all six stages reach done
@@ -14,19 +32,19 @@ import { initialStages, reduceStages, STAGE_ORDER } from "../src/stage-rail"
 
 describe("reduceStages — happy path", () => {
 	it("marks earlier stages done when a later stage becomes active", () => {
-		const events = [
-			{ stage: "readiness", status: "active" },
-			{ stage: "contract", status: "active" },
-			{ stage: "generate", status: "active" },
-			{ stage: "validate", status: "active" },
-			{ stage: "layout", status: "active" },
-			{ stage: "align", status: "active" },
-			{ stage: "align", status: "done" },
+		const updates: RunUpdate[] = [
+			progress("READINESS"),
+			progress("CONTRACT"),
+			progress("OUTLINE"),
+			progress("VALIDATION"),
+			progress("LAYOUT"),
+			progress("ALIGNMENT"),
+			terminal(),
 		]
 
 		let state = initialStages()
-		for (const ev of events) {
-			state = reduceStages(state, ev)
+		for (const update of updates) {
+			state = reduceStages(state, update)
 		}
 
 		const expected: Record<StageKey, ChipState> = {
@@ -42,7 +60,7 @@ describe("reduceStages — happy path", () => {
 
 	it("marks all earlier stages done when the final stage activates", () => {
 		let state = initialStages()
-		state = reduceStages(state, { stage: "align", status: "active" })
+		state = reduceStages(state, progress("ALIGNMENT"))
 
 		assert.equal(state.readiness, "done")
 		assert.equal(state.contract, "done")
@@ -54,29 +72,28 @@ describe("reduceStages — happy path", () => {
 })
 
 // ---------------------------------------------------------------------------
-// Repair-loop: validate goes warn, then later stages proceed
+// Repair-loop: validate goes warn on a DIAGNOSTIC artifact state, then proceeds
 // ---------------------------------------------------------------------------
 
 describe("reduceStages — repair loop", () => {
-	it("validate goes warn on VALIDATION_FAILED, then proceeds when layout activates", () => {
-		const events = [
-			{ stage: "readiness", status: "active" },
-			{ stage: "contract", status: "active" },
-			{ stage: "generate", status: "active" },
-			{ stage: "validate", status: "active" },
-			{ stage: "validate", status: "warn" }, // repair attempt
-			{ stage: "validate", status: "warn" }, // second attempt
-			{ stage: "layout", status: "active" },
-			{ stage: "align", status: "active" },
-			{ stage: "align", status: "done" },
+	it("validate goes warn on a DIAGNOSTIC artifactState, then proceeds when layout activates", () => {
+		const updates: RunUpdate[] = [
+			progress("READINESS"),
+			progress("CONTRACT"),
+			progress("DRAFT", "XML_DRAFT"),
+			progress("VALIDATION", "DIAGNOSTIC"), // repair attempt
+			progress("VALIDATION", "DIAGNOSTIC"), // second attempt
+			progress("VALIDATION", "XML_DRAFT"), // passed
+			progress("LAYOUT", "XML_DRAFT"),
+			progress("ALIGNMENT", "XML_DRAFT"),
+			terminal(),
 		]
 
 		let state = initialStages()
-		for (const ev of events) {
-			state = reduceStages(state, ev)
+		for (const update of updates) {
+			state = reduceStages(state, update)
 		}
 
-		// All stages end done
 		for (const stage of STAGE_ORDER) {
 			assert.equal(state[stage], "done", `stage ${stage} should be done`)
 		}
@@ -84,9 +101,8 @@ describe("reduceStages — repair loop", () => {
 
 	it("warn does not mark earlier stages done", () => {
 		let state = initialStages()
-		state = reduceStages(state, { stage: "validate", status: "warn" })
+		state = reduceStages(state, progress("VALIDATION", "DIAGNOSTIC"))
 
-		// Only validate is affected
 		assert.equal(state.validate, "warn")
 		assert.equal(state.readiness, "pending")
 		assert.equal(state.contract, "pending")
@@ -96,14 +112,10 @@ describe("reduceStages — repair loop", () => {
 	})
 })
 
-// ---------------------------------------------------------------------------
-// Vague-input path: stops at readiness active
-// ---------------------------------------------------------------------------
-
 describe("reduceStages — vague input", () => {
 	it("stops at readiness active when no later stage fires", () => {
 		let state = initialStages()
-		state = reduceStages(state, { stage: "readiness", status: "active" })
+		state = reduceStages(state, progress("READINESS"))
 
 		assert.equal(state.readiness, "active")
 		assert.equal(state.contract, "pending")
@@ -112,36 +124,34 @@ describe("reduceStages — vague input", () => {
 		assert.equal(state.layout, "pending")
 		assert.equal(state.align, "pending")
 	})
+
+	it("a terminal update leaves never-reached stages pending, not done", () => {
+		let state = initialStages()
+		state = reduceStages(state, progress("READINESS"))
+		state = reduceStages(state, terminal("FAILED"))
+
+		assert.equal(state.readiness, "done")
+		assert.equal(state.contract, "pending")
+		assert.equal(state.generate, "pending")
+		assert.equal(state.validate, "pending")
+		assert.equal(state.layout, "pending")
+		assert.equal(state.align, "pending")
+	})
 })
 
-// ---------------------------------------------------------------------------
-// Edge cases: unknown stage/status, idempotency
-// ---------------------------------------------------------------------------
-
 describe("reduceStages — edge cases", () => {
-	it("ignores unknown stage names (forward-compat)", () => {
+	it("ignores phases with no stage mapping (forward-compat)", () => {
 		const initial = initialStages()
-		const result = reduceStages(initial, {
-			stage: "future-stage",
-			status: "active",
-		})
+		const result = reduceStages(initial, progress("AWAITING_INPUT"))
 		assert.deepEqual(result, initial)
 	})
 
-	it("ignores unknown status values", () => {
-		const initial = initialStages()
-		const result = reduceStages(initial, {
-			stage: "readiness",
-			status: "unknown-status",
-		})
-		assert.deepEqual(result, initial)
-	})
-
-	it("is idempotent — applying same event twice produces same result", () => {
+	it("is idempotent — applying the same update twice produces the same result", () => {
 		let state = initialStages()
-		state = reduceStages(state, { stage: "validate", status: "active" })
+		const update = progress("VALIDATION")
+		state = reduceStages(state, update)
 		const once = { ...state }
-		state = reduceStages(state, { stage: "validate", status: "active" })
+		state = reduceStages(state, update)
 		assert.deepEqual(state, once)
 	})
 })

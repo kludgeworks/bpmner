@@ -26,11 +26,8 @@ import org.springframework.http.HttpStatus
 class BpmnWebControllerTest {
     private val generationStarter = mock(WebGenerationStarter::class.java)
     private val agentPlatform = mock(AgentPlatform::class.java)
-    private val controller = BpmnWebController(generationStarter, agentPlatform)
-
-    // -------------------------------------------------------------------------
-    // POST /generations (existing tests — constructor updated to include agentPlatform)
-    // -------------------------------------------------------------------------
+    private val runUpdates = RunUpdateSinkRegistry()
+    private val controller = BpmnWebController(generationStarter, agentPlatform, runUpdates)
 
     @Test
     fun `accepted with relative sseUrl when generation starts`() {
@@ -42,7 +39,7 @@ class BpmnWebControllerTest {
         assertEquals(HttpStatus.ACCEPTED, response.statusCode)
         val body = response.body!!
         assertEquals("test-process-123", body.processId)
-        assertEquals("events/process/test-process-123", body.sseUrl)
+        assertEquals("api/bpmn/generations/test-process-123/updates", body.sseUrl)
     }
 
     @Test
@@ -64,9 +61,40 @@ class BpmnWebControllerTest {
         assertEquals("Use verb-object task names", request.styleGuide)
     }
 
-    // -------------------------------------------------------------------------
-    // GET /generations/{id}/bpmn
-    // -------------------------------------------------------------------------
+    @Test
+    fun `updates streams RunUpdates from the registry for a known process id`() {
+        `when`(agentPlatform.getAgentProcess("sse-proc")).thenReturn(mock(AgentProcess::class.java))
+        runUpdates.emit(
+            "sse-proc",
+            dev.groknull.bpmner.pipeline.RunPhase.READINESS,
+            dev.groknull.bpmner.pipeline.ArtifactState.NONE,
+            "hello",
+        )
+
+        val response = controller.updates("sse-proc")
+
+        assertEquals(HttpStatus.OK, response.statusCode)
+        val first = response.body?.blockFirst(java.time.Duration.ofSeconds(5))
+        assertEquals("hello", first?.summary)
+    }
+
+    @Test
+    fun `404 when updates requested for an unknown process id — no sink is ever created`() {
+        `when`(agentPlatform.getAgentProcess("no-such-proc")).thenReturn(null)
+
+        val response = controller.updates("no-such-proc")
+
+        assertEquals(HttpStatus.NOT_FOUND, response.statusCode)
+    }
+
+    @Test
+    fun `404 when getAgentProcess throws for updates`() {
+        `when`(agentPlatform.getAgentProcess("bad-id")).thenThrow(RuntimeException("no such process"))
+
+        val response = controller.updates("bad-id")
+
+        assertEquals(HttpStatus.NOT_FOUND, response.statusCode)
+    }
 
     @Test
     fun `200 with xml body and attachment header when process has terminal xml`() {
@@ -128,10 +156,6 @@ class BpmnWebControllerTest {
 
         assertEquals(HttpStatus.CONFLICT, response.statusCode)
     }
-
-    // -------------------------------------------------------------------------
-    // POST /generations/{id}/answers
-    // -------------------------------------------------------------------------
 
     @Test
     fun `202 when process is WAITING and form is present — bind and start are called`() {
@@ -202,10 +226,6 @@ class BpmnWebControllerTest {
         assertEquals(1, violations.size, "expected one NotBlank violation for blank answers; got: $violations")
         assertEquals("answers", violations.first().propertyPath.toString())
     }
-
-    // -------------------------------------------------------------------------
-    // Helpers
-    // -------------------------------------------------------------------------
 
     private fun processWithResult(result: BpmnResult?): AgentProcess {
         val process = mock(AgentProcess::class.java)

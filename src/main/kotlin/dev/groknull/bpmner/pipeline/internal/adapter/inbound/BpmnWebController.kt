@@ -9,6 +9,7 @@ import com.embabel.agent.core.AgentPlatform
 import com.embabel.agent.core.AgentProcessStatusCode
 import com.embabel.agent.core.hitl.FormBindingRequest
 import dev.groknull.bpmner.authoring.BpmnResult
+import dev.groknull.bpmner.pipeline.RunUpdate
 import dev.groknull.bpmner.readiness.BpmnClarificationAnswers
 import jakarta.validation.Valid
 import jakarta.validation.constraints.NotBlank
@@ -26,6 +27,7 @@ import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
+import reactor.core.publisher.Flux
 
 data class WebGenerationRequest(
     @field:NotBlank
@@ -52,6 +54,7 @@ data class WebGenerationResponse(
 internal class BpmnWebController(
     private val generationStarter: WebGenerationStarter,
     private val agentPlatform: AgentPlatform,
+    private val runUpdates: RunUpdateSinkRegistry,
 ) {
     @PostMapping("/generations")
     fun startGeneration(
@@ -61,14 +64,38 @@ internal class BpmnWebController(
         return ResponseEntity.accepted().body(
             WebGenerationResponse(
                 processId = processId,
-                sseUrl = "events/process/$processId",
+                sseUrl = "api/bpmn/generations/$processId/updates",
             ),
         )
     }
 
     /**
+     * Native Spring reactive SSE endpoint for the ordered [RunUpdate] stream: bpmner owns this
+     * delivery path outright — no reach into Embabel's `web.sse.SSEController`. Subscribes the
+     * bounded per-process replay sink ([RunUpdateSinkRegistry]) so a late subscriber (the browser
+     * connects only after the 202 response from [startGeneration]) still receives every prior
+     * update before the live tail. Spring MVC natively streams a returned `Flux<T>` as
+     * `text/event-stream` — no `SseEmitter` bridging code is needed.
+     *
+     * - `200`: known process id — streams its replay-then-live [RunUpdate] sequence.
+     * - `404`: unknown process id, so no sink is ever created for it — without this check the
+     *   registry would let an arbitrary caller grow unbounded by subscribing to made-up ids.
+     */
+    @GetMapping("/generations/{id}/updates", produces = [MediaType.TEXT_EVENT_STREAM_VALUE])
+    fun updates(@PathVariable id: String): ResponseEntity<Flux<RunUpdate>> {
+        if (!agentProcessExists(id)) return ResponseEntity.notFound().build()
+        return ResponseEntity.ok(runUpdates.subscribe(id))
+    }
+
+    private fun agentProcessExists(id: String): Boolean = try {
+        agentPlatform.getAgentProcess(id) != null
+    } catch (_: Exception) {
+        false
+    }
+
+    /**
      * Serves the terminal [BpmnResult.xml] for a finished generation as an `application/xml`
-     * attachment (ADR-ss-004: reads the Embabel process store; no bpmner-side registry).
+     * attachment.
      *
      * - `200`: run completed with XML — body is byte-identical to the final `BpmnResult.xml`.
      * - `404`: unknown process id (or process evicted from the in-memory store).
@@ -98,7 +125,7 @@ internal class BpmnWebController(
 
     /**
      * Accepts a free-text clarification answer, binds it to the parked process, and resumes it
-     * asynchronously (ARCHITECTURE.md §ss-4, ADR-ss-003).
+     * asynchronously.
      *
      * - `202`: answer accepted; the run resumes over the existing SSE stream.
      * - `404`: unknown process id (or process evicted from the in-memory store).
@@ -124,6 +151,8 @@ internal class BpmnWebController(
             return ResponseEntity.status(HttpStatus.CONFLICT).build()
         }
 
+        // Safe: BpmnGenerationAgent.clarificationFormFrom is this blackboard slot's sole
+        // producer, always as FormBindingRequest<BpmnClarificationAnswers>.
         @Suppress("UNCHECKED_CAST")
         val form =
             process.last(FormBindingRequest::class.java) as? FormBindingRequest<BpmnClarificationAnswers>

@@ -273,8 +273,8 @@ any `LOCAL_MODEL_FIX` rule names an unregistered handler. `AgentDeploymentValida
 | `alignment/` | Guardrail 3: semantic comparison vs process contract. | `BpmnAligner` (port), `LlmBpmnAligner`, `BpmnAlignmentReport`. |
 | `repair/` | Validation + iterative repair loop. | `BpmnRepairer` (port), `DefaultBpmnRepairer`, `BpmnRepairLoop`, `BpmnRepairAdvancer`. |
 | `layout/` | Deterministic auto-layout + final XSD validation. `BpmnLayoutAgent` remains its inbound adapter; layouter and placement helpers are flattened private implementation. | `BpmnLayoutAgent`, `BpmnLayoutPort` (port), `LayoutedBpmnXml`. |
-| `pipeline/` | Single `generateBpmn` orchestrator: thin `@Action` shims, `AgentDeploymentValidator`, HTTP and shell inbound adapters, and private preview/browser outbound adapters. | `BpmnGenerationAgent`, `AgentDeploymentValidator`, `BpmnWebController`, `BpmnShellCommands`. |
-| `telemetry/` | Event sink: process-finished summary, validation event logging, SSE progress projection. | `BpmnerRunSummaryListener`, `BpmnPipelineObserver`, `BpmnProgressProjectionObserver`. |
+| `pipeline/` | Single `generateBpmn` orchestrator: thin `@Action` shims, `AgentDeploymentValidator`, HTTP and shell inbound adapters, private preview/browser outbound adapters, and (epic #605) the `RunUpdate` read model + its Embabel anti-corruption layer and native SSE delivery. | `BpmnGenerationAgent`, `AgentDeploymentValidator`, `BpmnWebController`, `BpmnShellCommands`, `RunUpdate`, `BpmnRunUpdateChannel`, `RunUpdateSinkRegistry`. |
+| `telemetry/` | Event sink: process-finished cost/timing summary and debug-level lifecycle logging only. The author-facing progress stream moved to `pipeline`'s `RunUpdate` model (epic #605); this module no longer touches the browser. | `BpmnerRunSummaryListener`, `BpmnerLoggingAgenticEventListener`, `BpmnerValidationEventCollector`. |
 | `llm/` | LLM provider registration (DeepSeek, OpenRouter). Platform-level; `allowedDependencies = []`. | Provider `@Configuration` classes. |
 
 <!-- markdownlint-enable MD013 -->
@@ -327,9 +327,11 @@ Both entrypoints reach `generateBpmn` by resolving the orchestrator by name on `
 - **Shell** — `BpmnShellCommands` (`pipeline/internal/adapter/inbound/`) exposes `generate`
   / `gen` / `g`, seeding `UserInput` in **closed mode**.
 - **Web (Tripper `JourneyController`)** — `BpmnWebController` → `WebGenerationStarter` calls
-  `BpmnAgentInvoker.startAsync(request)` in `INTERACTIVE` mode; returns `202 {processId,
-  sseUrl}`. No synchronous readiness pre-check. Clarification via `WaitFor.formSubmission`
-  over SSE.
+  `BpmnAgentInvoker.startAsync(request)` in `INTERACTIVE` mode; returns
+  `202 {processId, sseUrl: "api/bpmn/generations/{id}/updates"}`. No synchronous readiness
+  pre-check. Clarification via `WaitFor.formSubmission`, surfaced as an `AWAITING_INPUT`
+  `RunUpdate` over that same SSE stream (epic #605 — see §wire-contract; this is a
+  **bpmner-owned** endpoint, not Embabel's `web.sse.SSEController`).
 
 ### Configuration
 
@@ -337,30 +339,62 @@ Each capability module owns its `@ConfigurationProperties` binding
 (config module dissolved in epic #451 S4; per ADR-004, config types belong at the capability root package). For the full configuration reference see
 [`operator-guide.md`](./operator-guide.md).
 
-### SSE wire contract {#wire-contract}
+### `RunUpdate` wire contract {#wire-contract}
 
-The web client receives typed SSE events over the Embabel platform channel
-(`/api/bpmn/generations/events/process/{id}`). The following rules are **binding** for
-all new event types — do not rename a class or property without updating the TypeScript
-client in the same PR.
+Epic #605 replaced the entire pre-existing contract below with a bpmner-owned model and
+delivery path — no bridge, no parallel run, no phased cutover (`plans/605/ARCHITECTURE.md`,
+ADR-605-01). It supersedes the streaming-studio `ss-*` ADRs that governed the deleted design,
+most notably ADR-ss-004 ("reads the Embabel process store; no bpmner-side registry" — #605
+introduces the minimal bpmner-owned `RunUpdateSinkRegistry` instead) and ADR-ss-003/007/008
+(resume semantics, layout-snapshot delivery, and the `status`-property-collision naming rule,
+all specific to the deleted class-name-discriminated event hierarchy).
 
-- **Type discriminator:** the `type` field in the SSE JSON payload is the **Kotlin simple
-  class name** of the event. New event types must be concrete `class` (not `data class`)
-  declarations in the telemetry module root (`dev.groknull.bpmner.telemetry`) extending
-  `AbstractAgentProcessEvent`.
-- **Class and property names are the API.** Renaming a Kotlin class or property changes
-  the JSON field name and silently breaks the client.
-- **Note on inherited properties:** `AbstractAgentProcessEvent` exposes a `status` getter
-  returning `AgentProcessStatusReport`. New event types that carry a string status should
-  name the property `stageStatus` (or another non-conflicting name) to avoid hiding the
-  inherited getter with an incompatible type.
-- **Stage keys** (for `BpmnStageEvent`): `readiness | contract | generate | validate |
-  layout | align`.
-- **Status values** (for `BpmnStageEvent.stageStatus`): `active | done | warn`.
+The web client subscribes to `GET /api/bpmn/generations/{id}/updates` — a **native,
+bpmner-owned** Spring MVC SSE endpoint (`BpmnWebController`, backed by
+`RunUpdateSinkRegistry`) — never Embabel's `web.sse.SSEController`. Each message is one JSON
+`RunUpdate`, serialized directly from `dev.groknull.bpmner.pipeline.RunUpdate` with **no
+class-name `type` discriminator** (that was the deleted contract's binding rule; #605
+deliberately drops it):
 
-The drift guard in `BpmnProgressProjectionObserverTest` enforces at build time that every
-key in `ACTION_LABELS` and `ACTION_STAGES` is a live `@Action` method name — stale keys
-fail the build.
+```jsonc
+{
+  "seq": 5,                       // monotonic per run; the sole ordering/stale-update guard
+  "phase": "VALIDATION",          // READINESS | AWAITING_INPUT | CONTRACT | OUTLINE | DRAFT
+                                   // | VALIDATION | LAYOUT | ALIGNMENT | FINISHED
+  "artifactState": "DIAGNOSTIC",  // NONE | XML_DRAFT | DIAGNOSTIC | FINAL
+  "summary": "Validating and repairing (attempt 2).",
+  "detail": { "attemptNumber": "2", "xsdIssues": "1" }, // optional, flat String->String, whitelisted
+  "outcome": "COMPLETED"          // present ONLY on the one terminal update per run
+}
+```
+
+- **No type discriminator, no Embabel type, ever.** `phase`/`artifactState`/`outcome` are the
+  only enums; `detail` is a flat `Map<String, String>` — a leakage test
+  (`BpmnRunUpdateChannelTest`) and a structural reflection test (`RunUpdateTest`) both pin
+  that a `RunUpdate` can never carry a prompt, model reasoning, credential, provider payload,
+  or raw domain/Embabel object.
+- **The terminal marker is the `outcome` field's presence**, not a separate event type or a
+  settle-tracking state machine (the client's `stream-settle.ts` is now a one-line predicate).
+  `detail.status` carries the finer-grained
+  `dev.groknull.bpmner.authoring.BpmnGenerationStatus` (`GENERATED | NEEDS_CLARIFICATION |
+  ALIGNMENT_FAILED | VALIDATION_FAILED`); `detail.alignmentVerdict` / `detail.alignmentReport`
+  / `detail.diagnostics` are present only when relevant.
+- **The BPMN XML is never inlined into a `RunUpdate`.** The client fetches the one artifact —
+  once, at the terminal update, when `artifactState != "NONE"` — from the existing
+  `GET /generations/{id}/bpmn` (unchanged). There is no progressive multi-snapshot delivery;
+  richer intermediate milestones (e.g. the pre-XML `GRAPH_DRAFT` graph) are epic #605's
+  optional Stage 2.
+- **`AWAITING_INPUT`** carries the clarification prompt in `summary` and
+  `detail.round` / `detail.maxRounds` / `detail.options` (`|`-joined) for bounded-choice
+  questions — the client's clarify form is otherwise unchanged.
+
+`RunUpdateSinkRegistry` is a bounded, evictable, per-processId replay buffer (mirroring the
+platform's own `embabel.agent.platform.sse.max-buffer-size` / `.max-process-buffers`
+defaults), fed by `BpmnRunUpdateChannel` — the anti-corruption layer that is simultaneously
+the Embabel `OutputChannel` registered on every run's `ProcessOptions` and an
+`AgenticEventListener` for platform lifecycle events (waiting/finished/failed), plus a plain
+`@EventListener` for bpmner's own deterministic `@DomainEvent` milestones. See
+`plans/605/ARCHITECTURE.md` and `plans/605/PLAN-662.md` for the full design rationale.
 
 ---
 

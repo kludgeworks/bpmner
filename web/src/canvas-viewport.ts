@@ -29,15 +29,13 @@ export function setZoomControlsEnabled(
 	zoomOutButton.disabled = !enabled
 }
 
-export function fitInitialViewport(
-	canvas: CanvasViewport,
-	stage: string,
-): boolean {
-	if (stage === "LAYOUT_COMPLETE") {
-		canvas.zoom("fit-viewport", true)
-		return true
-	}
-	return false
+/**
+ * Fits and centers the viewport on the diagram just imported. The client renders exactly one
+ * diagram — the terminal artifact fetched from `GET /generations/{id}/bpmn` — rather than a
+ * progressive series of snapshots, so every successful import is the one to fit.
+ */
+export function fitInitialViewport(canvas: CanvasViewport): void {
+	canvas.zoom("fit-viewport", true)
 }
 
 export function zoomBy(canvas: CanvasViewport, factor: number): void {

@@ -3,10 +3,12 @@
  * SPDX-License-Identifier: MIT
  */
 
+import type { RunPhase, RunUpdate } from "./run-update"
+
 /**
- * Six deterministic stage keys for the pipeline rail.
- * Wire contract (ARCHITECTURE.md §wire-contract): these are the only valid stage values;
- * unknown values from future server versions are silently ignored by the reducer.
+ * Six deterministic stage keys for the pipeline rail — a client-side grouping of the server's
+ * `RunPhase` milestones. Unknown phases (e.g. `AWAITING_INPUT`, a future phase) are silently
+ * ignored by the reducer.
  */
 export type StageKey =
 	| "readiness"
@@ -29,6 +31,17 @@ export const STAGE_ORDER: StageKey[] = [
 	"align",
 ]
 
+/** Maps a server `RunPhase` onto the rail's coarser `StageKey`, where one exists. */
+const PHASE_TO_STAGE: Partial<Record<RunPhase, StageKey>> = {
+	READINESS: "readiness",
+	CONTRACT: "contract",
+	OUTLINE: "generate",
+	DRAFT: "generate",
+	VALIDATION: "validate",
+	LAYOUT: "layout",
+	ALIGNMENT: "align",
+}
+
 /** Initial state: all chips pending. */
 export function initialStages(): Record<StageKey, ChipState> {
 	return {
@@ -42,39 +55,47 @@ export function initialStages(): Record<StageKey, ChipState> {
 }
 
 /**
- * Pure reducer: applies one BpmnStageEvent to the current chip state map.
+ * Pure reducer: applies one `RunUpdate` to the current chip state map.
  *
  * Rules:
- * - `active`: marks the target chip active; marks every earlier chip `done`.
- * - `done`: marks the target chip done; marks every earlier chip `done`.
- * - `warn`: marks the target chip warn; does not affect other chips.
- * - Unknown stage or status: no-op (forward-compatibility with later stages).
- * - Idempotent: calling with the same event twice has no additional effect.
+ * - A non-terminal update whose phase maps to a stage: marks that chip `active` (or `warn`
+ *   when `artifactState` is `DIAGNOSTIC` — the validate/repair loop), and marks every earlier
+ *   stage `done`.
+ * - The terminal update (`outcome` present): marks every stage reached so far `done`; a stage
+ *   never reached (e.g. `generate` on a `NEEDS_CLARIFICATION` outcome) stays `pending`.
+ * - A phase with no stage mapping (`AWAITING_INPUT`, `FINISHED` on a non-terminal update):
+ *   no-op — forward-compatible with phases this rail doesn't visualise.
+ * - Idempotent: applying the same update twice has no additional effect.
  */
 export function reduceStages(
 	stages: Record<StageKey, ChipState>,
-	event: { stage: string; status: string },
+	update: RunUpdate,
 ): Record<StageKey, ChipState> {
-	const stage = event.stage as StageKey
-	if (!STAGE_ORDER.includes(stage)) return stages
+	if (update.outcome !== undefined) {
+		const next = { ...stages }
+		for (const key of STAGE_ORDER) {
+			if (next[key] !== "pending") next[key] = "done"
+		}
+		return next
+	}
 
-	const status = event.status
-	if (status !== "active" && status !== "done" && status !== "warn")
-		return stages
+	const stage = PHASE_TO_STAGE[update.phase]
+	if (!stage) return stages
 
 	const next = { ...stages }
 
-	if (status === "warn") {
+	if (update.artifactState === "DIAGNOSTIC") {
+		// A repair-loop retry only flags its own stage as "warn"; it must not mark earlier
+		// stages done.
 		next[stage] = "warn"
 		return next
 	}
 
-	// active or done: mark target, mark all earlier stages done
 	const idx = STAGE_ORDER.indexOf(stage)
 	for (let i = 0; i < idx; i++) {
-		next[STAGE_ORDER[i]] = "done"
+		if (next[STAGE_ORDER[i]] === "pending") next[STAGE_ORDER[i]] = "done"
 	}
-	next[stage] = status as ChipState
+	next[stage] = "active"
 	return next
 }
 

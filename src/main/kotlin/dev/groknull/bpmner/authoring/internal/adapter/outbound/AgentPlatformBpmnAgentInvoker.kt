@@ -5,6 +5,7 @@
 
 package dev.groknull.bpmner.authoring.internal.adapter.outbound
 
+import com.embabel.agent.api.channel.OutputChannel
 import com.embabel.agent.api.common.autonomy.AgentProcessExecution
 import com.embabel.agent.core.AgentPlatform
 import com.embabel.agent.core.Budget
@@ -25,6 +26,8 @@ internal class AgentPlatformBpmnAgentInvoker(
     private val agentPlatform: AgentPlatform,
     private val config: BpmnAuthoringBudgetConfig,
     private val logging: LlmInteractionLoggingConfig,
+    /** Framework port — keeps `authoring` free of importing `pipeline.internal`. */
+    private val outputChannel: OutputChannel,
 ) : BpmnAgentInvoker {
     override fun generate(
         request: BpmnRequest,
@@ -89,26 +92,23 @@ internal class AgentPlatformBpmnAgentInvoker(
         return process.id
     }
 
-    // Sync CLI generation: blocks for a typed BpmnResult. `ephemeral = true` because the process
-    // is short-lived and never queried for status.
-    //
-    // Listeners are NOT set here: every AgenticEventListener @Component (SSEController, the
-    // telemetry publishers, the progress observer) is already auto-registered globally on the
-    // platform and receives events for every process. Also passing them via ProcessOptions.listeners
-    // registers them a second time, so each fires twice — which surfaced as duplicated SSE
-    // progress/cost lines in the web UI.
+    // Short CLI run, never polled for status → ephemeral=true. Listeners aren't passed via
+    // ProcessOptions: every AgenticEventListener bean already auto-registers globally, so this
+    // would fire each event twice. outputChannel is bound here — the only supported registration
+    // point for the run-update channel.
     private fun syncGenerationProcessOptions(): ProcessOptions = ProcessOptions(
         budget = Budget(actions = config.generation),
         verbosity = llmVerbosity(),
         ephemeral = true,
+        outputChannel = outputChannel,
     )
 
-    // Async web generation: returns the process id immediately; callers poll for status, so the
-    // process must be persisted — `ephemeral = false`. See the note above on listeners.
+    // Process must be persisted (ephemeral=false): callers poll for status after the id returns.
     private fun asyncGenerationProcessOptions(): ProcessOptions = ProcessOptions(
         budget = Budget(actions = config.generation),
         verbosity = llmVerbosity(),
         ephemeral = false,
+        outputChannel = outputChannel,
     )
 
     private fun llmVerbosity(): Verbosity = Verbosity(

@@ -18,7 +18,6 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import dev.groknull.bpmner.bpmn.BpmnRequest
 import dev.groknull.bpmner.bpmn.styleGuideContribution
 import dev.groknull.bpmner.llm.publishOnInvalidLlmReturn
-import dev.groknull.bpmner.readiness.BpmnReadinessAssessedEvent
 import dev.groknull.bpmner.readiness.BpmnReadinessAssessmentException
 import dev.groknull.bpmner.readiness.BpmnReadinessConfig
 import dev.groknull.bpmner.readiness.BpmnReadinessThresholdsConfig
@@ -57,9 +56,13 @@ internal class BpmnReadinessAgent(
         context: OperationContext,
     ): ProcessInputAssessment {
         val modelAssessment = requestAssessment(request, context)
-        val assessment = modelAssessment.normalize(thresholds.readyThreshold, thresholds.maxClarificationQuestions)
-        eventPublisher.publishEvent(BpmnReadinessAssessedEvent(request, assessment))
-        return assessment
+        // No BpmnReadinessAssessedEvent published here: this action runs inside its own scoped,
+        // ephemeral Embabel sub-process (AgentPlatformBpmnReadinessInvoker), so
+        // AgentProcess.get() here resolves to that child process, not the outer web-facing run
+        // the browser is subscribed to. The orchestrator — which starts and awaits this
+        // sub-process synchronously — is the only call site with the correct process id in
+        // scope, and publishes the event itself (BpmnGenerationAgent.assessReadiness/reassess).
+        return modelAssessment.normalize(thresholds.readyThreshold, thresholds.maxClarificationQuestions)
     }
 
     /**

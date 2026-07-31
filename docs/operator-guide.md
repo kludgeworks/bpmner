@@ -173,19 +173,15 @@ Validation summary: graph=0, xsd=0, lint=2, repairScope=label=2, accepted=false,
 
 ### Progress events (SSE)
 
-`BpmnProgressProjectionObserver` translates each `@Action`'s start event into a friendly progress label and publishes `ProgressUpdateEvent`. Every `@Action` in the codebase is mapped — silent gaps would mean the UI stalls on "unknown step". To consume:
-
-```kotlin
-@Component
-class MyProgressListener {
-    @EventListener
-    fun onProgress(event: ProgressUpdateEvent) {
-        log.info("Bpmner step: {}", event.message)
-    }
-}
-```
-
-The mapping table lives in [`BpmnProgressProjectionObserver.kt`](../src/main/kotlin/dev/groknull/bpmner/telemetry/internal/adapter/inbound/BpmnProgressProjectionObserver.kt). Add a new entry whenever you add an `@Action` somewhere.
+The web client subscribes to `GET /api/bpmn/generations/{id}/updates` and receives ordered
+`RunUpdate` JSON messages — a bpmner-owned model driven by the agent's deterministic domain
+milestones (readiness, contract, draft, validation, layout, alignment, HITL, terminal), not by
+every `@Action` start. See [`architecture.md` §`RunUpdate` wire contract](architecture.md#wire-contract)
+for the full shape. The anti-corruption layer that produces it —
+[`BpmnRunUpdateChannel.kt`](../src/main/kotlin/dev/groknull/bpmner/pipeline/internal/adapter/inbound/BpmnRunUpdateChannel.kt)
+— is both the Embabel `OutputChannel` registered on every run and the milestone listener; add a
+new milestone there (and, if it is a new deterministic domain event, at its producer site) when
+you add a stage worth surfacing to the author.
 
 ### Custom Embabel listeners
 

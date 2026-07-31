@@ -7,6 +7,7 @@ package dev.groknull.bpmner.authoring.internal.adapter.inbound
 
 import com.embabel.agent.api.common.OperationContext
 import com.embabel.agent.api.common.PromptRunner
+import com.embabel.agent.core.AgentProcess
 import com.embabel.agent.core.support.InvalidLlmReturnFormatException
 import com.embabel.agent.core.support.InvalidLlmReturnTypeException
 import dev.groknull.bpmner.authoring.BpmnAgentInvoker
@@ -217,7 +218,7 @@ internal class LlmBpmnProcessGenerator(
 
     override fun render(ready: ReadyBpmnContext, graph: LaidOutProcessGraph): RenderedBpmn {
         val rendered = renderer.render(graph)
-        eventPublisher.publishEvent(dev.groknull.bpmner.authoring.BpmnGeneratedEvent(ready.request, rendered))
+        eventPublisher.publishEvent(BpmnGeneratedEvent(ready.request, rendered, processId = AgentProcess.get()?.id))
         return rendered
     }
 

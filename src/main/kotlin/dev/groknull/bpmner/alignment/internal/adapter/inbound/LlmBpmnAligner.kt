@@ -7,6 +7,7 @@ package dev.groknull.bpmner.alignment.internal.adapter.inbound
 
 import com.embabel.agent.api.common.OperationContext
 import com.embabel.agent.api.common.PromptRunner
+import com.embabel.agent.core.AgentProcess
 import com.embabel.agent.core.support.InvalidLlmReturnFormatException
 import com.embabel.agent.core.support.InvalidLlmReturnTypeException
 import com.embabel.common.ai.prompt.PromptContributor
@@ -55,7 +56,7 @@ internal class LlmBpmnAligner(
         val findings = requestAlignmentFindings(promptRunner, request, contract.contract, summary)
 
         val report = postChecker.apply(findings, summary)
-        eventPublisher.publishEvent(BpmnAlignmentCheckedEvent(request, report))
+        eventPublisher.publishEvent(BpmnAlignmentCheckedEvent(request, report, processId = AgentProcess.get()?.id))
 
         return report
     }

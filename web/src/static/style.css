@@ -328,89 +328,6 @@ button:disabled:hover {
 	border-bottom: 1px solid var(--ink-06);
 }
 
-.run-cost {
-	margin: var(--space-2) 0 0 0;
-	font-family: var(--font-mono);
-	font-size: 11px;
-	white-space: pre-wrap;
-	color: var(--ink-70);
-}
-
-/* --------------------------------------------------------------------------
- * Diagnostics — severity dots + strike-in-place for fixed rows (ADR-ss-002)
- * ------------------------------------------------------------------------ */
-#diagnostics-list {
-	margin: 0;
-	padding: 0;
-	list-style: none;
-}
-
-.diagnostic-item {
-	display: flex;
-	align-items: baseline;
-	gap: var(--space-2);
-	padding: var(--space-1) 0;
-	font-size: 12px;
-	color: var(--ink);
-}
-
-.severity-dot {
-	flex: none;
-	width: 8px;
-	height: 8px;
-	border-radius: 50%;
-	transform: translateY(1px);
-	background: var(--sev-unknown);
-}
-
-.severity-dot--error {
-	background: var(--sev-error);
-}
-
-.severity-dot--warning {
-	background: var(--sev-warning);
-}
-
-.severity-dot--info {
-	background: var(--sev-info);
-}
-
-.diagnostic-text {
-	word-break: break-word;
-}
-
-.diagnostic-item--fixed .diagnostic-text {
-	color: var(--ink-45);
-	text-decoration: line-through;
-}
-
-.diagnostic-item--fixed .severity-dot {
-	background: var(--ink-12);
-}
-
-/* Canvas overlays — a severity-coloured dot pinned to the flagged element. */
-.diagnostic-overlay {
-	width: 12px;
-	height: 12px;
-	border-radius: 50%;
-	border: 2px solid var(--paper);
-	cursor: help;
-	pointer-events: auto;
-	background: var(--sev-unknown);
-}
-
-.diagnostic-overlay--error {
-	background: var(--sev-error);
-}
-
-.diagnostic-overlay--warning {
-	background: var(--sev-warning);
-}
-
-.diagnostic-overlay--info {
-	background: var(--sev-info);
-}
-
 /* --------------------------------------------------------------------------
  * Result bar
  * ------------------------------------------------------------------------ */
@@ -446,13 +363,15 @@ button:disabled:hover {
 	background: var(--oxide);
 }
 
-.alignment-report summary {
+.alignment-report summary,
+.validation-diagnostics summary {
 	cursor: pointer;
 	font-size: 12px;
 	color: var(--ink-70);
 }
 
-.alignment-report p {
+.alignment-report p,
+.validation-diagnostics pre {
 	margin: var(--space-2) 0 0 0;
 	font-size: 12px;
 	white-space: pre-wrap;

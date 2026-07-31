@@ -126,22 +126,37 @@ describe("buildResultBarHtml — alignment report", () => {
 	})
 })
 
-describe("buildResultBarHtml — cost summary", () => {
-	it("renders cost pre when costSummary is set", () => {
+describe("buildResultBarHtml — validation diagnostics summary", () => {
+	it("renders a <details> block when diagnosticsSummary is set", () => {
 		const html = buildResultBarHtml({
-			status: "GENERATED",
-			costSummary: "Total: $0.12 | 1234 tokens",
+			status: "VALIDATION_FAILED",
+			diagnosticsSummary: "source=xsd: element is not well-formed",
 		})
 		assert.ok(
-			html.includes('class="run-cost"'),
-			"should include run-cost class",
+			html.includes('class="validation-diagnostics"'),
+			"should include validation-diagnostics class",
 		)
-		assert.ok(html.includes("Total: $0.12"), "should include cost text")
+		assert.ok(
+			html.includes("element is not well-formed"),
+			"should include the diagnostics text",
+		)
 	})
 
-	it("omits cost pre when costSummary is absent", () => {
-		const html = buildResultBarHtml({ status: "GENERATED" })
-		assert.ok(!html.includes("run-cost"), "no cost element when summary absent")
+	it("omits the block when diagnosticsSummary is absent", () => {
+		const html = buildResultBarHtml({ status: "VALIDATION_FAILED" })
+		assert.ok(
+			!html.includes("validation-diagnostics"),
+			"no diagnostics block when summary absent",
+		)
+	})
+
+	it("HTML-escapes diagnostics text", () => {
+		const html = buildResultBarHtml({
+			status: "VALIDATION_FAILED",
+			diagnosticsSummary: '<script>alert("xss")</script>',
+		})
+		assert.ok(html.includes("&lt;script&gt;"))
+		assert.ok(!html.includes("<script>"))
 	})
 })
 
@@ -189,17 +204,15 @@ describe("renderResultBar — visibility", () => {
 })
 
 describe("renderResultBar — full state round-trip", () => {
-	it("renders GENERATED result with download url and cost", () => {
+	it("renders GENERATED result with download url", () => {
 		const { el } = makeContainer()
 		const state: ResultBarState = {
 			status: "GENERATED",
 			downloadUrl: "api/bpmn/generations/abc/bpmn",
-			costSummary: "$0.05",
 		}
 		renderResultBar(el, state)
 
 		assert.ok(el.innerHTML.includes("GENERATED"), "status in output")
 		assert.ok(el.innerHTML.includes("abc/bpmn"), "download url in output")
-		assert.ok(el.innerHTML.includes("$0.05"), "cost in output")
 	})
 })
