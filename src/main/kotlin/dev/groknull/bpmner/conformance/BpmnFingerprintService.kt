@@ -16,6 +16,10 @@ class BpmnFingerprintService {
     private val objectMapper: ObjectMapper = jacksonObjectMapper().findAndRegisterModules()
 
     fun serializeDefinition(definition: BpmnDefinition): String {
+        return objectMapper.writeValueAsString(definition)
+    }
+
+    fun serializeDefinitionPretty(definition: BpmnDefinition): String {
         return objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(definition)
     }
 

@@ -8,9 +8,9 @@
 			"reason": "regenerated 2026-07-11"
 		},
 		"contractFullPayload": {
-			"chars": 33789,
+			"chars": 34497,
 			"updatedBy": "auto",
-			"reason": "regenerated 2026-07-11"
+			"reason": "regenerated 2026-07-31"
 		},
 		"generationPrompt": {
 			"chars": 15338,
@@ -18,9 +18,9 @@
 			"reason": "regenerated 2026-07-11"
 		},
 		"generationFullPayload": {
-			"chars": 32045,
+			"chars": 35403,
 			"updatedBy": "auto",
-			"reason": "regenerated 2026-07-11"
+			"reason": "regenerated 2026-07-31"
 		},
 		"alignmentPrompt": {
 			"chars": 2512,
@@ -28,29 +28,29 @@
 			"reason": "regenerated 2026-07-11"
 		},
 		"alignmentFullPayload": {
-			"chars": 4427,
+			"chars": 4525,
 			"updatedBy": "auto",
-			"reason": "regenerated 2026-07-11"
+			"reason": "regenerated 2026-07-31"
 		},
 		"readinessPrompt": {
-			"chars": 4693,
-			"updatedBy": "readiness-question-guidance",
-			"reason": "Require bounded, material clarification choices instead of workflow restatement"
+			"chars": 4976,
+			"updatedBy": "auto",
+			"reason": "regenerated 2026-07-31"
 		},
 		"readinessFullPayload": {
-			"chars": 10594,
-			"updatedBy": "readiness-question-guidance",
-			"reason": "Require bounded, material clarification choices instead of workflow restatement"
+			"chars": 10877,
+			"updatedBy": "auto",
+			"reason": "regenerated 2026-07-31"
 		},
 		"repairPatchPrompt": {
-			"chars": 1972,
-			"updatedBy": "auto",
-			"reason": "regenerated 2026-07-11"
+			"chars": 1725,
+			"updatedBy": "671",
+			"reason": "compact JSON serialization for repair prompts"
 		},
 		"repairFullPrompt": {
-			"chars": 2268,
-			"updatedBy": "auto",
-			"reason": "regenerated 2026-07-11"
+			"chars": 1895,
+			"updatedBy": "671",
+			"reason": "compact JSON serialization and conditional XML exclusion in full feedback"
 		}
 	}
 }
