@@ -115,10 +115,7 @@ internal class RunUpdateSinkRegistry {
         ProcessSink(creationCounter.incrementAndGet())
     }
 
-    // Drops one sink before growing past the platform-mirrored cap, so the registry can never
-    // exceed MAX_PROCESS_BUFFERS regardless of caller behaviour. Prefers the oldest sink with no
-    // active subscriber; if every sink is currently subscribed, falls back to the oldest sink
-    // outright rather than let the registry grow unbounded.
+    // Evicts before growing past the cap: prefers the oldest unsubscribed sink, else the oldest.
     private fun evictOneIfFull() {
         if (sinks.size < MAX_PROCESS_BUFFERS) return
         val victim = sinks.entries.filter { it.value.sink.currentSubscriberCount() == 0 }

@@ -37,35 +37,20 @@ import org.springframework.stereotype.Component
 import java.util.concurrent.ConcurrentHashMap
 
 /**
- * The anti-corruption layer: the single Embabel [OutputChannel] registered on every generation
- * run's `ProcessOptions` (`AgentPlatformBpmnAgentInvoker`), plus the platform lifecycle listener
- * and bpmner `@DomainEvent` listeners that together translate Embabel signals and bpmner's own
- * deterministic milestones into the ordered [dev.groknull.bpmner.pipeline.RunUpdate] stream held
- * by [RunUpdateSinkRegistry].
+ * Anti-corruption layer: the Embabel [OutputChannel] registered on every run's `ProcessOptions`,
+ * plus the platform lifecycle listener and bpmner `@DomainEvent` listeners, translating Embabel
+ * signals and bpmner's own milestones into the ordered [dev.groknull.bpmner.pipeline.RunUpdate]
+ * stream held by [RunUpdateSinkRegistry].
  *
- * Imports `com.embabel.agent.api.channel.*` and `com.embabel.agent.api.event.*` only — the
- * public API side of Embabel's API/SPI line — never `com.embabel.agent.web.sse.*`. Emits only
- * [dev.groknull.bpmner.pipeline.RunUpdate] outward: no Embabel type, action name, prompt, model
- * reasoning, credential, or provider payload ever reaches a `RunUpdate` (`detail` below is always
- * an explicitly built, flat `String -> String` map).
+ * Imports `com.embabel.agent.api.channel.*`/`api.event.*` only, never `web.sse.*`, and emits only
+ * [dev.groknull.bpmner.pipeline.RunUpdate] outward — no Embabel type, action name, prompt,
+ * credential, or provider payload in `detail`.
  *
- * A single `@Component` doubles as both seams deliberately: [OutputChannel] is injected directly
- * into `ProcessOptions` (per-run), while [AgenticEventListener] beans are auto-registered
- * globally on the platform — one bean, one registration each, so nothing fires twice.
- *
- * The bpmner `@DomainEvent` listeners below are plain, synchronous `@EventListener`s, not
- * `@ApplicationModuleListener`: that annotation composes `@Async` and requires an
- * event-publication registry (JDBC/JPA) this project does not configure.
- *
- * They read `event.processId` — a field every one of the six milestone `@DomainEvent`s carries
- * — never [AgentProcess.get] themselves. Each producer captures `AgentProcess.get()?.id`
- * synchronously at publish time, inside its own `@Action` (see each event's KDoc); that is the
- * one point in the codebase guaranteed to be correct regardless of dispatch mode, because it
- * runs *before* any event-listener machinery gets involved. An async listener would run off the
- * publishing thread entirely, and `BpmnReadinessAssessedEvent` specifically is published from
- * *inside* a separate, scoped Embabel sub-process (`AgentPlatformBpmnReadinessInvoker`) — so even
- * fully synchronous dispatch would resolve to the wrong (child) process id if read here instead.
- * Consume-time resolution is never safe; publish-time capture always is.
+ * The `@DomainEvent` listeners are plain `@EventListener`s, not `@ApplicationModuleListener`
+ * (which requires an event-publication registry this project doesn't configure), and read
+ * `event.processId` rather than [AgentProcess.get]: publish-time capture inside each producing
+ * `@Action` is the one point guaranteed correct regardless of dispatch mode or sub-process
+ * scoping (see each event's KDoc).
  */
 @InfrastructureRing
 @Component
@@ -78,8 +63,6 @@ internal class BpmnRunUpdateChannel(
     /** Clarification round counter keyed by process id, for the `AWAITING_INPUT` detail bag. */
     private val clarificationRounds = ConcurrentHashMap<String, Int>()
 
-    // --- Embabel OutputChannel seam (registered via ProcessOptions.outputChannel) ---
-
     override fun send(event: OutputChannelEvent) {
         // Only ProgressOutputChannelEvent is meaningful here; no @Action in this codebase sends
         // one today, so this is presently dormant, but it is the seam any future LLM-authored
@@ -89,8 +72,6 @@ internal class BpmnRunUpdateChannel(
             registry.emitNarration(event.processId, event.message)
         }
     }
-
-    // --- Embabel lifecycle seam (auto-registered AgenticEventListener) ---
 
     override fun onProcessEvent(event: AgentProcessEvent) {
         when (event) {
@@ -159,8 +140,6 @@ internal class BpmnRunUpdateChannel(
             },
         )
     }
-
-    // --- bpmner @DomainEvent milestones (the deterministic domain sequence) ---
 
     @EventListener
     fun onReadinessAssessed(event: BpmnReadinessAssessedEvent) {
@@ -254,10 +233,8 @@ private fun summaryFor(status: BpmnGenerationStatus): String = when (status) {
     BpmnGenerationStatus.VALIDATION_FAILED -> "Validation failed — generation stopped."
 }
 
-// A null processId here means the producer failed to capture AgentProcess.get() at publish
-// time (see each event's KDoc) — a producer bug, not a legitimate runtime case, so it's logged
-// rather than silently dropped. Kept as a top-level function (not a class member) purely to
-// stay under detekt's TooManyFunctions threshold for BpmnRunUpdateChannel.
+// A null processId is a producer bug (see each event's KDoc), not a legitimate runtime case —
+// logged, not silently dropped.
 private fun requireProcessId(logger: Logger, processId: String?, source: String): String? {
     if (processId == null) {
         logger.warn("{} published with no processId; RunUpdate dropped.", source)

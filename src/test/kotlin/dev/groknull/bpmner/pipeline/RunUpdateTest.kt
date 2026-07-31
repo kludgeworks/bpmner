@@ -43,10 +43,6 @@ class RunUpdateTest {
         assertEquals(RunOutcome.COMPLETED, update.outcome)
     }
 
-    // -------------------------------------------------------------------------
-    // supersedes — the stale-diagram guard (seq is the sole ordering authority)
-    // -------------------------------------------------------------------------
-
     @Test
     fun `supersedes is true against a null current (first update)`() {
         val first = progress(seq = 1)
@@ -79,13 +75,8 @@ class RunUpdateTest {
         assertTrue(laterDiagnostic.supersedes(earlierFinal))
     }
 
-    // -------------------------------------------------------------------------
-    // Leakage guard: RunUpdate's declared shape can never carry a raw domain/Embabel
-    // object — every property is a primitive, enum, or Map<String, String>. This is a
-    // structural (compile-time) guarantee; the test pins it so a future field addition
-    // that widens the type is caught in review.
-    // -------------------------------------------------------------------------
-
+    // Compile-time guarantee: catches a future field addition that would leak an
+    // Embabel/raw domain type.
     @Test
     fun `every RunUpdate property is a primitive, enum, or flat string map`() {
         val allowedSimpleNames = setOf("Long", "String", "RunPhase", "ArtifactState", "RunOutcome", "Map")

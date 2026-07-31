@@ -29,10 +29,6 @@ class BpmnWebControllerTest {
     private val runUpdates = RunUpdateSinkRegistry()
     private val controller = BpmnWebController(generationStarter, agentPlatform, runUpdates)
 
-    // -------------------------------------------------------------------------
-    // POST /generations (existing tests — constructor updated to include agentPlatform/runUpdates)
-    // -------------------------------------------------------------------------
-
     @Test
     fun `accepted with relative sseUrl when generation starts`() {
         `when`(generationStarter.start(any() ?: WebGenerationRequest("fallback")))
@@ -64,10 +60,6 @@ class BpmnWebControllerTest {
         assertEquals("Order is shipped", request.processDescription)
         assertEquals("Use verb-object task names", request.styleGuide)
     }
-
-    // -------------------------------------------------------------------------
-    // GET /generations/{id}/updates
-    // -------------------------------------------------------------------------
 
     @Test
     fun `updates streams RunUpdates from the registry for a known process id`() {
@@ -103,10 +95,6 @@ class BpmnWebControllerTest {
 
         assertEquals(HttpStatus.NOT_FOUND, response.statusCode)
     }
-
-    // -------------------------------------------------------------------------
-    // GET /generations/{id}/bpmn
-    // -------------------------------------------------------------------------
 
     @Test
     fun `200 with xml body and attachment header when process has terminal xml`() {
@@ -168,10 +156,6 @@ class BpmnWebControllerTest {
 
         assertEquals(HttpStatus.CONFLICT, response.statusCode)
     }
-
-    // -------------------------------------------------------------------------
-    // POST /generations/{id}/answers
-    // -------------------------------------------------------------------------
 
     @Test
     fun `202 when process is WAITING and form is present — bind and start are called`() {
@@ -242,10 +226,6 @@ class BpmnWebControllerTest {
         assertEquals(1, violations.size, "expected one NotBlank violation for blank answers; got: $violations")
         assertEquals("answers", violations.first().propertyPath.toString())
     }
-
-    // -------------------------------------------------------------------------
-    // Helpers
-    // -------------------------------------------------------------------------
 
     private fun processWithResult(result: BpmnResult?): AgentProcess {
         val process = mock(AgentProcess::class.java)

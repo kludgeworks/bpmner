@@ -97,10 +97,8 @@ internal class BpmnGenerationAgent(
         return Assessing(next, assessment, state.round + 1)
     }
 
-    // Readiness runs as its own scoped, ephemeral sub-process (see BpmnReadinessAssessedEvent's
-    // KDoc), so the orchestrator — here, on its own process's thread, right after the
-    // sub-process returns — is the correct place to capture the outer processId, not a listener
-    // resolving AgentProcess.get() later.
+    // Readiness runs as its own ephemeral sub-process; only the orchestrator (right here) has
+    // the outer processId — a listener resolving AgentProcess.get() later would not.
     private fun publishReadinessAssessed(request: BpmnRequest, assessment: ProcessInputAssessment) {
         eventPublisher.publishEvent(BpmnReadinessAssessedEvent(request, assessment, processId = AgentProcess.get()?.id))
     }

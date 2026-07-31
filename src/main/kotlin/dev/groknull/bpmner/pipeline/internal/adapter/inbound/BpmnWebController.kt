@@ -151,10 +151,8 @@ internal class BpmnWebController(
             return ResponseEntity.status(HttpStatus.CONFLICT).build()
         }
 
-        // Safe: BpmnGenerationAgent.clarificationFormFrom is the only producer that parks a
-        // process in WAITING with a FormBindingRequest on the blackboard, and it always
-        // constructs FormBindingRequest<BpmnClarificationAnswers> — no other agent shares this
-        // blackboard slot with a different answer type.
+        // Safe: BpmnGenerationAgent.clarificationFormFrom is this blackboard slot's sole
+        // producer, always as FormBindingRequest<BpmnClarificationAnswers>.
         @Suppress("UNCHECKED_CAST")
         val form =
             process.last(FormBindingRequest::class.java) as? FormBindingRequest<BpmnClarificationAnswers>

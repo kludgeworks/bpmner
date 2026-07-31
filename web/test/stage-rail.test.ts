@@ -112,10 +112,6 @@ describe("reduceStages — repair loop", () => {
 	})
 })
 
-// ---------------------------------------------------------------------------
-// Vague-input / NEEDS_CLARIFICATION path: stops at readiness, then terminates
-// ---------------------------------------------------------------------------
-
 describe("reduceStages — vague input", () => {
 	it("stops at readiness active when no later stage fires", () => {
 		let state = initialStages()
@@ -142,10 +138,6 @@ describe("reduceStages — vague input", () => {
 		assert.equal(state.align, "pending")
 	})
 })
-
-// ---------------------------------------------------------------------------
-// Edge cases: unmapped phases, idempotency
-// ---------------------------------------------------------------------------
 
 describe("reduceStages — edge cases", () => {
 	it("ignores phases with no stage mapping (forward-compat)", () => {

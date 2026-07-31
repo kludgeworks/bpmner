@@ -50,10 +50,6 @@ class BpmnRunUpdateChannelTest {
     private val registry = RunUpdateSinkRegistry()
     private val channel = BpmnRunUpdateChannel(registry)
 
-    // -------------------------------------------------------------------------
-    // OutputChannel seam
-    // -------------------------------------------------------------------------
-
     @Test
     fun `send with a ProgressOutputChannelEvent narrates in the last-known phase`() {
         registry.emit("p1", RunPhase.LAYOUT, ArtifactState.XML_DRAFT, "layout milestone")
@@ -82,10 +78,6 @@ class BpmnRunUpdateChannelTest {
         val updates = registry.subscribe("untouched").take(1).collectList().block(TIMEOUT)!!
         assertEquals(1L, updates.single().seq)
     }
-
-    // -------------------------------------------------------------------------
-    // Embabel lifecycle seam: waiting / failed / finished
-    // -------------------------------------------------------------------------
 
     @Test
     fun `onProcessEvent with AgentProcessWaitingEvent emits AWAITING_INPUT with round and options`() {
@@ -212,13 +204,7 @@ class BpmnRunUpdateChannelTest {
         assertEquals(1, updates.size, "exactly one terminal update, never double-delivered")
     }
 
-    // -------------------------------------------------------------------------
-    // bpmner @DomainEvent milestones — every event carries processId explicitly (producer-
-    // captured); listeners read event.processId only, never AgentProcess.get(). This is what
-    // makes these six listeners fully unit-testable on the positive path, unlike the earlier
-    // design where three of them could only be tested for their "no bound process" fallback.
-    // -------------------------------------------------------------------------
-
+    // Every event carries processId (producer-captured); listeners never call AgentProcess.get().
     @Test
     fun `onReadinessAssessed emits a READINESS update using the event's processId`() {
         channel.onReadinessAssessed(
@@ -327,10 +313,6 @@ class BpmnRunUpdateChannelTest {
         )
         // No assertion beyond "did not throw" — requireProcessId's contract for producer bugs.
     }
-
-    // -------------------------------------------------------------------------
-    // Helpers
-    // -------------------------------------------------------------------------
 
     private fun processWithForm(
         id: String,
