@@ -14,8 +14,11 @@ import com.embabel.agent.core.hitl.FormBindingRequest
 import com.embabel.ux.form.Form
 import com.embabel.ux.form.RadioGroup
 import com.embabel.ux.form.RadioOption
+import dev.groknull.bpmner.alignment.AlignmentVerdict
 import dev.groknull.bpmner.alignment.BpmnAlignmentCheckedEvent
 import dev.groknull.bpmner.alignment.BpmnAlignmentReport
+import dev.groknull.bpmner.alignment.BpmnDefinitionSummary
+import dev.groknull.bpmner.alignment.BpmnSummaryElement
 import dev.groknull.bpmner.authoring.BpmnGeneratedEvent
 import dev.groknull.bpmner.authoring.BpmnGenerationStatus
 import dev.groknull.bpmner.authoring.BpmnResult
@@ -210,20 +213,53 @@ class BpmnRunUpdateChannelTest {
     }
 
     // -------------------------------------------------------------------------
-    // bpmner @DomainEvent milestones — require an AgentProcess bound via ThreadLocal
+    // bpmner @DomainEvent milestones — every event carries processId explicitly (producer-
+    // captured); listeners read event.processId only, never AgentProcess.get(). This is what
+    // makes these six listeners fully unit-testable on the positive path, unlike the earlier
+    // design where three of them could only be tested for their "no bound process" fallback.
     // -------------------------------------------------------------------------
 
     @Test
-    fun `onReadinessAssessed is dropped (not thrown) with no bound AgentProcess`() {
-        // No AgentProcess.get() is bound in a plain unit test thread — this must log+drop, not throw.
+    fun `onReadinessAssessed emits a READINESS update using the event's processId`() {
         channel.onReadinessAssessed(
-            BpmnReadinessAssessedEvent(request = BpmnRequest(processDescription = "x"), assessment = readyAssessment()),
+            BpmnReadinessAssessedEvent(
+                request = BpmnRequest(processDescription = "x"),
+                assessment = readyAssessment(),
+                processId = "proc-readiness",
+            ),
         )
-        // No assertion beyond "did not throw" — currentProcessOrWarn's contract.
+
+        val update = registry.subscribe("proc-readiness").take(1).collectList().block(TIMEOUT)!!.single()
+        assertEquals(RunPhase.READINESS, update.phase)
+        assertEquals(ArtifactState.NONE, update.artifactState)
     }
 
     @Test
-    fun `onValidationFailed and onValidationPassed use the event's own processId when present`() {
+    fun `onReadinessAssessed drops (not throws) when the event carries no processId`() {
+        // A producer bug (AgentProcess.get() returned null at publish time) — must log+drop,
+        // never throw, and never emit into some other process's sink.
+        channel.onReadinessAssessed(
+            BpmnReadinessAssessedEvent(request = BpmnRequest(processDescription = "x"), assessment = readyAssessment()),
+        )
+    }
+
+    @Test
+    fun `onGenerated emits a DRAFT XML_DRAFT update using the event's processId`() {
+        channel.onGenerated(
+            BpmnGeneratedEvent(
+                request = BpmnRequest(processDescription = "x"),
+                rendered = mock(RenderedBpmn::class.java),
+                processId = "proc-generated",
+            ),
+        )
+
+        val update = registry.subscribe("proc-generated").take(1).collectList().block(TIMEOUT)!!.single()
+        assertEquals(RunPhase.DRAFT, update.phase)
+        assertEquals(ArtifactState.XML_DRAFT, update.artifactState)
+    }
+
+    @Test
+    fun `onValidationFailed and onValidationPassed use the event's own processId`() {
         channel.onValidationFailed(
             BpmnValidationFailedEvent(
                 request = BpmnRequest(processDescription = "x"),
@@ -254,15 +290,33 @@ class BpmnRunUpdateChannelTest {
     }
 
     @Test
-    fun `onGenerated onLayoutCompleted and onAlignmentChecked are dropped without a bound AgentProcess`() {
-        // These handlers all require AgentProcess.get(); off-thread in a unit test that is
-        // always null here, so the only contract under test is "drop silently, never throw" —
-        // the event payloads themselves are never inspected on that path, hence mocks.
-        channel.onGenerated(
-            BpmnGeneratedEvent(
+    fun `onLayoutCompleted emits a LAYOUT update using the event's processId`() {
+        channel.onLayoutCompleted(BpmnLayoutCompletedEvent(xml = "<xml/>", processId = "proc-layout"))
+
+        val update = registry.subscribe("proc-layout").take(1).collectList().block(TIMEOUT)!!.single()
+        assertEquals(RunPhase.LAYOUT, update.phase)
+        assertEquals(ArtifactState.XML_DRAFT, update.artifactState)
+    }
+
+    @Test
+    fun `onAlignmentChecked emits an ALIGNMENT update using the event's processId`() {
+        channel.onAlignmentChecked(
+            BpmnAlignmentCheckedEvent(
                 request = BpmnRequest(processDescription = "x"),
-                rendered = mock(RenderedBpmn::class.java),
+                report = alignedReport(),
+                processId = "proc-alignment",
             ),
+        )
+
+        val update = registry.subscribe("proc-alignment").take(1).collectList().block(TIMEOUT)!!.single()
+        assertEquals(RunPhase.ALIGNMENT, update.phase)
+        assertEquals(ArtifactState.XML_DRAFT, update.artifactState)
+    }
+
+    @Test
+    fun `onGenerated onLayoutCompleted and onAlignmentChecked drop when their event carries no processId`() {
+        channel.onGenerated(
+            BpmnGeneratedEvent(request = BpmnRequest(processDescription = "x"), rendered = mock(RenderedBpmn::class.java)),
         )
         channel.onLayoutCompleted(BpmnLayoutCompletedEvent(xml = "<xml/>"))
         channel.onAlignmentChecked(
@@ -271,6 +325,7 @@ class BpmnRunUpdateChannelTest {
                 report = mock(BpmnAlignmentReport::class.java),
             ),
         )
+        // No assertion beyond "did not throw" — requireProcessId's contract for producer bugs.
     }
 
     // -------------------------------------------------------------------------
@@ -302,6 +357,17 @@ class BpmnRunUpdateChannelTest {
         `when`(process.last(FormBindingRequest::class.java)).thenReturn(form)
         return process
     }
+
+    private fun alignedReport(): BpmnAlignmentReport = BpmnAlignmentReport(
+        verdict = AlignmentVerdict.ALIGNED,
+        bpmnSummary = BpmnDefinitionSummary(
+            processId = "Process_1",
+            processName = "Ship order",
+            elements = listOf(BpmnSummaryElement(id = "StartEvent_1", type = "startEvent")),
+        ),
+        issues = emptyList(),
+        rationale = "Fully aligned.",
+    )
 
     private fun readyAssessment(): ProcessInputAssessment = ProcessInputAssessment(
         verdict = ReadinessVerdict.READY,

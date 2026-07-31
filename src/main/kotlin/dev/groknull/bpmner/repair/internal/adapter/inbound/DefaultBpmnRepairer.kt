@@ -6,6 +6,7 @@
 package dev.groknull.bpmner.repair.internal.adapter.inbound
 
 import com.embabel.agent.api.common.ActionContext
+import com.embabel.agent.core.AgentProcess
 import dev.groknull.bpmner.bpmn.LaidOutProcessGraph
 import dev.groknull.bpmner.bpmn.RenderedBpmn
 import dev.groknull.bpmner.conformance.BpmnDiagnostic
@@ -55,9 +56,10 @@ internal class DefaultBpmnRepairer(
             repairAttempts = finalEval.repairAttempts,
         )
 
+        val processId = AgentProcess.get()?.id
         if (finalEval.diagnostics.isEmpty()) {
             eventPublisher.publishEvent(
-                BpmnValidationPassedEvent(finalEval.request, result.xml, finalEval.repairAttempts),
+                BpmnValidationPassedEvent(finalEval.request, result.xml, finalEval.repairAttempts, processId),
             )
         } else {
             eventPublisher.publishEvent(
@@ -67,6 +69,7 @@ internal class DefaultBpmnRepairer(
                     diagnostics = finalEval.diagnostics,
                     attemptNumber = finalEval.history.size,
                     repairAttempts = finalEval.repairAttempts,
+                    processId = processId,
                 ),
             )
         }

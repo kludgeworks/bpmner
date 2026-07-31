@@ -13,6 +13,7 @@ import com.embabel.agent.api.annotation.State
 import com.embabel.agent.api.common.ActionContext
 import com.embabel.agent.api.common.OperationContext
 import com.embabel.agent.core.ActionRetryPolicy
+import com.embabel.agent.core.AgentProcess
 import com.embabel.agent.core.hitl.FormBindingRequest
 import com.embabel.agent.core.hitl.WaitFor
 import com.embabel.agent.domain.io.UserInput
@@ -43,6 +44,7 @@ import dev.groknull.bpmner.layout.BpmnLayoutCompletedEvent
 import dev.groknull.bpmner.layout.BpmnLayoutPort
 import dev.groknull.bpmner.layout.LayoutedBpmnXml
 import dev.groknull.bpmner.readiness.BpmnClarificationAnswers
+import dev.groknull.bpmner.readiness.BpmnReadinessAssessedEvent
 import dev.groknull.bpmner.readiness.BpmnReadinessInvoker
 import dev.groknull.bpmner.readiness.ClarificationExchange
 import dev.groknull.bpmner.readiness.ProcessInputAssessment
@@ -77,7 +79,9 @@ internal class BpmnGenerationAgent(
 
     @Action
     fun assessReadiness(request: BpmnRequest): ProcessInputAssessment {
-        return readinessInvoker.assess(request)
+        val assessment = readinessInvoker.assess(request)
+        publishReadinessAssessed(request, assessment)
+        return assessment
     }
 
     @Action
@@ -88,7 +92,17 @@ internal class BpmnGenerationAgent(
     @Action(clearBlackboard = true, actionRetryPolicy = ActionRetryPolicy.FIRE_ONCE)
     fun reassess(state: AwaitingClarification, answers: BpmnClarificationAnswers): Assessing {
         val next = state.request.withClarification(answers, state.assessment)
-        return Assessing(next, readinessInvoker.assess(next), state.round + 1)
+        val assessment = readinessInvoker.assess(next)
+        publishReadinessAssessed(next, assessment)
+        return Assessing(next, assessment, state.round + 1)
+    }
+
+    // Readiness runs as its own scoped, ephemeral sub-process (see BpmnReadinessAssessedEvent's
+    // KDoc), so the orchestrator — here, on its own process's thread, right after the
+    // sub-process returns — is the correct place to capture the outer processId, not a listener
+    // resolving AgentProcess.get() later.
+    private fun publishReadinessAssessed(request: BpmnRequest, assessment: ProcessInputAssessment) {
+        eventPublisher.publishEvent(BpmnReadinessAssessedEvent(request, assessment, processId = AgentProcess.get()?.id))
     }
 
     @Action
@@ -137,7 +151,7 @@ internal class BpmnGenerationAgent(
         // Publish the laid-out (DI-bearing) XML so telemetry can forward a LAYOUT_COMPLETE
         // snapshot over the SSE channel, enabling the web client to switch from its client-side
         // preview layout to the canonical server geometry (ARCH ADR-ss-007).
-        eventPublisher.publishEvent(BpmnLayoutCompletedEvent(layouted.xml))
+        eventPublisher.publishEvent(BpmnLayoutCompletedEvent(layouted.xml, processId = AgentProcess.get()?.id))
         return FinalValidatedBpmnXml(definition = layouted.definition, xml = layouted.xml)
     }
 

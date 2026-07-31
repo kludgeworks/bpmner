@@ -56,13 +56,21 @@ import java.util.concurrent.ConcurrentHashMap
  * registration each, so nothing fires twice.
  *
  * The bpmner `@DomainEvent` listeners below are plain, synchronous `@EventListener`s — **not**
- * `@ApplicationModuleListener`. Spring Modulith's `@ApplicationModuleListener` composes
- * `@Async` (verified against the framework source), which would run these handlers off the
- * action's thread; every one of them resolves the current run via [AgentProcess.get] (a
- * `ThreadLocal` bound only on the publishing thread — the same load-bearing constraint already
- * documented on the deleted `BpmnPipelineObserver`), and the project has no event-publication
- * registry (JDBC/JPA) that `@ApplicationModuleListener` requires. Async delivery here would
- * silently drop every milestone update.
+ * `@ApplicationModuleListener`. Spring Modulith's `@ApplicationModuleListener` composes `@Async`
+ * (verified against the framework source), and the project has no event-publication registry
+ * (JDBC/JPA) that it requires anyway.
+ *
+ * They read `event.processId` — a field every one of the six milestone `@DomainEvent`s carries
+ * — never [AgentProcess.get] themselves. Each producer captures `AgentProcess.get()?.id`
+ * synchronously at publish time, inside its own `@Action` (see each event's KDoc); that is the
+ * one point in the codebase guaranteed to be correct regardless of dispatch mode, because it
+ * runs *before* any event-listener machinery — sync, `@Async`, or otherwise — gets involved.
+ * Reading the ThreadLocal here in the listener instead would have two independent failure modes:
+ * an `@Async` listener runs off the publishing thread entirely, and `BpmnReadinessAssessedEvent`
+ * specifically is published from *inside* a separate, scoped Embabel sub-process
+ * (`AgentPlatformBpmnReadinessInvoker`) — so even fully synchronous dispatch would resolve to
+ * the wrong (child) process id for that one event. Consume-time resolution is never safe;
+ * publish-time capture always is.
  */
 @InfrastructureRing
 @Component
@@ -161,9 +169,9 @@ internal class BpmnRunUpdateChannel(
 
     @EventListener
     fun onReadinessAssessed(event: BpmnReadinessAssessedEvent) {
-        val process = currentProcessOrWarn("BpmnReadinessAssessedEvent") ?: return
+        val processId = requireProcessId(logger, event.processId, "BpmnReadinessAssessedEvent") ?: return
         registry.emit(
-            processId = process.id,
+            processId = processId,
             phase = RunPhase.READINESS,
             artifactState = ArtifactState.NONE,
             summary = "Assessed input readiness (${event.assessment.verdict.name.lowercase()}).",
@@ -171,11 +179,10 @@ internal class BpmnRunUpdateChannel(
     }
 
     @EventListener
-    @Suppress("UnusedParameter") // the type is required for Spring's @EventListener dispatch
     fun onGenerated(event: BpmnGeneratedEvent) {
-        val process = currentProcessOrWarn("BpmnGeneratedEvent") ?: return
+        val processId = requireProcessId(logger, event.processId, "BpmnGeneratedEvent") ?: return
         registry.emit(
-            processId = process.id,
+            processId = processId,
             phase = RunPhase.DRAFT,
             artifactState = ArtifactState.XML_DRAFT,
             summary = "Rendered a draft BPMN diagram.",
@@ -184,7 +191,7 @@ internal class BpmnRunUpdateChannel(
 
     @EventListener
     fun onValidationFailed(event: BpmnValidationFailedEvent) {
-        val processId = event.processId ?: currentProcessOrWarn("BpmnValidationFailedEvent")?.id ?: return
+        val processId = requireProcessId(logger, event.processId, "BpmnValidationFailedEvent") ?: return
         registry.emit(
             processId = processId,
             phase = RunPhase.VALIDATION,
@@ -201,7 +208,7 @@ internal class BpmnRunUpdateChannel(
 
     @EventListener
     fun onValidationPassed(event: BpmnValidationPassedEvent) {
-        val processId = event.processId ?: currentProcessOrWarn("BpmnValidationPassedEvent")?.id ?: return
+        val processId = requireProcessId(logger, event.processId, "BpmnValidationPassedEvent") ?: return
         registry.emit(
             processId = processId,
             phase = RunPhase.VALIDATION,
@@ -211,11 +218,10 @@ internal class BpmnRunUpdateChannel(
     }
 
     @EventListener
-    @Suppress("UnusedParameter") // the type is required for Spring's @EventListener dispatch
     fun onLayoutCompleted(event: BpmnLayoutCompletedEvent) {
-        val process = currentProcessOrWarn("BpmnLayoutCompletedEvent") ?: return
+        val processId = requireProcessId(logger, event.processId, "BpmnLayoutCompletedEvent") ?: return
         registry.emit(
-            processId = process.id,
+            processId = processId,
             phase = RunPhase.LAYOUT,
             artifactState = ArtifactState.XML_DRAFT,
             summary = "Applied automatic diagram layout.",
@@ -224,19 +230,14 @@ internal class BpmnRunUpdateChannel(
 
     @EventListener
     fun onAlignmentChecked(event: BpmnAlignmentCheckedEvent) {
-        val process = currentProcessOrWarn("BpmnAlignmentCheckedEvent") ?: return
+        val processId = requireProcessId(logger, event.processId, "BpmnAlignmentCheckedEvent") ?: return
         registry.emit(
-            processId = process.id,
+            processId = processId,
             phase = RunPhase.ALIGNMENT,
             artifactState = ArtifactState.XML_DRAFT,
             summary = "Checked semantic alignment (${event.report.verdict.name.lowercase()}).",
         )
     }
-
-    // Milestone publication depends on AgentProcess.get(), a ThreadLocal bound by the agent
-    // runtime to the thread executing the action. Plain @EventListener is synchronous, so the
-    // listener fires on that same thread and the lookup resolves (mirrors BpmnPipelineObserver).
-    private fun currentProcessOrWarn(source: String): AgentProcess? = resolveProcessOrWarn(logger, source)
 
     private companion object {
         // Mirrors BpmnGenerationAgent.MAX_ROUNDS (private const = 3).
@@ -258,15 +259,13 @@ private fun summaryFor(status: BpmnGenerationStatus): String = when (status) {
     BpmnGenerationStatus.VALIDATION_FAILED -> "Validation failed — generation stopped."
 }
 
-// Milestone publication depends on AgentProcess.get(), a ThreadLocal bound by the agent runtime
-// to the thread executing the action. Plain @EventListener is synchronous, so the listener
-// fires on that same thread and the lookup resolves (mirrors the deleted BpmnPipelineObserver).
-// Kept as a top-level function (not a class member) purely to stay under detekt's
-// TooManyFunctions threshold for BpmnRunUpdateChannel.
-private fun resolveProcessOrWarn(logger: Logger, source: String): AgentProcess? {
-    val process = AgentProcess.get()
-    if (process == null) {
-        logger.warn("No AgentProcess bound to current thread while handling {}; RunUpdate dropped.", source)
+// A null processId here means the producer failed to capture AgentProcess.get() at publish
+// time (see each event's KDoc) — a producer bug, not a legitimate runtime case, so it's logged
+// rather than silently dropped. Kept as a top-level function (not a class member) purely to
+// stay under detekt's TooManyFunctions threshold for BpmnRunUpdateChannel.
+private fun requireProcessId(logger: Logger, processId: String?, source: String): String? {
+    if (processId == null) {
+        logger.warn("{} published with no processId; RunUpdate dropped.", source)
     }
-    return process
+    return processId
 }

@@ -18,8 +18,13 @@ import org.jmolecules.event.annotation.DomainEvent
  * Lives at the layout module root (published API) following the same pattern as
  * [dev.groknull.bpmner.authoring.BpmnGeneratedEvent] and
  * [dev.groknull.bpmner.conformance.BpmnValidationPassedEvent].
+ *
+ * [processId] is captured by the producer via `AgentProcess.get()?.id` at publish time (inside
+ * the `layout` `@Action`), not resolved later by a listener — publish-time capture is correct
+ * regardless of execution/dispatch mode; consume-time `AgentProcess.get()` is not.
  */
 @DomainEvent
 data class BpmnLayoutCompletedEvent(
     val xml: String,
+    val processId: String? = null,
 )
