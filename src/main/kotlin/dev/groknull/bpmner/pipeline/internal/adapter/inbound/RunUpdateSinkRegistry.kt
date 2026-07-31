@@ -17,29 +17,30 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicLong
 
 /**
- * bpmner-owned, per-processId registry of [RunUpdate] sinks (plan D2 — supersedes ADR-ss-004:
- * a minimal bpmner-side registry is now warranted, fed by the [dev.groknull.bpmner.pipeline.internal.adapter.inbound.BpmnRunUpdateChannel]
- * anti-corruption layer, not read from Embabel's `web.sse` buffering).
+ * bpmner-owned, per-processId registry of [RunUpdate] sinks, fed by
+ * [dev.groknull.bpmner.pipeline.internal.adapter.inbound.BpmnRunUpdateChannel].
  *
- * Each sink is a **replay** buffer (D4): the async run returns 202 and the browser subscribes
- * over a separate GET afterwards, so a live-only sink would drop every update published before
- * the subscription lands. [REPLAY_LIMIT] and [MAX_PROCESS_BUFFERS] mirror the platform's own
- * `embabel.agent.platform.sse.max-buffer-size` (100) / `.max-process-buffers` (1000) defaults
- * (ADR-605-06) — bounded and evictable, not an unbounded registry.
+ * Each sink is a **replay** buffer: a subscriber may connect after updates have already been
+ * published for a process, so a live-only sink would drop everything published before the
+ * subscription lands. [REPLAY_LIMIT] and [MAX_PROCESS_BUFFERS] mirror the platform's own
+ * `embabel.agent.platform.sse.max-buffer-size` (100) / `.max-process-buffers` (1000) defaults —
+ * bounded and evictable, never an unbounded registry: [sinkFor] always evicts a sink before
+ * admitting one past the cap, picking the oldest unsubscribed sink if one exists and otherwise
+ * the oldest sink outright, so the registry can never grow past [MAX_PROCESS_BUFFERS].
  *
- * Sequence numbers are assigned here, by a single writer per process (D3): the run is
- * single-threaded per process today (`SimpleAgentProcess`), and even if `ConcurrentAgentProcess`
- * is enabled later, ordering stays authoritative at this one write point rather than at browser
- * arrival.
+ * Sequence numbers are assigned here, by a single writer per process: the run is single-threaded
+ * per process today (`SimpleAgentProcess`), and even if `ConcurrentAgentProcess` is enabled
+ * later, ordering stays authoritative at this one write point rather than at browser arrival.
  */
 @InfrastructureRing
 @Component
 internal class RunUpdateSinkRegistry {
-    private class ProcessSink {
+    private class ProcessSink(val createdAt: Long) {
         val seq = AtomicLong(0)
         val sink: Sinks.Many<RunUpdate> = Sinks.many().replay().limit(REPLAY_LIMIT)
     }
 
+    private val creationCounter = AtomicLong(0)
     private val sinks = ConcurrentHashMap<String, ProcessSink>()
 
     /** Last-known phase/artifact per process, so a bare narration ([emitNarration]) can be placed in context. */
@@ -68,10 +69,9 @@ internal class RunUpdateSinkRegistry {
 
     /**
      * Publishes a transient narration string in the run's last-known phase/artifact context —
-     * the extension point for optional LLM-authored narration (ADR-605-04's
-     * `MessageOutputChannelEvent` / Embabel's [com.embabel.agent.api.channel.ProgressOutputChannelEvent]),
-     * without any new port. Falls back to [RunPhase.READINESS] / [ArtifactState.NONE] if no
-     * milestone has been recorded yet for this process.
+     * the extension point for optional LLM-authored narration, without any new port. Falls back
+     * to [RunPhase.READINESS] / [ArtifactState.NONE] if no milestone has been recorded yet for
+     * this process.
      */
     fun emitNarration(processId: String, message: String) {
         val (phase, artifactState) = lastKnown[processId] ?: (RunPhase.READINESS to ArtifactState.NONE)
@@ -112,15 +112,19 @@ internal class RunUpdateSinkRegistry {
 
     private fun sinkFor(processId: String): ProcessSink = sinks.computeIfAbsent(processId) {
         evictOneIfFull()
-        ProcessSink()
+        ProcessSink(creationCounter.incrementAndGet())
     }
 
-    // Bounded/evictable (D2/ADR-605-06): drop one sink with no active subscriber before growing
-    // past the platform-mirrored cap, rather than retaining every process forever.
+    // Drops one sink before growing past the platform-mirrored cap, so the registry can never
+    // exceed MAX_PROCESS_BUFFERS regardless of caller behaviour. Prefers the oldest sink with no
+    // active subscriber; if every sink is currently subscribed, falls back to the oldest sink
+    // outright rather than let the registry grow unbounded.
     private fun evictOneIfFull() {
         if (sinks.size < MAX_PROCESS_BUFFERS) return
-        sinks.entries.firstOrNull { it.value.sink.currentSubscriberCount() == 0 }
-            ?.let { sinks.remove(it.key) }
+        val victim = sinks.entries.filter { it.value.sink.currentSubscriberCount() == 0 }
+            .minByOrNull { it.value.createdAt }
+            ?: sinks.entries.minByOrNull { it.value.createdAt }
+        victim?.let { sinks.remove(it.key) }
     }
 
     companion object {

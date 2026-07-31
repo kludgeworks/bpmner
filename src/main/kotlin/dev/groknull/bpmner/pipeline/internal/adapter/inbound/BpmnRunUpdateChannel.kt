@@ -37,40 +37,35 @@ import org.springframework.stereotype.Component
 import java.util.concurrent.ConcurrentHashMap
 
 /**
- * The anti-corruption layer (ADR-605-04): the single Embabel [OutputChannel] registered on
- * every generation run's `ProcessOptions` (`AgentPlatformBpmnAgentInvoker`), plus the platform
- * lifecycle listener and bpmner `@DomainEvent` listeners that together translate Embabel
- * signals and bpmner's own deterministic milestones into the ordered [dev.groknull.bpmner.pipeline.RunUpdate]
- * stream held by [RunUpdateSinkRegistry].
+ * The anti-corruption layer: the single Embabel [OutputChannel] registered on every generation
+ * run's `ProcessOptions` (`AgentPlatformBpmnAgentInvoker`), plus the platform lifecycle listener
+ * and bpmner `@DomainEvent` listeners that together translate Embabel signals and bpmner's own
+ * deterministic milestones into the ordered [dev.groknull.bpmner.pipeline.RunUpdate] stream held
+ * by [RunUpdateSinkRegistry].
  *
  * Imports `com.embabel.agent.api.channel.*` and `com.embabel.agent.api.event.*` only — the
  * public API side of Embabel's API/SPI line — never `com.embabel.agent.web.sse.*`. Emits only
- * [dev.groknull.bpmner.pipeline.RunUpdate] outward: no Embabel type, action name, prompt,
- * model reasoning, credential, or provider payload ever reaches a `RunUpdate` (Stage 1 exit
- * gate; `detail` below is always an explicitly built, flat `String -> String` map).
+ * [dev.groknull.bpmner.pipeline.RunUpdate] outward: no Embabel type, action name, prompt, model
+ * reasoning, credential, or provider payload ever reaches a `RunUpdate` (`detail` below is always
+ * an explicitly built, flat `String -> String` map).
  *
- * A single `@Component` doubles as both seams deliberately: [OutputChannel] is injected
- * directly into `ProcessOptions` (per-run), while [AgenticEventListener] beans are
- * auto-registered globally on the platform (the same pattern the deleted
- * `BpmnResultEventPublisher` / `BpmnClarificationRequestEventPublisher` used) — one bean, one
- * registration each, so nothing fires twice.
+ * A single `@Component` doubles as both seams deliberately: [OutputChannel] is injected directly
+ * into `ProcessOptions` (per-run), while [AgenticEventListener] beans are auto-registered
+ * globally on the platform — one bean, one registration each, so nothing fires twice.
  *
- * The bpmner `@DomainEvent` listeners below are plain, synchronous `@EventListener`s — **not**
- * `@ApplicationModuleListener`. Spring Modulith's `@ApplicationModuleListener` composes `@Async`
- * (verified against the framework source), and the project has no event-publication registry
- * (JDBC/JPA) that it requires anyway.
+ * The bpmner `@DomainEvent` listeners below are plain, synchronous `@EventListener`s, not
+ * `@ApplicationModuleListener`: that annotation composes `@Async` and requires an
+ * event-publication registry (JDBC/JPA) this project does not configure.
  *
  * They read `event.processId` — a field every one of the six milestone `@DomainEvent`s carries
  * — never [AgentProcess.get] themselves. Each producer captures `AgentProcess.get()?.id`
  * synchronously at publish time, inside its own `@Action` (see each event's KDoc); that is the
  * one point in the codebase guaranteed to be correct regardless of dispatch mode, because it
- * runs *before* any event-listener machinery — sync, `@Async`, or otherwise — gets involved.
- * Reading the ThreadLocal here in the listener instead would have two independent failure modes:
- * an `@Async` listener runs off the publishing thread entirely, and `BpmnReadinessAssessedEvent`
- * specifically is published from *inside* a separate, scoped Embabel sub-process
- * (`AgentPlatformBpmnReadinessInvoker`) — so even fully synchronous dispatch would resolve to
- * the wrong (child) process id for that one event. Consume-time resolution is never safe;
- * publish-time capture always is.
+ * runs *before* any event-listener machinery gets involved. An async listener would run off the
+ * publishing thread entirely, and `BpmnReadinessAssessedEvent` specifically is published from
+ * *inside* a separate, scoped Embabel sub-process (`AgentPlatformBpmnReadinessInvoker`) — so even
+ * fully synchronous dispatch would resolve to the wrong (child) process id if read here instead.
+ * Consume-time resolution is never safe; publish-time capture always is.
  */
 @InfrastructureRing
 @Component
@@ -80,16 +75,16 @@ internal class BpmnRunUpdateChannel(
     AgenticEventListener {
     private val logger = LoggerFactory.getLogger(BpmnRunUpdateChannel::class.java)
 
-    /** Round counter keyed by process id — mirrors the deleted `BpmnClarificationRequestEventPublisher`. */
+    /** Clarification round counter keyed by process id, for the `AWAITING_INPUT` detail bag. */
     private val clarificationRounds = ConcurrentHashMap<String, Int>()
 
-    // --- Embabel OutputChannel seam (registered via ProcessOptions.outputChannel, D1) ---
+    // --- Embabel OutputChannel seam (registered via ProcessOptions.outputChannel) ---
 
     override fun send(event: OutputChannelEvent) {
-        // Only ProgressOutputChannelEvent is meaningful for Stage 1; no @Action in this
-        // codebase sends one today, so this is presently dormant, but it is the seam a future
-        // LLM-authored narration (Embabel's MessageOutputChannelEvent/`communicate` tool) or a
-        // richer per-action progress tool would ride without any new port (ADR-605-04).
+        // Only ProgressOutputChannelEvent is meaningful here; no @Action in this codebase sends
+        // one today, so this is presently dormant, but it is the seam any future LLM-authored
+        // narration (Embabel's MessageOutputChannelEvent/`communicate` tool) or a richer
+        // per-action progress tool would ride without any new port.
         if (event is ProgressOutputChannelEvent) {
             registry.emitNarration(event.processId, event.message)
         }
@@ -165,7 +160,7 @@ internal class BpmnRunUpdateChannel(
         )
     }
 
-    // --- bpmner @DomainEvent milestones (deterministic domain sequence, ARCHITECTURE.md) ---
+    // --- bpmner @DomainEvent milestones (the deterministic domain sequence) ---
 
     @EventListener
     fun onReadinessAssessed(event: BpmnReadinessAssessedEvent) {

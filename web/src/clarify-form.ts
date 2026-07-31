@@ -4,8 +4,8 @@
  */
 
 /**
- * State for the clarification form, built from an `AWAITING_INPUT` `RunUpdate` (epic #605):
- * `prompt` is the update's `summary` (sourced server-side from `FormBindingRequest.payload.title`),
+ * State for the clarification form, built from an `AWAITING_INPUT` `RunUpdate`: `prompt` is the
+ * update's `summary` (sourced server-side from `FormBindingRequest.payload.title`),
  * `round`/`maxRounds`/`options` come from its whitelisted `detail` map. Protocol-agnostic
  * otherwise — this module itself has no wire-contract types.
  */

@@ -4,11 +4,10 @@
  */
 
 /**
- * The `RunUpdate` wire contract (epic #605): a single flat JSON shape serialized directly from
- * the Kotlin sealed interface `dev.groknull.bpmner.pipeline.RunUpdate` (no class-name `type`
- * discriminator — that was the old, now-deleted contract). A `Progress` update omits
- * `outcome`; the one `Terminal` update per run carries it — that presence/absence *is* the
- * single terminal marker.
+ * The `RunUpdate` wire contract: a single flat JSON shape serialized directly from the Kotlin
+ * sealed interface `dev.groknull.bpmner.pipeline.RunUpdate`, with no class-name `type`
+ * discriminator. A `Progress` update omits `outcome`; the one `Terminal` update per run carries
+ * it — that presence/absence *is* the single terminal marker.
  */
 
 export type ArtifactState = "NONE" | "XML_DRAFT" | "DIAGNOSTIC" | "FINAL"

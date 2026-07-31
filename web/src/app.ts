@@ -5,17 +5,18 @@
 
 import BpmnViewer from "bpmn-js"
 import {
+	buildClarifyState,
+	buildResultBarState,
+	parseRunUpdate,
+} from "./app-helpers"
+import {
 	bindZoomControls,
 	type CanvasViewport,
 	fitInitialViewport,
 	setZoomControlsEnabled,
 } from "./canvas-viewport"
-import { type ClarifyState, renderClarifyForm } from "./clarify-form"
-import {
-	type ResultBarState,
-	type ResultStatus,
-	renderResultBar,
-} from "./result-bar"
+import { renderClarifyForm } from "./clarify-form"
+import { type ResultBarState, renderResultBar } from "./result-bar"
 import { isTerminal, type RunUpdate } from "./run-update"
 import { importSnapshot } from "./snapshot-import"
 import type { ChipState, StageKey } from "./stage-rail"
@@ -112,11 +113,9 @@ function connectSse(url: string) {
 	eventSource = new EventSource(url)
 
 	eventSource.onmessage = (e: MessageEvent) => {
-		let update: RunUpdate
-		try {
-			update = JSON.parse(e.data) as RunUpdate
-		} catch (err) {
-			console.error("Failed to parse RunUpdate", err)
+		const update = parseRunUpdate(e.data)
+		if (!update) {
+			console.error("Failed to parse RunUpdate", e.data)
 			return
 		}
 
@@ -145,14 +144,7 @@ function connectSse(url: string) {
 }
 
 function applyClarificationEvent(update: RunUpdate): void {
-	const detail = update.detail ?? {}
-	const baseState: ClarifyState = {
-		prompt: update.summary,
-		options: detail.options ? detail.options.split("|") : [],
-		round: Number(detail.round ?? "1"),
-		maxRounds: Number(detail.maxRounds ?? "1"),
-		submitting: false,
-	}
+	const baseState = buildClarifyState(update)
 
 	async function submitAnswers(answer: string): Promise<void> {
 		// Optimistically disable the form while submitting.
@@ -208,8 +200,8 @@ function applyClarificationEvent(update: RunUpdate): void {
 /**
  * Handles the one terminal `RunUpdate` for a run: renders the result bar from its whitelisted
  * `detail`, fetches and imports the final diagram when one exists (`artifactState !== "NONE"`
- * — `GET /generations/{id}/bpmn`, the only XML the browser ever receives, per ADR-605-05), and
- * closes the stream.
+ * — `GET /generations/{id}/bpmn`, the only XML the browser ever receives), and closes the
+ * stream.
  */
 async function applyTerminalUpdate(update: RunUpdate): Promise<void> {
 	generateBtn.disabled = false
@@ -217,23 +209,11 @@ async function applyTerminalUpdate(update: RunUpdate): Promise<void> {
 	clarifyRegionEl.classList.add("hidden")
 	clarifyRegionEl.innerHTML = ""
 
-	const detail = update.detail ?? {}
-	const hasArtifact = update.artifactState !== "NONE" && currentProcessId
-	const downloadUrl = hasArtifact
-		? `api/bpmn/generations/${currentProcessId}/bpmn`
-		: undefined
-
-	resultBarState = {
-		status: detail.status as ResultStatus | undefined,
-		alignmentVerdict: detail.alignmentVerdict,
-		alignmentReport: detail.alignmentReport,
-		diagnosticsSummary: detail.diagnostics,
-		downloadUrl,
-	}
+	resultBarState = buildResultBarState(update, currentProcessId)
 	renderResultBar(resultBarEl, resultBarState)
 
-	if (downloadUrl) {
-		await loadFinalDiagram(downloadUrl)
+	if (resultBarState.downloadUrl) {
+		await loadFinalDiagram(resultBarState.downloadUrl)
 	}
 
 	if (shouldClose(update)) {

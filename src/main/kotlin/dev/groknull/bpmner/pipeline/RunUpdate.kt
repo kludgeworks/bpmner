@@ -6,8 +6,7 @@
 package dev.groknull.bpmner.pipeline
 
 /**
- * Artifact availability for a generation run at the point a [RunUpdate] was produced (epic
- * #605 Goals: "explicitly communicate artifact availability").
+ * Artifact availability for a generation run at the point a [RunUpdate] was produced.
  *
  * - [NONE] — no BPMN artifact exists yet (readiness, contract, outline, awaiting input).
  * - [XML_DRAFT] — a renderable BPMN XML exists (post-`render`, post-`layout`, or a passed
@@ -17,9 +16,8 @@ package dev.groknull.bpmner.pipeline
  * - [FINAL] — the terminal artifact is available for download via
  *   `GET /generations/{id}/bpmn` (`GENERATED` or `ALIGNMENT_FAILED`, both of which carry XML).
  *
- * `GRAPH_DRAFT` (the pre-XML server-side graph, milestone 5 in `plans/605/ARCHITECTURE.md`)
- * is deliberately not a value here yet — it is Stage 2 / #663's remit; the enum stays open for
- * it (ARCHITECTURE.md "Staged Sub-issues", Stage 2).
+ * The enum deliberately has no value yet for the pre-XML server-side graph milestone; it stays
+ * open for one to be added when that milestone is delivered.
  */
 enum class ArtifactState {
     NONE,
@@ -30,8 +28,7 @@ enum class ArtifactState {
 
 /**
  * The deterministic milestone a [RunUpdate] reports on — the author-centred journey through
- * `BpmnGenerationAgent`'s action chain (`plans/605/ARCHITECTURE.md` §"deterministic domain
- * milestone sequence"), projected without any Embabel action name or type.
+ * `BpmnGenerationAgent`'s action chain, projected without any Embabel action name or type.
  */
 enum class RunPhase {
     /** `assessReadiness` / `reassess`. */
@@ -77,7 +74,7 @@ enum class RunOutcome {
  * ([dev.groknull.bpmner.pipeline.internal.adapter.inbound.BpmnRunUpdateChannel]) projects
  * bpmner's own `@DomainEvent` milestones and select Embabel lifecycle/`OutputChannel` signals
  * onto. Carries **notification + minimal event-carried state** — never the BPMN XML itself
- * (that stays behind `GET /generations/{id}/bpmn`, ADR-605-05) and never an Embabel type,
+ * (that stays behind `GET /generations/{id}/bpmn`) and never an Embabel type,
  * action name, prompt, model-reasoning, credential, or provider payload (`detail` is a flat,
  * explicitly whitelisted `String -> String` bag; see call sites in `BpmnRunUpdateChannel`).
  *
@@ -119,8 +116,8 @@ sealed interface RunUpdate {
 
 /**
  * True when `this` update should replace [current] in a consumer's rendered state: it is
- * strictly newer by [RunUpdate.seq]. Because [seq] is assigned by a single writer per process
- * (D3, `plans/605/PLAN-662.md`), this is a total order — an update can never be superseded by
- * one with an equal or lower sequence number, however it happens to arrive.
+ * strictly newer by [RunUpdate.seq]. Because [seq] is assigned by a single writer per process,
+ * this is a total order — an update can never be superseded by one with an equal or lower
+ * sequence number, however it happens to arrive.
  */
 fun RunUpdate.supersedes(current: RunUpdate?): Boolean = current == null || this.seq > current.seq

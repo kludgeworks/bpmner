@@ -7,8 +7,8 @@ import type { RunPhase, RunUpdate } from "./run-update"
 
 /**
  * Six deterministic stage keys for the pipeline rail — a client-side grouping of the server's
- * `RunPhase` milestones (epic #605), kept for visual continuity with the pre-#605 rail. Unknown
- * phases (e.g. `AWAITING_INPUT`, a future phase) are silently ignored by the reducer.
+ * `RunPhase` milestones. Unknown phases (e.g. `AWAITING_INPUT`, a future phase) are silently
+ * ignored by the reducer.
  */
 export type StageKey =
 	| "readiness"
@@ -85,8 +85,8 @@ export function reduceStages(
 	const next = { ...stages }
 
 	if (update.artifactState === "DIAGNOSTIC") {
-		// A repair-loop retry only flags its own stage; it must not mark earlier stages
-		// done, mirroring the pre-#605 rail's "warn" semantics.
+		// A repair-loop retry only flags its own stage as "warn"; it must not mark earlier
+		// stages done.
 		next[stage] = "warn"
 		return next
 	}

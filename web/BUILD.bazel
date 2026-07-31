@@ -129,6 +129,13 @@ bpmner_node_test(
     deps = WEB_TS_DEPS,
 )
 
+bpmner_node_test(
+    name = "app_helpers_test",
+    srcs = WEB_SRCS + WEB_TEST_SRCS,
+    entry_point = "test/app-helpers.test.ts",
+    deps = WEB_TS_DEPS,
+)
+
 # jsdom is a large CJS package with runtime resource loading that does not
 # survive esbuild bundling, so it is marked external here and resolved from
 # node_modules at runtime (ADR-ss-006 / PLAN ss-5 risk R-jsdom-bundle).

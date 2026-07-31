@@ -103,7 +103,31 @@ class RunUpdateSinkRegistryTest {
         assertTrue(updates.single().summary == "hi")
     }
 
+    @Test
+    fun `never grows past MAX_PROCESS_BUFFERS even when every existing sink is subscribed`() {
+        // Every sink below is kept subscribed for its whole lifetime, so an eviction candidate
+        // with zero subscribers never exists — the exact scenario that let the registry grow
+        // unbounded before the oldest-sink fallback was added.
+        val subscriptions = (0 until MAX_PROCESS_BUFFERS).map { i ->
+            registry.subscribe("full-$i").subscribe()
+        }
+
+        // One more distinct id past the cap must still evict something rather than add a 1001st.
+        registry.subscribe("one-too-many").subscribe()
+
+        assertEquals(MAX_PROCESS_BUFFERS, registrySize())
+
+        subscriptions.forEach { it.dispose() }
+    }
+
+    private fun registrySize(): Int {
+        val sinksField = RunUpdateSinkRegistry::class.java.getDeclaredField("sinks")
+        sinksField.isAccessible = true
+        return (sinksField.get(registry) as Map<*, *>).size
+    }
+
     private companion object {
         private val TIMEOUT: Duration = Duration.ofSeconds(5)
+        private const val MAX_PROCESS_BUFFERS = 1000
     }
 }

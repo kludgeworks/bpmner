@@ -56,8 +56,8 @@ internal class BpmnReadinessAgent(
         context: OperationContext,
     ): ProcessInputAssessment {
         val modelAssessment = requestAssessment(request, context)
-        // No BpmnReadinessAssessedEvent published here (epic #605): this action runs inside its
-        // own scoped, ephemeral Embabel sub-process (AgentPlatformBpmnReadinessInvoker), so
+        // No BpmnReadinessAssessedEvent published here: this action runs inside its own scoped,
+        // ephemeral Embabel sub-process (AgentPlatformBpmnReadinessInvoker), so
         // AgentProcess.get() here resolves to that child process, not the outer web-facing run
         // the browser is subscribed to. The orchestrator — which starts and awaits this
         // sub-process synchronously — is the only call site with the correct process id in

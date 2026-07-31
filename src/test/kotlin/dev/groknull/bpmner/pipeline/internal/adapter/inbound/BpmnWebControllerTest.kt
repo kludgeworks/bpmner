@@ -70,7 +70,8 @@ class BpmnWebControllerTest {
     // -------------------------------------------------------------------------
 
     @Test
-    fun `updates streams RunUpdates from the registry for the given process id`() {
+    fun `updates streams RunUpdates from the registry for a known process id`() {
+        `when`(agentPlatform.getAgentProcess("sse-proc")).thenReturn(mock(AgentProcess::class.java))
         runUpdates.emit(
             "sse-proc",
             dev.groknull.bpmner.pipeline.RunPhase.READINESS,
@@ -78,9 +79,29 @@ class BpmnWebControllerTest {
             "hello",
         )
 
-        val first = controller.updates("sse-proc").blockFirst(java.time.Duration.ofSeconds(5))
+        val response = controller.updates("sse-proc")
 
+        assertEquals(HttpStatus.OK, response.statusCode)
+        val first = response.body?.blockFirst(java.time.Duration.ofSeconds(5))
         assertEquals("hello", first?.summary)
+    }
+
+    @Test
+    fun `404 when updates requested for an unknown process id — no sink is ever created`() {
+        `when`(agentPlatform.getAgentProcess("no-such-proc")).thenReturn(null)
+
+        val response = controller.updates("no-such-proc")
+
+        assertEquals(HttpStatus.NOT_FOUND, response.statusCode)
+    }
+
+    @Test
+    fun `404 when getAgentProcess throws for updates`() {
+        `when`(agentPlatform.getAgentProcess("bad-id")).thenThrow(RuntimeException("no such process"))
+
+        val response = controller.updates("bad-id")
+
+        assertEquals(HttpStatus.NOT_FOUND, response.statusCode)
     }
 
     // -------------------------------------------------------------------------

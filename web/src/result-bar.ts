@@ -4,9 +4,8 @@
  */
 
 /**
- * Terminal generation statuses — mirrors BpmnGenerationStatus on the server.
- * Wire contract (ARCHITECTURE.md §wire-contract, §ss-3): these are the four valid values
- * carried by BpmnResultEvent.resultStatus.
+ * Terminal generation statuses — mirrors `BpmnGenerationStatus` on the server; these are the
+ * four valid values carried by a terminal `RunUpdate`'s `detail.status`.
  */
 export type ResultStatus =
 	| "GENERATED"
@@ -15,11 +14,11 @@ export type ResultStatus =
 	| "VALIDATION_FAILED"
 
 /**
- * Accumulated state for the result bar, built directly from the terminal `RunUpdate` (epic
- * #605): `status`/`alignmentVerdict`/`alignmentReport`/`diagnosticsSummary` all come from its
- * whitelisted `detail` map — never a run-cost figure. A cost/token summary could reveal the
- * underlying LLM provider or model, which the `RunUpdate` leakage guard forbids by design, so
- * it is intentionally not part of this contract (still logged server-side only, unchanged).
+ * Accumulated state for the result bar, built directly from the terminal `RunUpdate`:
+ * `status`/`alignmentVerdict`/`alignmentReport`/`diagnosticsSummary` all come from its
+ * whitelisted `detail` map. There is deliberately no cost/token figure here — that could reveal
+ * the underlying LLM provider or model, which the `RunUpdate` leakage guard forbids (cost is
+ * still logged server-side only).
  */
 export type ResultBarState = {
 	status?: ResultStatus

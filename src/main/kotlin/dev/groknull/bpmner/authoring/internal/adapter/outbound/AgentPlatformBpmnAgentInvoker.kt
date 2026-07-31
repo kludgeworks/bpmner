@@ -28,8 +28,7 @@ internal class AgentPlatformBpmnAgentInvoker(
     private val logging: LlmInteractionLoggingConfig,
     // Wired by type only (com.embabel.agent.api.channel.OutputChannel is a third-party
     // interface): the pipeline module's RunUpdate anti-corruption-layer bean satisfies this
-    // without authoring ever importing pipeline.internal.* (epic #605 plan §2 cross-module
-    // wiring wrinkle — resolved by depending on the framework port, not a bpmner type).
+    // without authoring ever importing pipeline.internal.*.
     private val outputChannel: OutputChannel,
 ) : BpmnAgentInvoker {
     override fun generate(
@@ -104,8 +103,8 @@ internal class AgentPlatformBpmnAgentInvoker(
     // ProcessOptions.listeners registers them a second time, so each fires twice — which
     // surfaced as duplicated SSE progress/cost lines in the web UI previously.
     //
-    // outputChannel IS set here (D1, epic #605): registering it on ProcessOptions is the one
-    // supported way to bind the run-update anti-corruption layer to this specific process.
+    // outputChannel IS set here: registering it on ProcessOptions is the one supported way to
+    // bind the run-update anti-corruption layer to this specific process.
     private fun syncGenerationProcessOptions(): ProcessOptions = ProcessOptions(
         budget = Budget(actions = config.generation),
         verbosity = llmVerbosity(),
