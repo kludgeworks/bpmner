@@ -31,12 +31,16 @@ import dev.groknull.bpmner.conformance.BpmnLintingPort
 import dev.groknull.bpmner.conformance.LintIssue
 import dev.groknull.bpmner.conformance.internal.adapter.outbound.BpmnXsdValidator
 import dev.groknull.bpmner.contract.FlatContractTestFixtures
+import dev.groknull.bpmner.pipeline.ArtifactState
+import dev.groknull.bpmner.pipeline.RunPhase
+import dev.groknull.bpmner.pipeline.internal.adapter.inbound.RunUpdateSinkRegistry
 import dev.groknull.bpmner.readiness.BpmnClarificationAnswers
 import dev.groknull.bpmner.readiness.ClarificationQuestion
 import dev.groknull.bpmner.readiness.ProcessInputAssessment
 import dev.groknull.bpmner.readiness.ReadinessVerdict
 import dev.groknull.bpmner.readiness.ReadyBpmnContext
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.mockito.ArgumentMatchers.any
@@ -52,6 +56,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.xmlunit.assertj.XmlAssert
 import org.xmlunit.assertj.XmlAssert.assertThat
 import java.nio.file.Path
+import java.time.Duration
 import kotlin.io.path.readText
 
 /**
@@ -78,6 +83,9 @@ class BpmnAgentFlowSystemTest : EmbabelMockitoIntegrationTest() {
 
     @Autowired
     private lateinit var bpmnAgentInvoker: AgentPlatformBpmnAgentInvoker
+
+    @Autowired
+    private lateinit var runUpdateSinkRegistry: RunUpdateSinkRegistry
 
     @Test
     @Suppress("LongMethod")
@@ -237,6 +245,19 @@ class BpmnAgentFlowSystemTest : EmbabelMockitoIntegrationTest() {
         val process = runGateProcess(ReadyBpmnContext::class.java, ephemeral = false, request, needsClarification())
 
         assertEquals(AgentProcessStatusCode.WAITING, process.status)
+
+        // Stage 3 (#662 residual): the process pauses via Embabel's AgentProcessWaitingEvent,
+        // which BpmnRunUpdateChannel (an AgenticEventListener auto-registered globally, not
+        // passed via this test's own ProcessOptions) translates into an AWAITING_INPUT update —
+        // asserting the HITL pause is real on the delivery path, not just on process.status.
+        val awaiting = runUpdateSinkRegistry.subscribe(process.id)
+            .filter { it.phase == RunPhase.AWAITING_INPUT }
+            .next()
+            .block(Duration.ofSeconds(2))
+        assertTrue(awaiting != null, "expected an AWAITING_INPUT RunUpdate when the process pauses for HITL")
+        assertEquals(ArtifactState.NONE, awaiting!!.artifactState)
+        assertTrue(awaiting.detail.containsKey("round"))
+        assertTrue(awaiting.detail.containsKey("maxRounds"))
     }
 
     @Test

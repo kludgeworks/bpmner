@@ -5,6 +5,7 @@
 
 package dev.groknull.bpmner.pipeline
 
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -93,6 +94,46 @@ class RunUpdateTest {
         }
     }
 
+    // Stage 3 (#662 residual): pins the JSON shape web/src/run-update.ts hand-mirrors. No
+    // Jackson customization exists anywhere in src/main (grep-verified), so the auto-configured
+    // Spring mapper's behavior matches jacksonObjectMapper()'s Kotlin+Jackson defaults.
+    @Test
+    fun `Terminal serializes to exactly the fields the client expects`() {
+        val terminal: RunUpdate = RunUpdate.Terminal(
+            seq = 9,
+            artifactState = ArtifactState.FINAL,
+            summary = "BPMN generation complete.",
+            outcome = RunOutcome.COMPLETED,
+            detail = mapOf("status" to "GENERATED"),
+        )
+
+        val json = MAPPER.readTree(MAPPER.writeValueAsString(terminal))
+        assertEquals(
+            setOf("seq", "phase", "artifactState", "summary", "detail", "outcome"),
+            json.fieldNames().asSequence().toSet(),
+        )
+        assertEquals("FINISHED", json["phase"].asText())
+        assertEquals("FINAL", json["artifactState"].asText())
+        assertEquals("COMPLETED", json["outcome"].asText())
+    }
+
+    // Load-bearing: web/src/run-update.ts's isTerminal() is literally `outcome !== undefined`.
+    // Default Jackson inclusion is ALWAYS, so if a future refactor hoists a nullable `outcome`
+    // onto the sealed RunUpdate interface, Progress would start serializing `"outcome": null`
+    // and every non-terminal update would read as terminal in the browser. This is the one
+    // assertion that catches that before it ships.
+    @Test
+    fun `Progress serializes with no outcome key at all`() {
+        val progress: RunUpdate = progress(seq = 1)
+
+        val json = MAPPER.readTree(MAPPER.writeValueAsString(progress))
+        assertFalse(json.has("outcome"), "a Progress update must never carry an outcome key")
+        assertEquals(
+            setOf("seq", "phase", "artifactState", "summary", "detail"),
+            json.fieldNames().asSequence().toSet(),
+        )
+    }
+
     private fun progress(
         seq: Long,
         artifactState: ArtifactState = ArtifactState.NONE,
@@ -102,4 +143,8 @@ class RunUpdateTest {
         artifactState = artifactState,
         summary = "s",
     )
+
+    private companion object {
+        private val MAPPER = jacksonObjectMapper()
+    }
 }
