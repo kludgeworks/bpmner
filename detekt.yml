@@ -33,11 +33,8 @@ complexity:
     # Framework-dispatched methods are a structural floor, not a cohesion smell:
     # - Action / Condition: Embabel's planner creates one planning node per annotated method.
     # - Test: JUnit discovers and dispatches each @Test method independently.
-    # - EventListener: Spring registers one listener per annotated method; anti-corruption
-    #   layers that fan in several milestone events (e.g. BpmnRunUpdateChannel) grow this
-    #   count by design as new milestones are added.
-    # Exclude all four from the function count to avoid spurious TooManyFunctions violations.
-    ignoreAnnotatedFunctions: ['Action', 'Condition', 'Test', 'EventListener']
+    # Exclude all three from the function count to avoid spurious TooManyFunctions violations.
+    ignoreAnnotatedFunctions: ['Action', 'Condition', 'Test']
   LongParameterList:
     active: true
     constructorThreshold: 11

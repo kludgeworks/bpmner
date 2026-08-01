@@ -56,6 +56,7 @@ import java.util.concurrent.ConcurrentHashMap
  */
 @InfrastructureRing
 @Component
+@Suppress("TooManyFunctions") // one @EventListener per milestone the ACL fans in; see class KDoc
 internal class BpmnRunUpdateChannel(
     private val registry: RunUpdateSinkRegistry,
 ) : OutputChannel,
