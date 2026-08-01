@@ -72,8 +72,8 @@ internal class RuleSourceParityTest {
         val activeRules = beanRegistry.activeRules()
         val activeIds = activeRules.map { it.id }
 
-        // 41 Kotlin bean rules + 7 compiled = 48 executable rules
-        assertThat(activeRules).hasSize(48)
+        // 41 Kotlin bean rules + 8 compiled = 49 executable rules
+        assertThat(activeRules).hasSize(49)
         assertThat(activeIds).doesNotHaveDuplicates()
     }
 

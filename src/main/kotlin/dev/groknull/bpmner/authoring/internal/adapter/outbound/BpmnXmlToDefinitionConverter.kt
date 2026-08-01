@@ -13,6 +13,7 @@ import dev.groknull.bpmner.bpmn.BpmnDataObjectReference
 import dev.groknull.bpmner.bpmn.BpmnDataOutputAssociation
 import dev.groknull.bpmner.bpmn.BpmnDataStoreReference
 import dev.groknull.bpmner.bpmn.BpmnDefinition
+import dev.groknull.bpmner.bpmn.BpmnDiShape
 import dev.groknull.bpmner.bpmn.BpmnEdge
 import dev.groknull.bpmner.bpmn.BpmnErrorEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnErrorRef
@@ -48,6 +49,7 @@ import org.camunda.bpm.model.bpmn.instance.Process
 import org.camunda.bpm.model.bpmn.instance.SequenceFlow
 import org.camunda.bpm.model.bpmn.instance.SubProcess
 import org.camunda.bpm.model.bpmn.instance.bpmndi.BpmnDiagram
+import org.camunda.bpm.model.bpmn.instance.bpmndi.BpmnShape
 import org.jmolecules.architecture.onion.simplified.InfrastructureRing
 import org.springframework.stereotype.Component
 import org.w3c.dom.Document
@@ -144,6 +146,7 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
             lanes = collaboration.lanes,
             messageFlows = collaboration.messageFlows,
             diagramCount = diagramCount,
+            diShapes = semanticDiShapes(model, allNodes.map { it.id }.toSet()),
         )
     }
 
@@ -546,6 +549,16 @@ private val EXOTIC_BPMN_LOCAL_NAMES = listOf(
  * policy (one diagram per document).
  */
 private fun countDiagrams(model: BpmnModelInstance): Int = model.getModelElementsByType(BpmnDiagram::class.java).size
+
+private fun semanticDiShapes(model: BpmnModelInstance, nodeIds: Set<String>): Map<String, BpmnDiShape> =
+    model.getModelElementsByType(BpmnShape::class.java)
+        .mapNotNull { shape ->
+            val elementId = shape.bpmnElement?.id ?: return@mapNotNull null
+            val bounds = shape.bounds ?: return@mapNotNull null
+            if (elementId !in nodeIds) return@mapNotNull null
+            elementId to BpmnDiShape(bounds.x, bounds.y, bounds.width, bounds.height)
+        }
+        .toMap()
 
 /**
  * Exotic constructs (Choreography, Conversation, etc.) aren't `FlowNode`s and miss the
