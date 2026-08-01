@@ -18,12 +18,12 @@ Traditional LLM generation often suffers from "hallucinations" or missing requir
 - **Process Contract Extraction:** Derives a structured "contract" from the source text and clarifications. This contract serves as the source of truth, grounding every subsequent generation step in evidence.
 - **Semantic Alignment:** After generation, the system performs a terminal check comparing the BPMN elements against the Process Contract. Any invented tasks or missing branches are detected and reported, preventing ungrounded models from being delivered.
 
-### 2. Technical Quality (XSD & Pkl rule engine)
+### 2. Technical Quality
 
 Every diagram is strictly validated against:
 - The official **BPMN 2.0 XSD**.
 - Kotlin graph-integrity checks that reject malformed topology such as dangling flows or orphaned non-terminal nodes before output is accepted.
-- A custom **rule catalog** with specialized rules enforcing industry best practices (naming conventions and structural logic). Rules are evaluated in-process by a Kotlin `RuleEngine`; diagram auto-layout is a JVM-native ELK pass. See [`docs/bpmn-profile.md`](docs/bpmn-profile.md) for the retained BPMN vocabulary.
+- Diagram auto-layout is a JVM-native ELK pass. See [`docs/bpmn-profile.md`](docs/bpmn-profile.md) for the retained BPMN vocabulary.
 
 ### 3. Deterministic Repair
 
@@ -31,7 +31,7 @@ When validation fails, `bpmner` doesn't just "try again." It uses a **local-firs
 
 ## Model Routing
 
-Each LLM call routes through a named **role** (e.g. `repair-label`) rather than a hard-coded model. Roles let us match model cost and capability to the task: a label tweak goes to a small fast model, a full rewrite goes to a large one. Deterministic validation (XSD, Pkl rule engine) and `DeterministicTopologyRepairStrategy` never call an LLM — they are pure Kotlin and remain that way by design.
+Each LLM call routes through a named **role** (e.g. `repair-label`) rather than a hard-coded model. Roles let us match model cost and capability to the task: a label tweak goes to a small fast model, a full rewrite goes to a large one. Deterministic validation and `DeterministicTopologyRepairStrategy` never call an LLM — they are pure Kotlin and remain that way by design.
 
 | Role             | Persona                      | Requirement                      |
 | ---------------- | ---------------------------- | -------------------------------- |
@@ -187,8 +187,7 @@ These tests are gated via Bazel's `manual` tag to prevent accidental LLM invocat
 
 ## Project Structure
 - `src/`: Kotlin/JVM application (Spring Boot + Embabel).
-- `linter/`: Pkl-authored rule catalog (`linter/pkl/`) consumed by the in-process rule engine.
-- `docs/`: In-depth documentation in the consolidated [Architecture doc](docs/architecture.md) (covers the pipeline, Simplified Sliced Onion design, GOAP lifecycle, agent overview, and module map) plus the [Operator Guide](docs/operator-guide.md). Writing a new rule? See [`linter/docs/rule-authoring-guide.md`](linter/docs/rule-authoring-guide.md).
+- `docs/`: In-depth documentation in the consolidated [Architecture doc](docs/architecture.md) (covers the pipeline, Simplified Sliced Onion design, GOAP lifecycle, agent overview, and module map) plus the [Operator Guide](docs/operator-guide.md).
 
 ## Releases
 
@@ -205,4 +204,4 @@ docker run --rm -p 8080:8080 -e SPRING_PROFILES_ACTIVE=web,openai -e OPENAI_API_
 
 ## Contributing
 
-We follow [Conventional Commits](https://www.conventionalcommits.org/). Please refer to the [Linter README](linter/README.md) for details on adding new rules.
+We follow [Conventional Commits](https://www.conventionalcommits.org/).

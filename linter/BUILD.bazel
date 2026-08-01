@@ -1,21 +1,7 @@
 # Copyright 2026 The Project Contributors
 # SPDX-License-Identifier: MIT
 
-load("@aspect_rules_js//js:defs.bzl", "js_library")
-
 package(default_visibility = [
     "//:__pkg__",
     "//src:__subpackages__",
 ])
-
-# `vale_docs` is consumed by the root `vale_docs_test` / `vale_fixtures_test` to lint
-# documentation prose via `js_test`. After 2G the linter has no TypeScript surface, so
-# this `js_library` only carries the markdown sources + the Pkl-generated rule docs.
-js_library(
-    name = "vale_docs",
-    srcs = [
-        "README.md",
-        "docs/template.md",
-        "docs/toolbox.md",
-    ],
-)

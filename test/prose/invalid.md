@@ -1,3 +1,3 @@
 # Vale Fixture
 
-For modelers, this pkl note says BPMN2 and bpmnlint should run an autofix after a sanity check.
+For modelers, this note says BPMN2 should run an autofix after a sanity check.

@@ -171,6 +171,7 @@ _TAGS = {
 _DATA = {
     "BpmnConfigBindingTest": ["//src:analysis_srcs"],
     "HandlerSourceSanityTest": ["//src:analysis_srcs"],
+    "RuleDocsGoldenTest": ["//:rules.md"],
 }
 
 # One java_junit5_test per *Test.kt. Live-LLM smoke tests carry unique

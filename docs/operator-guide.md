@@ -25,65 +25,6 @@ Both fields are bound at `bpmner.budget` via `@ConfigurationProperties` in the a
 Both fields are bound at `bpmner.readiness`. Interactive generation permits at most three
 clarification rounds; the per-assessment question limit does not increase that round limit.
 
-### Rule profile + severity overrides
-
-| Key | Default | Effect |
-| --- | --- | --- |
-| `bpmner.rules.profile` | `recommended` | Named profile loaded at startup. Built-in profiles: `recommended` (declared severities, nothing disabled) and `strict` (every WARNING-default rule bumped to ERROR). Unknown profile name fails startup with the list of available profiles. |
-| `bpmner.rules.severity-overrides` | `{}` | Per-rule escape hatch applied **on top of** the active profile. User entries always win — the profile is the baseline, this map is per-deployment surgery. Keys are bare rule ids (e.g. `act-verb-object-name`); values are one of `error`, `warning`, `info`, `off`. |
-| `bpmner.rules.config-uri` | `modulepath:/linter/pkl/bpmner.pkl` | Modeller-owned convention source for word lists used by selected naming rules and the `stripTypeWords` local repair handler. Leave unset for packaged defaults; set to a `file:` URI for a team-specific `bpmner.pkl`. |
-
-Worked example — strict on a known-quiet rule, with a few escape-hatch carveouts:
-
-```yaml
-bpmner:
-  rules:
-    profile: strict
-    severity-overrides:
-      "act-activity-label-capitalization": "off"   # too noisy for our domain
-      "name-business-meaningful-label": "warning"  # keep it visible but not blocking
-```
-
-**YAML 1.1 gotcha**: the literal `off` (and `on`, `yes`, `no`) is parsed as a boolean by SnakeYAML before Spring Boot's binder sees it. Spring then converts the Boolean to the string `"false"` / `"true"`, which the override parser doesn't recognise — the rule silently stays enabled. **Always quote severity values**: `"off"`, `"warning"`, `"error"`, `"info"`. The existing rule overrides in `application.yaml` follow this pattern.
-
-### Rule conventions (`bpmner.pkl`)
-
-The packaged `modulepath:/linter/pkl/bpmner.pkl` amends `BpmnerLintConfig.pkl` and supplies the default convention lists used by Kotlin-authored rule beans. To customise those lists, create a local Pkl file that amends the packaged template and point `bpmner.rules.config-uri` at it with a `file:` URI:
-
-```pkl
-amends "modulepath:/linter/pkl/BpmnerLintConfig.pkl"
-
-elementTypeWords = List("activity", "process", "event", "step")
-allowedAcronyms = List("BPMN", "SLA", "API", "CRM")
-technicalTokens = List("api", "svc", "tbl", "req", "resp", "tmp", "proc", "obj")
-discouragedLeadingVerbs = List("handle", "manage", "process", "perform", "do")
-discouragedBpmnTypes = List(
-  "bpmn:Transaction",
-  "bpmn:DataObject",
-  "bpmn:DataStore",
-  "bpmn:DataInputAssociation",
-  "bpmn:DataOutputAssociation",
-)
-```
-
-The convention fields are:
-
-| Field | Used by |
-| --- | --- |
-| `discouragedLeadingVerbs` | `act-discouraged-business-verbs` |
-| `elementTypeWords` | `name-no-element-type-words`, `data-no-type-words-in-data-name`, and `stripTypeWords` repair |
-| `allowedAcronyms` | `name-uncommon-abbreviations` allowed vocabulary |
-| `technicalTokens` | `name-business-meaningful-label` forbidden vocabulary |
-| `discouragedBpmnTypes` | `gen-bpmn-subset` target elements |
-
-Profile and severity decisions are not read from `bpmner.pkl` at runtime; they come from `bpmner.rules.profile` and `bpmner.rules.severity-overrides`.
-
-The packaged profile also rejects event subprocesses at XML conversion, because that exclusion is
-an attribute (`triggeredByEvent`) rather than a BPMN element type. Non-interrupting boundary events
-and signal/escalation/compensation event definitions are supported (`cancelActivity`, `signalRef`,
-`escalationRef`, and an optional `activityRef` all round-trip). Data objects/stores and data
-associations are not supported.
-
 ### LLM role bindings
 
 bpmner doesn't pick a model directly; it picks a *role*, and Embabel's role-mapping resolves the role to a concrete LLM. The roles bpmner uses:
@@ -136,10 +77,10 @@ A `BpmnDiagnostic` is what the validator emits and the repair loop dispatches on
 
 | Field | Type | What it tells you |
 | --- | --- | --- |
-| `source` | `GRAPH` / `XSD` / `LINT` / `RENDER` | Which validator found it. `GRAPH` = `BpmnDefinitionValidator` (structural); `XSD` = schema; `LINT` = Pkl rule engine; `RENDER` = the renderer failed before validation. |
+| `source` | `GRAPH` / `XSD` / `LINT` / `RENDER` | Which validator found it. `GRAPH` = `BpmnDefinitionValidator` (structural); `XSD` = schema; `LINT` = in-process validation; `RENDER` = the renderer failed before validation. |
 | `message` | string | Human-readable description. Often quotes the offending element id. |
 | `severity` | `ERROR` / `WARNING` / `INFO` | Only `ERROR` is blocking. Repair fires on blocking diagnostics. |
-| `rule` | nullable string | The bare rule id (e.g. `act-verb-object-name`). `null` for non-rule sources. |
+| `rule` | nullable string | The diagnostic identifier. `null` for non-rule sources. |
 | `elementId` / `objectRef` | nullable string | Which BPMN element triggered the diagnostic. |
 | `repairScope` | `LABEL` / `OUTLINE` / `PHASE` / `COMPOSITION` / `FULL_PROCESS` | Which repair tier handles it. LABEL → label-patch (cost 0.5). OUTLINE/PHASE → structural-patch (0.7). FULL_PROCESS or none → full-rewrite (0.9). |
 | `kind` | `LOCAL_MODEL_FIX` / `LLM_MODEL_PATCH` / `LLM_XML_REWRITE` / `UNFIXABLE` | The repair-action selector. `LOCAL_MODEL_FIX` → deterministic Kotlin handler. `UNFIXABLE` → no repair fires; the diagnostic surfaces to the user. |
@@ -147,7 +88,7 @@ A `BpmnDiagnostic` is what the validator emits and the repair loop dispatches on
 | `fixHandler` | nullable string | For `LOCAL_MODEL_FIX`, the registered handler name. |
 | `ownerRef` | nullable string | Phase/pool ownership context. |
 
-**Reading a diagnostic in a log**: source first (XSD = "the XML is wrong"; GRAPH = "the model is wrong"; LINT = "a rule disagrees"), then `kind` (predicts the repair tier), then `message`. If `kind = UNFIXABLE` you'll see this exact diagnostic in the final result — bpmner can't fix it; the operator must.
+**Reading a diagnostic in a log**: source first, then `kind` (predicts the repair tier), then `message`. If `kind = UNFIXABLE` you'll see this exact diagnostic in the final result — bpmner can't fix it; the operator must.
 
 ## Observability
 
@@ -296,7 +237,7 @@ Diagnose:
 
 1. Look at the per-validation summary log line. If `repairScope` is empty and `accepted=false`, you're stuck.
 2. Grep the run for `UNFIXABLE` diagnostics. Their `message` field tells you what bpmner gave up on.
-3. Decide: is the diagnostic actually unfixable (a logic error the user must fix), or is the rule's `kind` mis-classified? If the latter, change the Pkl rule's `Repair.kind` and add a handler.
+3. Decide: is the diagnostic actually unfixable (a logic error the user must fix), or is its `kind` mis-classified? If the latter, correct the repair metadata and add a handler.
 
 ### `ProcessExecutionTerminatedException`
 
@@ -324,17 +265,6 @@ Two flavours, distinguished by `report` nullability:
 ### Stuck repair fingerprint
 
 Phrase to grep for in logs: `Repair attempt N` (the per-attempt summary). If you see the same diagnostic counts attempt after attempt, the fingerprint guards should have already fired a `ReplanRequestedException` — but if they're not, that's a bug worth reporting. The expected behaviour is: same-fingerprint → replan signal → planner blacklists the action → planner picks a different action.
-
-### Unknown profile name
-
-Surface: startup fails fast with:
-
-```text
-Unknown rule profile 'foo'. Available profiles: recommended, strict.
-Drop a {Name}Profile.pkl file into linter/pkl/profiles/ to add a new one.
-```
-
-The error message lists every available profile. Either fix the YAML or add a new `.pkl` profile (see [`linter/docs/rule-authoring-guide.md`](../linter/docs/rule-authoring-guide.md)).
 
 ### YAML config-binding errors at startup
 
