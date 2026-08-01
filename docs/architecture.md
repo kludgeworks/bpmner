@@ -346,7 +346,7 @@ deliberately drops it):
   "seq": 5,                       // monotonic per run; the sole ordering/stale-update guard
   "phase": "VALIDATION",          // READINESS | AWAITING_INPUT | CONTRACT | OUTLINE | DRAFT
                                    // | VALIDATION | LAYOUT | ALIGNMENT | FINISHED
-  "artifactState": "DIAGNOSTIC",  // NONE | XML_DRAFT | DIAGNOSTIC | FINAL
+  "artifactState": "DIAGNOSTIC",  // NONE | GRAPH_DRAFT | XML_DRAFT | DIAGNOSTIC | FINAL
   "summary": "Validating and repairing (attempt 2).",
   "detail": { "attemptNumber": "2", "xsdIssues": "1" }, // optional, flat String->String, whitelisted
   "outcome": "COMPLETED"          // present ONLY on the one terminal update per run
@@ -366,9 +366,10 @@ deliberately drops it):
   / `detail.diagnostics` are present only when relevant.
 - **The BPMN XML is never inlined into a `RunUpdate`.** The client fetches the one artifact —
   once, at the terminal update, when `artifactState != "NONE"` — from the existing
-  `GET /generations/{id}/bpmn` (unchanged). There is no progressive multi-snapshot delivery;
-  richer intermediate milestones (e.g. the pre-XML `GRAPH_DRAFT` graph) are epic #605's
-  optional Stage 2.
+  `GET /generations/{id}/bpmn` (unchanged). There is no progressive multi-snapshot delivery of
+  the XML itself, but two pre-XML milestones are delivered as `RunUpdate`s:
+  `BpmnContractExtractedEvent` (`CONTRACT` phase) and `BpmnGraphComposedEvent` (`OUTLINE` phase,
+  `GRAPH_DRAFT` artifact state).
 - **`AWAITING_INPUT`** carries the clarification prompt in `summary` and
   `detail.round` / `detail.maxRounds` / `detail.options` (`|`-joined) for bounded-choice
   questions — the client's clarify form is otherwise unchanged.

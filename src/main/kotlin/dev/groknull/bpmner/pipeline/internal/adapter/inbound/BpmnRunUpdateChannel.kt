@@ -19,11 +19,13 @@ import com.embabel.ux.form.RadioGroup
 import dev.groknull.bpmner.alignment.BpmnAlignmentCheckedEvent
 import dev.groknull.bpmner.authoring.BpmnGeneratedEvent
 import dev.groknull.bpmner.authoring.BpmnGenerationStatus
+import dev.groknull.bpmner.authoring.BpmnGraphComposedEvent
 import dev.groknull.bpmner.authoring.BpmnResult
 import dev.groknull.bpmner.conformance.BpmnDiagnosticSource
 import dev.groknull.bpmner.conformance.BpmnValidationFailedEvent
 import dev.groknull.bpmner.conformance.BpmnValidationPassedEvent
 import dev.groknull.bpmner.conformance.format
+import dev.groknull.bpmner.contract.BpmnContractExtractedEvent
 import dev.groknull.bpmner.layout.BpmnLayoutCompletedEvent
 import dev.groknull.bpmner.pipeline.ArtifactState
 import dev.groknull.bpmner.pipeline.RunOutcome
@@ -149,6 +151,37 @@ internal class BpmnRunUpdateChannel(
             phase = RunPhase.READINESS,
             artifactState = ArtifactState.NONE,
             summary = "Assessed input readiness (${event.assessment.verdict.name.lowercase()}).",
+        )
+    }
+
+    @EventListener
+    fun onContractExtracted(event: BpmnContractExtractedEvent) {
+        val processId = requireProcessId(logger, event.processId, "BpmnContractExtractedEvent") ?: return
+        registry.emit(
+            processId = processId,
+            phase = RunPhase.CONTRACT,
+            artifactState = ArtifactState.NONE,
+            summary = "Extracted the process contract" +
+                (if (event.contract.isValid) "." else " (with issues)."),
+            detail = mapOf(
+                "valid" to event.contract.isValid.toString(),
+                "issueCount" to event.contract.report.issues.size.toString(),
+            ),
+        )
+    }
+
+    @EventListener
+    fun onGraphComposed(event: BpmnGraphComposedEvent) {
+        val processId = requireProcessId(logger, event.processId, "BpmnGraphComposedEvent") ?: return
+        registry.emit(
+            processId = processId,
+            phase = RunPhase.OUTLINE,
+            artifactState = ArtifactState.GRAPH_DRAFT,
+            summary = "Composed the process graph structure.",
+            detail = mapOf(
+                "nodeCount" to event.graph.definition.nodes.size.toString(),
+                "edgeCount" to event.graph.definition.sequences.size.toString(),
+            ),
         )
     }
 

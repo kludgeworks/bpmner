@@ -21,14 +21,25 @@ import dev.groknull.bpmner.alignment.BpmnDefinitionSummary
 import dev.groknull.bpmner.alignment.BpmnSummaryElement
 import dev.groknull.bpmner.authoring.BpmnGeneratedEvent
 import dev.groknull.bpmner.authoring.BpmnGenerationStatus
+import dev.groknull.bpmner.authoring.BpmnGraphComposedEvent
 import dev.groknull.bpmner.authoring.BpmnResult
+import dev.groknull.bpmner.bpmn.BpmnDefinition
+import dev.groknull.bpmner.bpmn.BpmnEdge
+import dev.groknull.bpmner.bpmn.BpmnEndEvent
 import dev.groknull.bpmner.bpmn.BpmnRequest
+import dev.groknull.bpmner.bpmn.BpmnStartEvent
+import dev.groknull.bpmner.bpmn.LaidOutProcessGraph
+import dev.groknull.bpmner.bpmn.OwnedElementGraph
 import dev.groknull.bpmner.bpmn.RenderedBpmn
 import dev.groknull.bpmner.conformance.BpmnDiagnostic
 import dev.groknull.bpmner.conformance.BpmnDiagnosticSeverity
 import dev.groknull.bpmner.conformance.BpmnDiagnosticSource
 import dev.groknull.bpmner.conformance.BpmnValidationFailedEvent
 import dev.groknull.bpmner.conformance.BpmnValidationPassedEvent
+import dev.groknull.bpmner.contract.BpmnContractExtractedEvent
+import dev.groknull.bpmner.contract.ContractValidationReport
+import dev.groknull.bpmner.contract.ProcessContract
+import dev.groknull.bpmner.contract.ValidatedProcessContract
 import dev.groknull.bpmner.layout.BpmnLayoutCompletedEvent
 import dev.groknull.bpmner.pipeline.ArtifactState
 import dev.groknull.bpmner.pipeline.RunOutcome
@@ -245,6 +256,38 @@ class BpmnRunUpdateChannelTest {
     }
 
     @Test
+    fun `onContractExtracted emits a CONTRACT update using the event's processId`() {
+        channel.onContractExtracted(
+            BpmnContractExtractedEvent(
+                contract = validContract(),
+                processId = "proc-contract",
+            ),
+        )
+
+        val update = registry.subscribe("proc-contract").take(1).collectList().block(TIMEOUT)!!.single()
+        assertEquals(RunPhase.CONTRACT, update.phase)
+        assertEquals(ArtifactState.NONE, update.artifactState)
+        assertEquals("true", update.detail["valid"])
+        assertEquals("0", update.detail["issueCount"])
+    }
+
+    @Test
+    fun `onGraphComposed emits an OUTLINE GRAPH_DRAFT update using the event's processId`() {
+        channel.onGraphComposed(
+            BpmnGraphComposedEvent(
+                graph = minimalGraph(),
+                processId = "proc-graph",
+            ),
+        )
+
+        val update = registry.subscribe("proc-graph").take(1).collectList().block(TIMEOUT)!!.single()
+        assertEquals(RunPhase.OUTLINE, update.phase)
+        assertEquals(ArtifactState.GRAPH_DRAFT, update.artifactState)
+        assertEquals("2", update.detail["nodeCount"])
+        assertEquals("1", update.detail["edgeCount"])
+    }
+
+    @Test
     fun `onValidationFailed and onValidationPassed use the event's own processId`() {
         channel.onValidationFailed(
             BpmnValidationFailedEvent(
@@ -300,7 +343,9 @@ class BpmnRunUpdateChannelTest {
     }
 
     @Test
-    fun `onGenerated onLayoutCompleted and onAlignmentChecked drop when their event carries no processId`() {
+    fun `onContractExtracted onGraphComposed onGenerated onLayoutCompleted and onAlignmentChecked drop with no processId`() {
+        channel.onContractExtracted(BpmnContractExtractedEvent(contract = validContract()))
+        channel.onGraphComposed(BpmnGraphComposedEvent(graph = minimalGraph()))
         channel.onGenerated(
             BpmnGeneratedEvent(request = BpmnRequest(processDescription = "x"), rendered = mock(RenderedBpmn::class.java)),
         )
@@ -349,6 +394,24 @@ class BpmnRunUpdateChannelTest {
         ),
         issues = emptyList(),
         rationale = "Fully aligned.",
+    )
+
+    private fun validContract(): ValidatedProcessContract = ValidatedProcessContract(
+        contract = mock(ProcessContract::class.java),
+        report = ContractValidationReport(issues = emptyList()),
+    )
+
+    private fun minimalGraph(): LaidOutProcessGraph = LaidOutProcessGraph(
+        ownedGraph = mock(OwnedElementGraph::class.java),
+        definition = BpmnDefinition(
+            processId = "Process_1",
+            processName = "Handle request",
+            nodes = listOf(
+                BpmnStartEvent("StartEvent_1", "Request received"),
+                BpmnEndEvent("EndEvent_1", "Request completed"),
+            ),
+            sequences = listOf(BpmnEdge("Flow_1", "StartEvent_1", "EndEvent_1")),
+        ),
     )
 
     private fun readyAssessment(): ProcessInputAssessment = ProcessInputAssessment(

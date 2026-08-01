@@ -8,19 +8,19 @@ package dev.groknull.bpmner.pipeline
 /**
  * Artifact availability for a generation run at the point a [RunUpdate] was produced.
  *
- * - [NONE] — no BPMN artifact exists yet (readiness, contract, outline, awaiting input).
+ * - [NONE] — no BPMN artifact exists yet (readiness, contract, awaiting input).
+ * - [GRAPH_DRAFT] — the server-side process graph exists (post-`composeGraph`), but no BPMN XML
+ *   has been rendered yet.
  * - [XML_DRAFT] — a renderable BPMN XML exists (post-`render`, post-`layout`, or a passed
  *   validation) but the run has not reached a terminal outcome.
  * - [DIAGNOSTIC] — the XML exists but carries blocking diagnostics from a failed validation
  *   pass (the repair loop is retrying, or the run terminated with `VALIDATION_FAILED`).
  * - [FINAL] — the terminal artifact is available for download via
  *   `GET /generations/{id}/bpmn` (`GENERATED` or `ALIGNMENT_FAILED`, both of which carry XML).
- *
- * The enum deliberately has no value yet for the pre-XML server-side graph milestone; it stays
- * open for one to be added when that milestone is delivered.
  */
 enum class ArtifactState {
     NONE,
+    GRAPH_DRAFT,
     XML_DRAFT,
     DIAGNOSTIC,
     FINAL,
