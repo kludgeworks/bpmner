@@ -116,12 +116,13 @@ internal class EventStructureRule : BpmnRule {
     override val metadata = metadata(
         id,
         "Event Structure",
-        "Enforce event-subprocess start and terminate-end constraints.",
-        "Use one triggering start event in an event subprocess and reserve terminate end events " +
-            "for scopes with another completion path.",
+        "Enforce event flow cardinality, event-subprocess start, and terminate-end constraints.",
+        "Do not connect flow into start events or out of end events. Use one triggering start event " +
+            "in an event subprocess and reserve terminate end events for scopes with another completion path.",
         listOf("bpmn:StartEvent", "bpmn:EndEvent"),
     )
     override fun evaluate(ctx: BpmnDefinitionContext): List<RuleDiagnostic> = buildList {
+        addAll(eventCardinalityDiagnostics(ctx))
         ctx.definition.nodes
             .filterIsInstance<BpmnStartEvent>()
             .filter { it.isEventSubProcessStart }
@@ -167,6 +168,37 @@ internal class EventStructureRule : BpmnRule {
                         ),
                     )
                 }
+            }
+    }
+
+    private fun eventCardinalityDiagnostics(ctx: BpmnDefinitionContext): List<RuleDiagnostic> = buildList {
+        ctx.definition.nodes
+            .filterIsInstance<BpmnStartEvent>()
+            .filter { !it.isEventSubProcessStart && (ctx.incomingCounts[it.id] ?: 0) > 0 }
+            .forEach { start ->
+                add(
+                    RuleDiagnostic(
+                        "evt-start-event-incoming",
+                        id,
+                        RuleSeverity.ERROR,
+                        "start event must not have incoming sequence flow",
+                        start.id,
+                    ),
+                )
+            }
+        ctx.definition.nodes
+            .filterIsInstance<BpmnEndEvent>()
+            .filter { (ctx.outgoingCounts[it.id] ?: 0) > 0 }
+            .forEach { end ->
+                add(
+                    RuleDiagnostic(
+                        "evt-end-event-outgoing",
+                        id,
+                        RuleSeverity.ERROR,
+                        "end event must not have outgoing sequence flow",
+                        end.id,
+                    ),
+                )
             }
     }
 }
