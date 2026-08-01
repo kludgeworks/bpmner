@@ -95,6 +95,7 @@ filegroup(
 VALE_SRCS = [
     ".vale.ini",
     "README.md",
+    "rules.md",
     "//styles",
 ] + glob(["test/prose/*.md"])
 

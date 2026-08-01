@@ -34,6 +34,7 @@ const valeBin = join(
 
 const staticProductionDocs = [
 	"README.md",
+	"rules.md",
 ]
 
 function runVale(files) {

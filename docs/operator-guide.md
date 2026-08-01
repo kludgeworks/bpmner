@@ -77,7 +77,7 @@ A `BpmnDiagnostic` is what the validator emits and the repair loop dispatches on
 
 | Field | Type | What it tells you |
 | --- | --- | --- |
-| `source` | `GRAPH` / `XSD` / `LINT` / `RENDER` | Which validator found it. `GRAPH` = `BpmnDefinitionValidator` (structural); `XSD` = schema; `RENDER` = the renderer failed before validation. |
+| `source` | `GRAPH` / `XSD` / `LINT` / `RENDER` | Which validator found it. `GRAPH` = `BpmnDefinitionValidator` (structural); `XSD` = schema; `LINT` = in-process validation; `RENDER` = the renderer failed before validation. |
 | `message` | string | Human-readable description. Often quotes the offending element id. |
 | `severity` | `ERROR` / `WARNING` / `INFO` | Only `ERROR` is blocking. Repair fires on blocking diagnostics. |
 | `rule` | nullable string | The diagnostic identifier. `null` for non-rule sources. |
