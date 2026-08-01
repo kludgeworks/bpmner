@@ -29,16 +29,12 @@ import java.util.concurrent.ConcurrentHashMap
 /**
  * Anti-corruption layer, Embabel-facing half: the Embabel [OutputChannel] registered on every
  * run's `ProcessOptions`, plus the platform [AgenticEventListener] for process lifecycle
- * (waiting/failed/finished), translating Embabel signals into the ordered
- * [dev.groknull.bpmner.pipeline.RunUpdate] stream held by [RunUpdateSinkRegistry]. bpmner's own
- * `@DomainEvent` milestones (readiness, contract, graph, generated, validation, layout,
- * alignment) are the *other* half of this ACL — see
- * [BpmnMilestoneEventListener], a separate `@Component` with no Embabel imports at all, split out
- * once the milestone-listener count made clear the two concerns (translating Embabel's own
- * lifecycle SPI vs. translating bpmner's own domain events) don't share a cohesion boundary just
- * because they write to the same [RunUpdateSinkRegistry].
+ * (waiting/failed/finished), translated into the ordered
+ * [dev.groknull.bpmner.pipeline.RunUpdate] stream in [RunUpdateSinkRegistry]. The bpmner-facing
+ * half — bpmner's own `@DomainEvent` milestones — is [BpmnMilestoneEventListener], a separate
+ * `@Component` with no Embabel imports.
  *
- * Imports `com.embabel.agent.api.channel.*`/`api.event.*` only, never `web.sse.*`, and emits only
+ * Imports `com.embabel.agent.api.channel.*`/`api.event.*` only, never `web.sse.*`; emits only
  * [dev.groknull.bpmner.pipeline.RunUpdate] outward — no Embabel type, action name, prompt,
  * credential, or provider payload in `detail`.
  */

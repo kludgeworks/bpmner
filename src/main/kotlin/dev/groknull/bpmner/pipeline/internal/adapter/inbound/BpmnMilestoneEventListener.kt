@@ -24,20 +24,15 @@ import org.springframework.stereotype.Component
 
 /**
  * Anti-corruption layer, bpmner-facing half: translates bpmner's own `@DomainEvent` milestones
- * (readiness, contract, graph, generated, validation, layout, alignment) into the ordered
- * [dev.groknull.bpmner.pipeline.RunUpdate] stream held by [RunUpdateSinkRegistry]. The *other*
- * half of this ACL — [BpmnRunUpdateChannel] — translates Embabel's own `OutputChannel`/
- * `AgenticEventListener` SPI instead; the two are split into separate `@Component`s because they
- * don't share a cohesion boundary: this class imports no Embabel type at all, only bpmner's own
- * module-root events and Spring's plain `@EventListener`.
+ * into the ordered [dev.groknull.bpmner.pipeline.RunUpdate] stream in [RunUpdateSinkRegistry].
+ * The Embabel-facing half, [BpmnRunUpdateChannel], is a separate `@Component` — this class
+ * imports no Embabel type at all.
  *
- * The listeners are plain `@EventListener`s, not `@ApplicationModuleListener` (which requires an
- * event-publication registry this project doesn't configure), and read `event.processId` rather
- * than `AgentProcess.get()`: publish-time capture inside each producing `@Action` is the one
- * point guaranteed correct regardless of dispatch mode or sub-process scoping (see each event's
- * KDoc). Insert new milestones in action-chain order; `detail` stays a flat, explicitly
- * whitelisted `String -> String` bag — no Embabel type, action name, prompt, model-reasoning,
- * credential, or provider payload, matching [dev.groknull.bpmner.pipeline.RunUpdate]'s contract.
+ * Listeners are plain `@EventListener`s (not `@ApplicationModuleListener`, which needs an
+ * event-publication registry this project doesn't configure) and read `event.processId`,
+ * captured at publish time by each producing `@Action` — never `AgentProcess.get()` here (see
+ * each event's KDoc). `detail` stays a flat, whitelisted `String -> String` bag; no Embabel
+ * type, action name, prompt, credential, or provider payload.
  */
 @InfrastructureRing
 @Component
@@ -150,8 +145,10 @@ internal class BpmnMilestoneEventListener(
     }
 }
 
-// A null processId is a producer bug (see each event's KDoc), not a legitimate runtime case —
-// logged, not silently dropped.
+/**
+ * A null [processId] is a producer bug (see each event's KDoc), not a legitimate runtime case
+ * — logged, not silently dropped.
+ */
 private fun requireProcessId(logger: Logger, processId: String?, source: String): String? {
     if (processId == null) {
         logger.warn("{} published with no processId; RunUpdate dropped.", source)
