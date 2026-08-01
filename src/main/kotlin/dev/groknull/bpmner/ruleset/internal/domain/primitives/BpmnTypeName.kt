@@ -29,6 +29,7 @@ internal object BpmnTypeName {
     const val EXCLUSIVE_GATEWAY = "bpmn:ExclusiveGateway"
     const val INCLUSIVE_GATEWAY = "bpmn:InclusiveGateway"
     const val PARALLEL_GATEWAY = "bpmn:ParallelGateway"
+    const val COMPLEX_GATEWAY = "bpmn:ComplexGateway"
     const val EVENT_BASED_GATEWAY = "bpmn:EventBasedGateway"
 
     // An embedded subprocess is an Activity (a FlowNode), not a task/gateway/event. Surfaced so

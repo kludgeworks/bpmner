@@ -5,9 +5,11 @@
 
 package dev.groknull.bpmner.authoring.internal.adapter.outbound
 
+import dev.groknull.bpmner.bpmn.BpmnAdHocSubProcess
 import dev.groknull.bpmner.bpmn.BpmnBoundaryEvent
 import dev.groknull.bpmner.bpmn.BpmnBusinessRuleTask
 import dev.groknull.bpmner.bpmn.BpmnCallActivity
+import dev.groknull.bpmner.bpmn.BpmnComplexGateway
 import dev.groknull.bpmner.bpmn.BpmnEndEvent
 import dev.groknull.bpmner.bpmn.BpmnEventBasedGateway
 import dev.groknull.bpmner.bpmn.BpmnEventSubProcess
@@ -34,6 +36,7 @@ import org.camunda.bpm.model.bpmn.instance.Activity
 import org.camunda.bpm.model.bpmn.instance.BoundaryEvent
 import org.camunda.bpm.model.bpmn.instance.BusinessRuleTask
 import org.camunda.bpm.model.bpmn.instance.CallActivity
+import org.camunda.bpm.model.bpmn.instance.ComplexGateway
 import org.camunda.bpm.model.bpmn.instance.EndEvent
 import org.camunda.bpm.model.bpmn.instance.EventBasedGateway
 import org.camunda.bpm.model.bpmn.instance.ExclusiveGateway
@@ -80,6 +83,8 @@ internal object BpmnModelFactory {
 
                 is BpmnParallelGateway -> modelInstance.newInstance(ParallelGateway::class.java)
 
+                is BpmnComplexGateway -> modelInstance.newInstance(ComplexGateway::class.java)
+
                 is BpmnEventBasedGateway -> modelInstance.newInstance(EventBasedGateway::class.java)
 
                 is BpmnIntermediateCatchEvent -> modelInstance.newInstance(IntermediateCatchEvent::class.java)
@@ -94,6 +99,11 @@ internal object BpmnModelFactory {
                 is BpmnEndEvent -> modelInstance.newInstance(EndEvent::class.java)
 
                 is BpmnSubProcess -> modelInstance.newInstance(SubProcess::class.java)
+
+                is BpmnAdHocSubProcess ->
+                    modelInstance.newInstance(SubProcess::class.java).apply {
+                        setAttributeValue("adHoc", "true")
+                    }
 
                 is BpmnEventSubProcess ->
                     modelInstance.newInstance(SubProcess::class.java).apply {

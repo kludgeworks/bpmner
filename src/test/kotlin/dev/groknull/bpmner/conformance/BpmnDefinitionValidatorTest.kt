@@ -114,7 +114,7 @@ class BpmnDefinitionValidatorTest {
     }
 
     @Test
-    fun `validator rejects a disconnected closed cycle`() {
+    fun `validator leaves disconnected closed cycles to the compiled rule engine`() {
         val definition =
             BpmnDefinition(
                 processId = "Process_1",
@@ -136,7 +136,7 @@ class BpmnDefinitionValidatorTest {
 
         val errors = validator.validate(definition).joinToString("\n")
 
-        assertContains(errors, "process contains disconnected flow nodes: Cycle_1, Cycle_2")
+        assertTrue(errors.isEmpty())
     }
 
     @Test

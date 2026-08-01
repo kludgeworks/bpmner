@@ -35,22 +35,16 @@ internal class GatewayRuleConfig {
     // Deferred LLM metadata rules are added as LlmRuleSpec beans.
     // These are excluded from activeRules() but remain resolvable via ruleByIdOrAlias for markdown.
     @Bean
-    fun gtwExclusiveInclusiveParallelSemantics(): LlmRuleSpec = llmRule(
-        name = "Exclusive Inclusive Parallel Semantics",
+    fun gtwNoInclusiveGateway(): LlmRuleSpec = llmRule(
+        name = "No Inclusive Gateway",
         category = RuleCategory.Gateway,
         intent = "Keep gateway type choices aligned with BPMN token semantics.",
-        forModellers =
-        "Use exclusive gateways for exactly one path, inclusive gateways for one or more paths, and parallel gateways when all paths proceed together.",
+        forModellers = "Prefer explicit exclusive or parallel gateway semantics over inclusive gateways.",
         forAI =
         "Enforce deterministic parallel-gateway structure from XML. Treat XOR versus OR versus AND selection as a modelling-intent decision unless explicit structural evidence makes it invalid.",
-        targetElements =
-        listOf(
-            "bpmn:ExclusiveGateway",
-            "bpmn:InclusiveGateway",
-            "bpmn:ParallelGateway",
-        ),
+        targetElements = listOf("bpmn:InclusiveGateway"),
         errorMessages = mapOf(
-            "default" to "Gateway semantics should match exclusive, inclusive, or parallel behavior",
+            "default" to "Inclusive gateways are not permitted by this alternative rule",
             "parallelCondition" to "Parallel gateway outgoing sequence flow must not be conditional or default-only",
             "parallelSplitCardinality" to "Parallel diverging gateway should have at least two outgoing sequence flows",
             "parallelJoinCardinality" to "Parallel converging gateway should have at least two incoming sequence flows",

@@ -312,6 +312,12 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
                 .bpmnElements("startEvent")
                 .filter { it.hasAttribute("isInterrupting") }
                 .associate { it.getAttribute("id") to it.getAttribute("isInterrupting").toBoolean() },
+            eventSubProcessStartIds = document.bpmnElements("subProcess")
+                .filter { it.getAttribute("triggeredByEvent").toBoolean() }
+                .flatMap { it.childElements().filter { child -> child.localName == "startEvent" } }
+                .map { it.getAttribute("id") }
+                .filter { it.isNotBlank() }
+                .toSet(),
             attachedToRefs =
             document
                 .bpmnElements("boundaryEvent")
@@ -500,6 +506,7 @@ internal data class TaskMetadata(
 internal data class EventMetadata(
     val eventDefinitions: Map<String, BpmnEventDefinition>,
     val isInterrupting: Map<String, Boolean>,
+    val eventSubProcessStartIds: Set<String>,
     val attachedToRefs: Map<String, String>,
     val cancelActivity: Map<String, Boolean>,
     val messages: List<BpmnMessageRef>,

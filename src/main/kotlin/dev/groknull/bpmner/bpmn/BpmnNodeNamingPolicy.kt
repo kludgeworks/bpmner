@@ -72,6 +72,7 @@ object BpmnNodeNamingPolicy {
             // the BpmnSubset rule flags the unrecognized element wholesale; adding a name
             // complaint on top would be noise.
             is BpmnUnrecognizedNode -> false
+            is BpmnAdHocSubProcess, is BpmnComplexGateway -> false
         }
     }
 

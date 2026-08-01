@@ -111,6 +111,7 @@ internal enum class ConnectivityMode {
     OUTGOING_FLOWS_NAMED,
     WITHIN_POOL,
     ACROSS_POOLS,
+    WEAK_COMPONENTS_BY_SCOPE,
 }
 
 internal data class PairingCheckConfig(

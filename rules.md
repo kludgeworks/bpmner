@@ -991,37 +991,6 @@ Detect event-based gateway outgoing flows that target anything other than an int
 - **Kind**: `LLM_MODEL_PATCH`
 - **Safety**: `LLM_ONLY`
 
-## gtw-exclusive-inclusive-parallel-semantics
-
-- **Name**: Exclusive Inclusive Parallel Semantics
-- **Category**: Gateway
-- **Severity**: WARNING
-- **Target Elements**: `bpmn:ExclusiveGateway`, `bpmn:InclusiveGateway`, `bpmn:ParallelGateway`
-
-### Purpose
-
-Keep gateway type choices aligned with BPMN token semantics.
-
-### Modeller Guidance
-
-Use exclusive gateways for exactly one path, inclusive gateways for one or more paths, and parallel gateways when all paths proceed together.
-
-### AI Guidance
-
-Enforce deterministic parallel-gateway structure from XML. Treat XOR versus OR versus AND selection as a modelling-intent decision unless explicit structural evidence makes it invalid.
-
-### Diagnostic Messages
-
-- `default`: Gateway semantics should match exclusive, inclusive, or parallel behavior
-- `parallelCondition`: Parallel gateway outgoing sequence flow must not be conditional or default-only
-- `parallelJoinCardinality`: Parallel converging gateway should have at least two incoming sequence flows
-- `parallelSplitCardinality`: Parallel diverging gateway should have at least two outgoing sequence flows
-
-### Repair
-
-- **Kind**: `LLM_MODEL_PATCH`
-- **Safety**: `LLM_ONLY`
-
 ## gtw-fake-join
 
 - **Name**: Fake Join
@@ -1131,6 +1100,37 @@ Detect non-gateway flow nodes with multiple outgoing sequence flows; do not auto
 ### Diagnostic Messages
 
 - `default`: Non-gateway flow node has multiple outgoing flows; add an explicit gateway
+
+### Repair
+
+- **Kind**: `LLM_MODEL_PATCH`
+- **Safety**: `LLM_ONLY`
+
+## gtw-no-inclusive-gateway
+
+- **Name**: No Inclusive Gateway
+- **Category**: Gateway
+- **Severity**: WARNING
+- **Target Elements**: `bpmn:InclusiveGateway`
+
+### Purpose
+
+Keep gateway type choices aligned with BPMN token semantics.
+
+### Modeller Guidance
+
+Prefer explicit exclusive or parallel gateway semantics over inclusive gateways.
+
+### AI Guidance
+
+Enforce deterministic parallel-gateway structure from XML. Treat XOR versus OR versus AND selection as a modelling-intent decision unless explicit structural evidence makes it invalid.
+
+### Diagnostic Messages
+
+- `default`: Inclusive gateways are not permitted by this alternative rule
+- `parallelCondition`: Parallel gateway outgoing sequence flow must not be conditional or default-only
+- `parallelJoinCardinality`: Parallel converging gateway should have at least two incoming sequence flows
+- `parallelSplitCardinality`: Parallel diverging gateway should have at least two outgoing sequence flows
 
 ### Repair
 

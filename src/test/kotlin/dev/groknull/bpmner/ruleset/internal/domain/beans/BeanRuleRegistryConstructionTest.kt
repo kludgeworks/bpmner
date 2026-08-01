@@ -38,7 +38,7 @@ internal class BeanRuleRegistryConstructionTest {
             assertThat(llmSpecs).hasSize(2)
             assertThat(llmIds).contains(
                 "gen-business-clarity-over-technical-detail",
-                "gtw-exclusive-inclusive-parallel-semantics",
+                "gtw-no-inclusive-gateway",
             )
 
             // LLM specs are resolvable by id but are excluded from activeRules().
@@ -116,7 +116,7 @@ internal class BeanRuleRegistryConstructionTest {
                 "act-task-vs-subprocess-vs-call-activity",
                 // LLM specs are deferred but not executable, so they're also absent from activeIds
                 "gen-business-clarity-over-technical-detail",
-                "gtw-exclusive-inclusive-parallel-semantics",
+                "gtw-no-inclusive-gateway",
             )
         }
     }

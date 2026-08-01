@@ -288,12 +288,14 @@ data class BpmnUnrecognizedEventDefinition(
     JsonSubTypes.Type(value = BpmnExclusiveGateway::class, name = "EXCLUSIVE_GATEWAY"),
     JsonSubTypes.Type(value = BpmnInclusiveGateway::class, name = "INCLUSIVE_GATEWAY"),
     JsonSubTypes.Type(value = BpmnParallelGateway::class, name = "PARALLEL_GATEWAY"),
+    JsonSubTypes.Type(value = BpmnComplexGateway::class, name = "COMPLEX_GATEWAY"),
     JsonSubTypes.Type(value = BpmnEventBasedGateway::class, name = "EVENT_BASED_GATEWAY"),
     JsonSubTypes.Type(value = BpmnIntermediateCatchEvent::class, name = "INTERMEDIATE_CATCH_EVENT"),
     JsonSubTypes.Type(value = BpmnIntermediateThrowEvent::class, name = "INTERMEDIATE_THROW_EVENT"),
     JsonSubTypes.Type(value = BpmnBoundaryEvent::class, name = "BOUNDARY_EVENT"),
     JsonSubTypes.Type(value = BpmnEndEvent::class, name = "END_EVENT"),
     JsonSubTypes.Type(value = BpmnSubProcess::class, name = "SUB_PROCESS"),
+    JsonSubTypes.Type(value = BpmnAdHocSubProcess::class, name = "AD_HOC_SUB_PROCESS"),
     JsonSubTypes.Type(value = BpmnEventSubProcess::class, name = "EVENT_SUB_PROCESS"),
     JsonSubTypes.Type(value = BpmnCallActivity::class, name = "CALL_ACTIVITY"),
 )
@@ -390,6 +392,8 @@ data class BpmnStartEvent(
     override val eventDefinition: BpmnEventDefinition = BpmnNoneEventDefinition,
     @get:JsonPropertyDescription("Whether this start interrupts its enclosing scope; event subprocess starts may set false")
     val isInterrupting: Boolean = true,
+    @get:JsonPropertyDescription("Whether this start event belongs to an event subprocess")
+    val isEventSubProcessStart: Boolean = false,
     @get:JsonPropertyDescription(PARENT_REF_DESCRIPTION)
     override val parentRef: String? = null,
 ) : BpmnNode,
@@ -599,6 +603,19 @@ data class BpmnParallelGateway(
     override fun withName(name: String?): BpmnNode = copy(name = name)
 }
 
+data class BpmnComplexGateway(
+    @field:NotBlank
+    @get:JsonPropertyDescription(NODE_ID_DESCRIPTION)
+    override val id: String,
+    @get:JsonPropertyDescription(NODE_NAME_DESCRIPTION)
+    override val name: String? = null,
+    @get:JsonPropertyDescription(PARENT_REF_DESCRIPTION)
+    override val parentRef: String? = null,
+) : BpmnNode,
+    BpmnGateway {
+    override fun withName(name: String?): BpmnNode = copy(name = name)
+}
+
 data class BpmnEventBasedGateway(
     @field:NotBlank
     @get:JsonPropertyDescription(NODE_ID_DESCRIPTION)
@@ -686,6 +703,19 @@ data class BpmnEndEvent(
         "nodes and edges stay in the flat definition lists and carry parentRef = this subprocess's id.",
 )
 data class BpmnSubProcess(
+    @field:NotBlank
+    @get:JsonPropertyDescription(NODE_ID_DESCRIPTION)
+    override val id: String,
+    @get:JsonPropertyDescription(NODE_NAME_DESCRIPTION)
+    override val name: String? = null,
+    @get:JsonPropertyDescription(PARENT_REF_DESCRIPTION)
+    override val parentRef: String? = null,
+) : BpmnNode {
+    override fun withName(name: String?): BpmnNode = copy(name = name)
+}
+
+@JsonClassDescription("An ad-hoc subprocess whose contained activities have no prescribed sequence")
+data class BpmnAdHocSubProcess(
     @field:NotBlank
     @get:JsonPropertyDescription(NODE_ID_DESCRIPTION)
     override val id: String,

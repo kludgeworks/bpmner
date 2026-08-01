@@ -5,9 +5,11 @@
 
 package dev.groknull.bpmner.authoring.internal.adapter.outbound
 
+import dev.groknull.bpmner.bpmn.BpmnAdHocSubProcess
 import dev.groknull.bpmner.bpmn.BpmnBoundaryEvent
 import dev.groknull.bpmner.bpmn.BpmnBusinessRuleTask
 import dev.groknull.bpmner.bpmn.BpmnCallActivity
+import dev.groknull.bpmner.bpmn.BpmnComplexGateway
 import dev.groknull.bpmner.bpmn.BpmnEndEvent
 import dev.groknull.bpmner.bpmn.BpmnErrorRef
 import dev.groknull.bpmner.bpmn.BpmnEscalationRef
@@ -33,6 +35,7 @@ import dev.groknull.bpmner.bpmn.BpmnUserTask
 import org.camunda.bpm.model.bpmn.instance.BoundaryEvent
 import org.camunda.bpm.model.bpmn.instance.BusinessRuleTask
 import org.camunda.bpm.model.bpmn.instance.CallActivity
+import org.camunda.bpm.model.bpmn.instance.ComplexGateway
 import org.camunda.bpm.model.bpmn.instance.EndEvent
 import org.camunda.bpm.model.bpmn.instance.EventBasedGateway
 import org.camunda.bpm.model.bpmn.instance.ExclusiveGateway
@@ -78,6 +81,7 @@ internal fun FlowNode.toBpmnEventOrNull(normalisedName: String?, parentRef: Stri
                 name = normalisedName,
                 eventDefinition = eventMetadata.eventDefinitions[id] ?: BpmnNoneEventDefinition,
                 isInterrupting = eventMetadata.isInterrupting[id] ?: true,
+                isEventSubProcessStart = id in eventMetadata.eventSubProcessStartIds,
                 parentRef = parentRef,
             )
         }
@@ -138,6 +142,8 @@ internal fun FlowNode.toBpmnGatewayOrNull(normalisedName: String?, parentRef: St
             BpmnParallelGateway(id = id, name = normalisedName, parentRef = parentRef)
         }
 
+        is ComplexGateway -> BpmnComplexGateway(id = id, name = normalisedName, parentRef = parentRef)
+
         is EventBasedGateway -> {
             BpmnEventBasedGateway(id = id, name = normalisedName, parentRef = parentRef)
         }
@@ -154,6 +160,8 @@ internal fun FlowNode.toBpmnSubProcessOrUnrecognized(normalisedName: String?, pa
         is SubProcess -> {
             if (this is Transaction) {
                 toUnrecognizedNode(normalisedName, parentRef)
+            } else if (getAttributeValue("adHoc")?.toBoolean() == true) {
+                BpmnAdHocSubProcess(id = id, name = normalisedName, parentRef = parentRef)
             } else if (triggeredByEvent()) {
                 BpmnEventSubProcess(id = id, name = normalisedName, parentRef = parentRef)
             } else {
