@@ -5,11 +5,11 @@
 
 package dev.groknull.bpmner.conformance.internal.domain
 
+import dev.groknull.bpmner.bpmn.BpmnAdHocSubProcess
 import dev.groknull.bpmner.bpmn.BpmnBoundaryEvent
 import dev.groknull.bpmner.bpmn.BpmnBusinessRuleTask
 import dev.groknull.bpmner.bpmn.BpmnCompensateEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnDefinition
-import dev.groknull.bpmner.bpmn.BpmnEdge
 import dev.groknull.bpmner.bpmn.BpmnEndEvent
 import dev.groknull.bpmner.bpmn.BpmnErrorEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnEscalationEventDefinition
@@ -99,59 +99,6 @@ internal class BpmnDefinitionValidator {
                 errors.add("node ${node.id} missing outgoing sequence flow")
             }
         }
-
-        val boundaryEventIds = definition.nodes.filterIsInstance<BpmnBoundaryEvent>().map { it.id }.toSet()
-        definition.nodes
-            .filter { it.participatesInSequenceFlow() }
-            .groupBy { it.parentRef }
-            .forEach { (parentRef, nodes) ->
-                validateScopeWeakConnectivity(parentRef, nodes, definition.sequences, boundaryEventIds, errors)
-            }
-    }
-
-    private fun validateScopeWeakConnectivity(
-        parentRef: String?,
-        nodes: List<BpmnNode>,
-        sequences: List<BpmnEdge>,
-        boundaryEventIds: Set<String>,
-        errors: MutableList<String>,
-    ) {
-        if (nodes.size < 2) return
-
-        val nodeIds = nodes.map { it.id }.toSet()
-        val adjacent = nodeIds.associateWith { mutableSetOf<String>() }
-        // Handler targets reachable only via a boundary-event outgoing edge. The boundary event
-        // itself is not in the node set (it is an attached exception, not a flow-node anchor),
-        // so its outgoing edge is not added to the undirected adjacency. Instead the target is
-        // recorded here and seeded directly into the BFS visited set — preventing a false-positive
-        // disconnected-component report for a task that is only reachable via a boundary event.
-        val boundaryHandlerIds = sequences
-            .filter { it.parentRef == parentRef && it.sourceRef in boundaryEventIds && it.targetRef in nodeIds }
-            .map { it.targetRef }
-            .toSet()
-        sequences
-            .filter { it.parentRef == parentRef && it.sourceRef in nodeIds && it.targetRef in nodeIds }
-            .forEach { edge ->
-                adjacent.getValue(edge.sourceRef).add(edge.targetRef)
-                adjacent.getValue(edge.targetRef).add(edge.sourceRef)
-            }
-
-        val visited = mutableSetOf(nodes.first().id)
-        visited.addAll(boundaryHandlerIds)
-        val pending = ArrayDeque<String>()
-        pending.add(nodes.first().id)
-        pending.addAll(boundaryHandlerIds)
-        while (pending.isNotEmpty()) {
-            adjacent.getValue(pending.removeFirst())
-                .filter { visited.add(it) }
-                .forEach(pending::addLast)
-        }
-
-        val disconnected = nodeIds - visited
-        if (disconnected.isNotEmpty()) {
-            val scope = parentRef?.let { "subprocess '$it'" } ?: "process"
-            errors.add("$scope contains disconnected flow nodes: ${disconnected.sorted().joinToString(", ")}")
-        }
     }
 
     private fun BpmnDefinition.hasRequiredTopLevelEvents(): Boolean {
@@ -167,9 +114,6 @@ internal class BpmnDefinitionValidator {
      * own trigger; a compensation-handler task is invoked by a compensation event. All three are
      * floating and excluded from the weak-connectivity requirement.
      */
-    private fun BpmnNode.participatesInSequenceFlow(): Boolean =
-        !(this is BpmnBoundaryEvent || this is BpmnEventSubProcess || isCompensationHandler())
-
     private fun BpmnNode.requiresIncomingSequenceFlow(): Boolean = when {
         this is BpmnStartEvent || this is BpmnBoundaryEvent -> false
 
@@ -207,7 +151,7 @@ internal class BpmnDefinitionValidator {
         // An event subprocess counts as a container too — it holds start/end events and nests via parentRef.
         val subProcessesById =
             definition.nodes
-                .filter { it is BpmnSubProcess || it is BpmnEventSubProcess }
+                .filter { it is BpmnSubProcess || it is BpmnAdHocSubProcess || it is BpmnEventSubProcess }
                 .associateBy { it.id }
         val nodesById = definition.nodes.associateBy { it.id }
 

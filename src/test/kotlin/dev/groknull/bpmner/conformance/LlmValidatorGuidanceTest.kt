@@ -56,7 +56,7 @@ internal class LlmValidatorGuidanceTest {
             .isNotBlank()
 
         assertThat(guidance).contains("gen-business-clarity-over-technical-detail")
-        assertThat(guidance).contains("gtw-exclusive-inclusive-parallel-semantics")
+        assertThat(guidance).contains("gtw-no-inclusive-gateway")
     }
 
     @Test
@@ -65,7 +65,7 @@ internal class LlmValidatorGuidanceTest {
 
         // Heading section with id and name
         assertThat(guidance).contains("gen-business-clarity-over-technical-detail: Business Clarity Over Technical Detail")
-        assertThat(guidance).contains("gtw-exclusive-inclusive-parallel-semantics: Exclusive Inclusive Parallel Semantics")
+        assertThat(guidance).contains("gtw-no-inclusive-gateway: No Inclusive Gateway")
 
         // Intent line per rule (partial match for long lines)
         assertThat(guidance).contains("Intent: Keep BPMN diagrams focused on business behavior")

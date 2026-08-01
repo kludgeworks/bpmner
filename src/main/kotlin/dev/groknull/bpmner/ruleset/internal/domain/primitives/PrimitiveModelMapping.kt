@@ -5,10 +5,12 @@
 
 package dev.groknull.bpmner.ruleset.internal.domain.primitives
 
+import dev.groknull.bpmner.bpmn.BpmnAdHocSubProcess
 import dev.groknull.bpmner.bpmn.BpmnBoundaryEvent
 import dev.groknull.bpmner.bpmn.BpmnBusinessRuleTask
 import dev.groknull.bpmner.bpmn.BpmnCallActivity
 import dev.groknull.bpmner.bpmn.BpmnCompensateEventDefinition
+import dev.groknull.bpmner.bpmn.BpmnComplexGateway
 import dev.groknull.bpmner.bpmn.BpmnDefinitionContext
 import dev.groknull.bpmner.bpmn.BpmnEdge
 import dev.groknull.bpmner.bpmn.BpmnEndEvent
@@ -241,6 +243,9 @@ internal fun BpmnNode.toPrimitiveElement(
         if (this@toPrimitiveElement is BpmnEvent) {
             putAll(eventDefinitionProperties(eventDefinition))
         }
+        if (this@toPrimitiveElement is BpmnStartEvent) {
+            put("isEventSubProcessStart", isEventSubProcessStart.toString())
+        }
     },
 )
 
@@ -296,9 +301,13 @@ private fun BpmnNode.bpmnTypeName(): String = when (this) {
 
     is BpmnParallelGateway -> BpmnTypeName.PARALLEL_GATEWAY
 
+    is BpmnComplexGateway -> BpmnTypeName.COMPLEX_GATEWAY
+
     is BpmnEventBasedGateway -> BpmnTypeName.EVENT_BASED_GATEWAY
 
     is BpmnSubProcess -> BpmnTypeName.SUB_PROCESS
+
+    is BpmnAdHocSubProcess -> BpmnTypeName.SUB_PROCESS
 
     // Same BPMN element as an embedded subprocess (<bpmn:subProcess triggeredByEvent="true">),
     // so it shares the exact typename — rules that target bpmn:SubProcess see both.

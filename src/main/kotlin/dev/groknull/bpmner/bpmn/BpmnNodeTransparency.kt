@@ -69,4 +69,5 @@ internal fun BpmnNode.isSemanticallyTransparent(outgoingBySource: Map<String, Li
     // Fallback for elements without a typed Kotlin class. Never transparent — not enough
     // information to treat an unrecognized node as a routing-only pass-through.
     is BpmnUnrecognizedNode -> false
+    is BpmnAdHocSubProcess, is BpmnComplexGateway -> false
 }

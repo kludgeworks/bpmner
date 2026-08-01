@@ -85,7 +85,7 @@ internal class RuleSourceParityTest {
         assertThat(llmSpecs).hasSize(2)
         assertThat(llmSpecs.map { it.metadata.id }).containsExactlyInAnyOrder(
             "gen-business-clarity-over-technical-detail",
-            "gtw-exclusive-inclusive-parallel-semantics",
+            "gtw-no-inclusive-gateway",
         )
 
         // LLM specs are resolvable for metadata rendering but are not active executable rules.
