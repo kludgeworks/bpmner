@@ -71,12 +71,14 @@ enum class RunOutcome {
 /**
  * An ordered, transient update from one BPMN generation run — the CQRS read model / event
  * narrative (Fowler; Drotbohm's `cqrs-spring-modulith`) that the anti-corruption layer
- * ([dev.groknull.bpmner.pipeline.internal.adapter.inbound.BpmnRunUpdateChannel]) projects
- * bpmner's own `@DomainEvent` milestones and select Embabel lifecycle/`OutputChannel` signals
- * onto. Carries **notification + minimal event-carried state** — never the BPMN XML itself
- * (that stays behind `GET /generations/{id}/bpmn`) and never an Embabel type,
- * action name, prompt, model-reasoning, credential, or provider payload (`detail` is a flat,
- * explicitly whitelisted `String -> String` bag; see call sites in `BpmnRunUpdateChannel`).
+ * ([dev.groknull.bpmner.pipeline.internal.adapter.inbound.BpmnRunUpdateChannel] for Embabel
+ * lifecycle/`OutputChannel` signals,
+ * [dev.groknull.bpmner.pipeline.internal.adapter.inbound.BpmnMilestoneEventListener] for bpmner's
+ * own `@DomainEvent` milestones) projects onto. Carries **notification + minimal event-carried
+ * state** — never the BPMN XML itself (that stays behind `GET /generations/{id}/bpmn`) and never
+ * an Embabel type, action name, prompt, model-reasoning, credential, or provider payload
+ * (`detail` is a flat, explicitly whitelisted `String -> String` bag; see call sites in both
+ * classes).
  *
  * [seq] is assigned by a single writer per process ([RunUpdateSinkRegistry]) and is strictly
  * increasing for a given run — the stale-update guard: a client (or a future consumer) must

@@ -17,8 +17,9 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicLong
 
 /**
- * bpmner-owned, per-processId registry of [RunUpdate] sinks, fed by
- * [dev.groknull.bpmner.pipeline.internal.adapter.inbound.BpmnRunUpdateChannel].
+ * bpmner-owned, per-processId registry of [RunUpdate] sinks, fed by [BpmnRunUpdateChannel] and
+ * [BpmnMilestoneEventListener] — the two halves of the anti-corruption layer that share this
+ * registry.
  *
  * Each sink is a **replay** buffer: a subscriber may connect after updates have already been
  * published for a process, so a live-only sink would drop everything published before the
