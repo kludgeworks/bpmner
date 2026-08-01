@@ -10,8 +10,8 @@ import org.jmolecules.event.annotation.DomainEvent
 /**
  * Published when server-side auto-layout completes and the DI-bearing XML re-enters the
  * pipeline inside [dev.groknull.bpmner.pipeline.internal.adapter.inbound.BpmnGenerationAgent].
- * Consumed by [dev.groknull.bpmner.pipeline.internal.adapter.inbound.BpmnRunUpdateChannel] to
- * emit a `LAYOUT` [dev.groknull.bpmner.pipeline.RunUpdate] over bpmner's own SSE endpoint.
+ * Consumed by [dev.groknull.bpmner.pipeline.internal.adapter.inbound.BpmnMilestoneEventListener]
+ * to emit a `LAYOUT` [dev.groknull.bpmner.pipeline.RunUpdate] over bpmner's own SSE endpoint.
  *
  * Lives at the layout module root (published API) following the same pattern as
  * [dev.groknull.bpmner.authoring.BpmnGeneratedEvent] and

@@ -258,7 +258,7 @@ LLM Rewrite). Exits early when all blocking diagnostics are resolved, or after
 | `alignment/` | Guardrail 3: semantic comparison vs process contract. | `BpmnAligner` (port), `LlmBpmnAligner`, `BpmnAlignmentReport`. |
 | `repair/` | Validation + iterative repair loop. | `BpmnRepairer` (port), `DefaultBpmnRepairer`, `BpmnRepairLoop`, `BpmnRepairAdvancer`. |
 | `layout/` | Deterministic auto-layout + final XSD validation. `BpmnLayoutAgent` remains its inbound adapter; layouter and placement helpers are flattened private implementation. | `BpmnLayoutAgent`, `BpmnLayoutPort` (port), `LayoutedBpmnXml`. |
-| `pipeline/` | Single `generateBpmn` orchestrator: thin `@Action` shims, `AgentDeploymentValidator`, HTTP and shell inbound adapters, private preview/browser outbound adapters, and (epic #605) the `RunUpdate` read model + its Embabel anti-corruption layer and native SSE delivery. | `BpmnGenerationAgent`, `AgentDeploymentValidator`, `BpmnWebController`, `BpmnShellCommands`, `RunUpdate`, `BpmnRunUpdateChannel`, `RunUpdateSinkRegistry`. |
+| `pipeline/` | Single `generateBpmn` orchestrator: thin `@Action` shims, `AgentDeploymentValidator`, HTTP and shell inbound adapters, private preview/browser outbound adapters, and (epic #605) the `RunUpdate` read model + its Embabel anti-corruption layer and native SSE delivery. | `BpmnGenerationAgent`, `AgentDeploymentValidator`, `BpmnWebController`, `BpmnShellCommands`, `RunUpdate`, `BpmnRunUpdateChannel`, `BpmnMilestoneEventListener`, `RunUpdateSinkRegistry`. |
 | `telemetry/` | Event sink: process-finished cost/timing summary and debug-level lifecycle logging only. The author-facing progress stream moved to `pipeline`'s `RunUpdate` model (epic #605); this module no longer touches the browser. | `BpmnerRunSummaryListener`, `BpmnerLoggingAgenticEventListener`, `BpmnerValidationEventCollector`. |
 | `llm/` | LLM provider registration (DeepSeek, OpenRouter). Platform-level; `allowedDependencies = []`. | Provider `@Configuration` classes. |
 
@@ -346,7 +346,7 @@ deliberately drops it):
   "seq": 5,                       // monotonic per run; the sole ordering/stale-update guard
   "phase": "VALIDATION",          // READINESS | AWAITING_INPUT | CONTRACT | OUTLINE | DRAFT
                                    // | VALIDATION | LAYOUT | ALIGNMENT | FINISHED
-  "artifactState": "DIAGNOSTIC",  // NONE | XML_DRAFT | DIAGNOSTIC | FINAL
+  "artifactState": "DIAGNOSTIC",  // NONE | GRAPH_DRAFT | XML_DRAFT | DIAGNOSTIC | FINAL
   "summary": "Validating and repairing (attempt 2).",
   "detail": { "attemptNumber": "2", "xsdIssues": "1" }, // optional, flat String->String, whitelisted
   "outcome": "COMPLETED"          // present ONLY on the one terminal update per run
@@ -366,19 +366,21 @@ deliberately drops it):
   / `detail.diagnostics` are present only when relevant.
 - **The BPMN XML is never inlined into a `RunUpdate`.** The client fetches the one artifact —
   once, at the terminal update, when `artifactState != "NONE"` — from the existing
-  `GET /generations/{id}/bpmn` (unchanged). There is no progressive multi-snapshot delivery;
-  richer intermediate milestones (e.g. the pre-XML `GRAPH_DRAFT` graph) are epic #605's
-  optional Stage 2.
+  `GET /generations/{id}/bpmn` (unchanged). There is no progressive multi-snapshot delivery of
+  the XML itself, but two pre-XML milestones are delivered as `RunUpdate`s:
+  `BpmnContractExtractedEvent` (`CONTRACT` phase) and `BpmnGraphComposedEvent` (`OUTLINE` phase,
+  `GRAPH_DRAFT` artifact state).
 - **`AWAITING_INPUT`** carries the clarification prompt in `summary` and
   `detail.round` / `detail.maxRounds` / `detail.options` (`|`-joined) for bounded-choice
   questions — the client's clarify form is otherwise unchanged.
 
 `RunUpdateSinkRegistry` is a bounded, evictable, per-processId replay buffer (mirroring the
 platform's own `embabel.agent.platform.sse.max-buffer-size` / `.max-process-buffers`
-defaults), fed by `BpmnRunUpdateChannel` — the anti-corruption layer that is simultaneously
-the Embabel `OutputChannel` registered on every run's `ProcessOptions` and an
-`AgenticEventListener` for platform lifecycle events (waiting/finished/failed), plus a plain
-`@EventListener` for bpmner's own deterministic `@DomainEvent` milestones. See
+defaults), fed by two `@Component`s that split the anti-corruption layer along its two
+cohesion boundaries: `BpmnRunUpdateChannel` is the Embabel `OutputChannel` registered on every
+run's `ProcessOptions` and an `AgenticEventListener` for platform lifecycle events
+(waiting/finished/failed); `BpmnMilestoneEventListener` is a plain Spring `@EventListener` set
+— no Embabel import at all — for bpmner's own deterministic `@DomainEvent` milestones. See
 `plans/605/ARCHITECTURE.md` and `plans/605/PLAN-662.md` for the full design rationale.
 
 ---

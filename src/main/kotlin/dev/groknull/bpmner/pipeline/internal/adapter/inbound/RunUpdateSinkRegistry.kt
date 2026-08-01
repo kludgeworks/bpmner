@@ -17,20 +17,16 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicLong
 
 /**
- * bpmner-owned, per-processId registry of [RunUpdate] sinks, fed by
- * [dev.groknull.bpmner.pipeline.internal.adapter.inbound.BpmnRunUpdateChannel].
+ * bpmner-owned, per-processId registry of [RunUpdate] sinks, fed by [BpmnRunUpdateChannel] and
+ * [BpmnMilestoneEventListener] — the ACL's two halves.
  *
- * Each sink is a **replay** buffer: a subscriber may connect after updates have already been
- * published for a process, so a live-only sink would drop everything published before the
- * subscription lands. [REPLAY_LIMIT] and [MAX_PROCESS_BUFFERS] mirror the platform's own
- * `embabel.agent.platform.sse.max-buffer-size` (100) / `.max-process-buffers` (1000) defaults —
- * bounded and evictable, never an unbounded registry: [sinkFor] always evicts a sink before
- * admitting one past the cap, picking the oldest unsubscribed sink if one exists and otherwise
- * the oldest sink outright, so the registry can never grow past [MAX_PROCESS_BUFFERS].
+ * Each sink is a bounded **replay** buffer (a late subscriber must not miss updates already
+ * published), mirroring the platform's own `max-buffer-size` (100) / `max-process-buffers`
+ * (1000) defaults: [sinkFor] always evicts (oldest-unsubscribed, else oldest) before admitting a
+ * sink past [MAX_PROCESS_BUFFERS], so the registry can never grow unbounded.
  *
- * Sequence numbers are assigned here, by a single writer per process: the run is single-threaded
- * per process today (`SimpleAgentProcess`), and even if `ConcurrentAgentProcess` is enabled
- * later, ordering stays authoritative at this one write point rather than at browser arrival.
+ * Sequence numbers are assigned here by a single writer per process — authoritative regardless
+ * of dispatch mode, rather than at browser arrival.
  */
 @InfrastructureRing
 @Component

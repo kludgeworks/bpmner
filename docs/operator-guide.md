@@ -126,11 +126,13 @@ The web client subscribes to `GET /api/bpmn/generations/{id}/updates` and receiv
 `RunUpdate` JSON messages — a bpmner-owned model driven by the agent's deterministic domain
 milestones (readiness, contract, draft, validation, layout, alignment, HITL, terminal), not by
 every `@Action` start. See [`architecture.md` §`RunUpdate` wire contract](architecture.md#wire-contract)
-for the full shape. The anti-corruption layer that produces it —
+for the full shape. The anti-corruption layer that produces it is split in two:
 [`BpmnRunUpdateChannel.kt`](../src/main/kotlin/dev/groknull/bpmner/pipeline/internal/adapter/inbound/BpmnRunUpdateChannel.kt)
-— is both the Embabel `OutputChannel` registered on every run and the milestone listener; add a
-new milestone there (and, if it is a new deterministic domain event, at its producer site) when
-you add a stage worth surfacing to the author.
+is the Embabel `OutputChannel` registered on every run plus the platform lifecycle listener;
+[`BpmnMilestoneEventListener.kt`](../src/main/kotlin/dev/groknull/bpmner/pipeline/internal/adapter/inbound/BpmnMilestoneEventListener.kt)
+is where bpmner's own deterministic `@DomainEvent` milestones land. Add a new milestone listener
+there (and, if it is a new deterministic domain event, at its producer site) when you add a stage
+worth surfacing to the author.
 
 ### Custom Embabel listeners
 

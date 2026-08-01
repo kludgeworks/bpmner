@@ -7,12 +7,14 @@ package dev.groknull.bpmner.contract.internal.adapter.inbound
 
 import com.embabel.agent.api.common.OperationContext
 import com.embabel.agent.api.common.PromptRunner
+import com.embabel.agent.core.AgentProcess
 import com.embabel.agent.core.support.InvalidLlmReturnFormatException
 import com.embabel.agent.core.support.InvalidLlmReturnTypeException
 import com.embabel.common.ai.prompt.PromptContributor
 import dev.groknull.bpmner.bpmn.BpmnRequest
 import dev.groknull.bpmner.bpmn.RetryableBpmnGenerationException
 import dev.groknull.bpmner.bpmn.styleGuideContribution
+import dev.groknull.bpmner.contract.BpmnContractExtractedEvent
 import dev.groknull.bpmner.contract.BpmnContractExtractionException
 import dev.groknull.bpmner.contract.ContractIssueSeverity
 import dev.groknull.bpmner.contract.ProcessContractExtractor
@@ -72,7 +74,9 @@ internal class LlmProcessContractExtractor(
                 report.issues.joinToString { it.format() },
             )
         }
-        return ValidatedProcessContract(contract = contract, report = report)
+        val validated = ValidatedProcessContract(contract = contract, report = report)
+        eventPublisher.publishEvent(BpmnContractExtractedEvent(validated, processId = AgentProcess.get()?.id))
+        return validated
     }
 
     /**

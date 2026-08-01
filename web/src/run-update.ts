@@ -10,7 +10,12 @@
  * it — that presence/absence *is* the single terminal marker.
  */
 
-export type ArtifactState = "NONE" | "XML_DRAFT" | "DIAGNOSTIC" | "FINAL"
+export type ArtifactState =
+	| "NONE"
+	| "GRAPH_DRAFT"
+	| "XML_DRAFT"
+	| "DIAGNOSTIC"
+	| "FINAL"
 
 export type RunPhase =
 	| "READINESS"

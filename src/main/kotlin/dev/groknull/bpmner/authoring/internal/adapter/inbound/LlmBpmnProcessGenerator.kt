@@ -14,6 +14,7 @@ import dev.groknull.bpmner.authoring.BpmnAgentInvoker
 import dev.groknull.bpmner.authoring.BpmnContractFidelityPort
 import dev.groknull.bpmner.authoring.BpmnDefaultFlowPort
 import dev.groknull.bpmner.authoring.BpmnGeneratedEvent
+import dev.groknull.bpmner.authoring.BpmnGraphComposedEvent
 import dev.groknull.bpmner.authoring.BpmnOutlineGenerationException
 import dev.groknull.bpmner.authoring.BpmnProcessGenerator
 import dev.groknull.bpmner.authoring.BpmnRenderer
@@ -213,6 +214,7 @@ internal class LlmBpmnProcessGenerator(
 
         val graph = LaidOutProcessGraph(ownedGraph = owned, definition = definition)
         logArtifactDump("graph", graph)
+        eventPublisher.publishEvent(BpmnGraphComposedEvent(graph, processId = AgentProcess.get()?.id))
         return graph
     }
 

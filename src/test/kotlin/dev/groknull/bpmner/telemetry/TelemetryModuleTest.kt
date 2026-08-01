@@ -23,7 +23,7 @@ import org.springframework.test.context.TestPropertySource
  * plus framework lifecycle events (`BpmnerRunSummaryListener`,
  * `BpmnerLoggingAgenticEventListener`) — but `PipelineModuleTest` (not this test) is the one
  * that now needs `ALL_DEPENDENCIES` for the full milestone event graph, since `pipeline`'s
- * `BpmnRunUpdateChannel` is the actual consumer of `BpmnGeneratedEvent` /
+ * `BpmnMilestoneEventListener` is the actual consumer of `BpmnGeneratedEvent` /
  * `BpmnAlignmentCheckedEvent` / `BpmnReadinessAssessedEvent` / `BpmnLayoutCompletedEvent` today.
  * `ALL_DEPENDENCIES` is kept here regardless so this module's own event-type references resolve
  * at startup without relying on load order. The module exposes no root-package ports; context

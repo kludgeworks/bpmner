@@ -14,31 +14,15 @@ import com.embabel.agent.core.hitl.FormBindingRequest
 import com.embabel.ux.form.Form
 import com.embabel.ux.form.RadioGroup
 import com.embabel.ux.form.RadioOption
-import dev.groknull.bpmner.alignment.AlignmentVerdict
-import dev.groknull.bpmner.alignment.BpmnAlignmentCheckedEvent
-import dev.groknull.bpmner.alignment.BpmnAlignmentReport
-import dev.groknull.bpmner.alignment.BpmnDefinitionSummary
-import dev.groknull.bpmner.alignment.BpmnSummaryElement
-import dev.groknull.bpmner.authoring.BpmnGeneratedEvent
 import dev.groknull.bpmner.authoring.BpmnGenerationStatus
 import dev.groknull.bpmner.authoring.BpmnResult
-import dev.groknull.bpmner.bpmn.BpmnRequest
-import dev.groknull.bpmner.bpmn.RenderedBpmn
 import dev.groknull.bpmner.conformance.BpmnDiagnostic
 import dev.groknull.bpmner.conformance.BpmnDiagnosticSeverity
 import dev.groknull.bpmner.conformance.BpmnDiagnosticSource
-import dev.groknull.bpmner.conformance.BpmnValidationFailedEvent
-import dev.groknull.bpmner.conformance.BpmnValidationPassedEvent
-import dev.groknull.bpmner.layout.BpmnLayoutCompletedEvent
 import dev.groknull.bpmner.pipeline.ArtifactState
 import dev.groknull.bpmner.pipeline.RunOutcome
 import dev.groknull.bpmner.pipeline.RunPhase
 import dev.groknull.bpmner.pipeline.RunUpdate
-import dev.groknull.bpmner.readiness.BpmnReadinessAssessedEvent
-import dev.groknull.bpmner.readiness.ProcessInputAssessment
-import dev.groknull.bpmner.readiness.ReadinessDimension
-import dev.groknull.bpmner.readiness.ReadinessDimensionScore
-import dev.groknull.bpmner.readiness.ReadinessVerdict
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -46,6 +30,12 @@ import org.mockito.Mockito.mock
 import org.mockito.Mockito.`when`
 import java.time.Duration
 
+/**
+ * Covers only the Embabel-facing half of the ACL: [OutputChannel][com.embabel.agent.api.channel.OutputChannel]
+ * / [AgenticEventListener][com.embabel.agent.api.event.AgenticEventListener] translation. The
+ * bpmner `@DomainEvent` milestone listeners live in [BpmnMilestoneEventListener] and are covered
+ * by `BpmnMilestoneEventListenerTest`.
+ */
 class BpmnRunUpdateChannelTest {
     private val registry = RunUpdateSinkRegistry()
     private val channel = BpmnRunUpdateChannel(registry)
@@ -204,116 +194,6 @@ class BpmnRunUpdateChannelTest {
         assertEquals(1, updates.size, "exactly one terminal update, never double-delivered")
     }
 
-    // Every event carries processId (producer-captured); listeners never call AgentProcess.get().
-    @Test
-    fun `onReadinessAssessed emits a READINESS update using the event's processId`() {
-        channel.onReadinessAssessed(
-            BpmnReadinessAssessedEvent(
-                request = BpmnRequest(processDescription = "x"),
-                assessment = readyAssessment(),
-                processId = "proc-readiness",
-            ),
-        )
-
-        val update = registry.subscribe("proc-readiness").take(1).collectList().block(TIMEOUT)!!.single()
-        assertEquals(RunPhase.READINESS, update.phase)
-        assertEquals(ArtifactState.NONE, update.artifactState)
-    }
-
-    @Test
-    fun `onReadinessAssessed drops (not throws) when the event carries no processId`() {
-        // A producer bug (AgentProcess.get() returned null at publish time) — must log+drop,
-        // never throw, and never emit into some other process's sink.
-        channel.onReadinessAssessed(
-            BpmnReadinessAssessedEvent(request = BpmnRequest(processDescription = "x"), assessment = readyAssessment()),
-        )
-    }
-
-    @Test
-    fun `onGenerated emits a DRAFT XML_DRAFT update using the event's processId`() {
-        channel.onGenerated(
-            BpmnGeneratedEvent(
-                request = BpmnRequest(processDescription = "x"),
-                rendered = mock(RenderedBpmn::class.java),
-                processId = "proc-generated",
-            ),
-        )
-
-        val update = registry.subscribe("proc-generated").take(1).collectList().block(TIMEOUT)!!.single()
-        assertEquals(RunPhase.DRAFT, update.phase)
-        assertEquals(ArtifactState.XML_DRAFT, update.artifactState)
-    }
-
-    @Test
-    fun `onValidationFailed and onValidationPassed use the event's own processId`() {
-        channel.onValidationFailed(
-            BpmnValidationFailedEvent(
-                request = BpmnRequest(processDescription = "x"),
-                xml = "<xml/>",
-                diagnostics = listOf(
-                    BpmnDiagnostic(source = BpmnDiagnosticSource.GRAPH, message = "m", severity = BpmnDiagnosticSeverity.ERROR),
-                ),
-                attemptNumber = 1,
-                repairAttempts = 0,
-                processId = "proc-via-event",
-            ),
-        )
-        channel.onValidationPassed(
-            BpmnValidationPassedEvent(
-                request = BpmnRequest(processDescription = "x"),
-                xml = "<xml/>",
-                repairAttempts = 1,
-                processId = "proc-via-event",
-            ),
-        )
-
-        val updates = registry.subscribe("proc-via-event").take(2).collectList().block(TIMEOUT)!!
-        assertEquals(RunPhase.VALIDATION, updates[0].phase)
-        assertEquals(ArtifactState.DIAGNOSTIC, updates[0].artifactState)
-        assertEquals("1", updates[0].detail["graphIssues"])
-        assertEquals(RunPhase.VALIDATION, updates[1].phase)
-        assertEquals(ArtifactState.XML_DRAFT, updates[1].artifactState)
-    }
-
-    @Test
-    fun `onLayoutCompleted emits a LAYOUT update using the event's processId`() {
-        channel.onLayoutCompleted(BpmnLayoutCompletedEvent(xml = "<xml/>", processId = "proc-layout"))
-
-        val update = registry.subscribe("proc-layout").take(1).collectList().block(TIMEOUT)!!.single()
-        assertEquals(RunPhase.LAYOUT, update.phase)
-        assertEquals(ArtifactState.XML_DRAFT, update.artifactState)
-    }
-
-    @Test
-    fun `onAlignmentChecked emits an ALIGNMENT update using the event's processId`() {
-        channel.onAlignmentChecked(
-            BpmnAlignmentCheckedEvent(
-                request = BpmnRequest(processDescription = "x"),
-                report = alignedReport(),
-                processId = "proc-alignment",
-            ),
-        )
-
-        val update = registry.subscribe("proc-alignment").take(1).collectList().block(TIMEOUT)!!.single()
-        assertEquals(RunPhase.ALIGNMENT, update.phase)
-        assertEquals(ArtifactState.XML_DRAFT, update.artifactState)
-    }
-
-    @Test
-    fun `onGenerated onLayoutCompleted and onAlignmentChecked drop when their event carries no processId`() {
-        channel.onGenerated(
-            BpmnGeneratedEvent(request = BpmnRequest(processDescription = "x"), rendered = mock(RenderedBpmn::class.java)),
-        )
-        channel.onLayoutCompleted(BpmnLayoutCompletedEvent(xml = "<xml/>"))
-        channel.onAlignmentChecked(
-            BpmnAlignmentCheckedEvent(
-                request = BpmnRequest(processDescription = "x"),
-                report = mock(BpmnAlignmentReport::class.java),
-            ),
-        )
-        // No assertion beyond "did not throw" — requireProcessId's contract for producer bugs.
-    }
-
     private fun processWithForm(
         id: String,
         prompt: String,
@@ -339,26 +219,6 @@ class BpmnRunUpdateChannelTest {
         `when`(process.last(FormBindingRequest::class.java)).thenReturn(form)
         return process
     }
-
-    private fun alignedReport(): BpmnAlignmentReport = BpmnAlignmentReport(
-        verdict = AlignmentVerdict.ALIGNED,
-        bpmnSummary = BpmnDefinitionSummary(
-            processId = "Process_1",
-            processName = "Ship order",
-            elements = listOf(BpmnSummaryElement(id = "StartEvent_1", type = "startEvent")),
-        ),
-        issues = emptyList(),
-        rationale = "Fully aligned.",
-    )
-
-    private fun readyAssessment(): ProcessInputAssessment = ProcessInputAssessment(
-        verdict = ReadinessVerdict.READY,
-        overallScore = 90,
-        dimensions = listOf(
-            ReadinessDimensionScore(dimension = ReadinessDimension.ACTORS_ROLES, score = 90, rationale = "clear"),
-        ),
-        rationale = "Input is sufficient.",
-    )
 
     private companion object {
         private val TIMEOUT: Duration = Duration.ofSeconds(5)
