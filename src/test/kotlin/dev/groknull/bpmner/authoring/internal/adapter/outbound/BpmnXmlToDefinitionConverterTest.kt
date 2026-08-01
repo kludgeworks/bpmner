@@ -7,6 +7,7 @@ package dev.groknull.bpmner.authoring.internal.adapter.outbound
 
 import dev.groknull.bpmner.bpmn.BpmnBusinessRuleTask
 import dev.groknull.bpmner.bpmn.BpmnDefinition
+import dev.groknull.bpmner.bpmn.BpmnDiShape
 import dev.groknull.bpmner.bpmn.BpmnEdge
 import dev.groknull.bpmner.bpmn.BpmnEndEvent
 import dev.groknull.bpmner.bpmn.BpmnErrorRef
@@ -215,8 +216,44 @@ class BpmnXmlToDefinitionConverterTest {
 
         val parsed = reverse.parse(xmlWithTwoDiagrams)
         assertEquals(2, parsed.diagramCount, "parser should surface the BPMNDI diagram count")
-        // DI content is still dropped from the semantic model — only the count survives.
+        assertTrue(parsed.diShapes.isEmpty())
         assertEquals(setOf("s", "e"), parsed.nodes.map { it.id }.toSet())
+    }
+
+    @Test
+    fun `parse projects semantic BPMN-DI shape bounds without edges labels or containers`() {
+        val xml =
+            """
+            <definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                         xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+                         xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+                         xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+                         targetNamespace="http://example.com/bpmn">
+              <process id="p1" name="Has DI">
+                <startEvent id="start"/>
+                <subProcess id="container"><startEvent id="nested"/></subProcess>
+                <sequenceFlow id="flow" sourceRef="start" targetRef="container"/>
+              </process>
+              <bpmndi:BPMNDiagram id="diagram">
+                <bpmndi:BPMNPlane id="plane" bpmnElement="p1">
+                  <bpmndi:BPMNShape id="start_di" bpmnElement="start"><dc:Bounds x="10" y="20" width="36" height="36"/></bpmndi:BPMNShape>
+                  <bpmndi:BPMNShape id="container_di" bpmnElement="container"><dc:Bounds x="60" y="20" width="100" height="80"/></bpmndi:BPMNShape>
+                  <bpmndi:BPMNShape id="label_di" bpmnElement="missing"><dc:Bounds x="0" y="0" width="1" height="1"/></bpmndi:BPMNShape>
+                  <bpmndi:BPMNEdge id="flow_di" bpmnElement="flow"><di:waypoint x="10" y="20"/><di:waypoint x="60" y="20"/></bpmndi:BPMNEdge>
+                </bpmndi:BPMNPlane>
+              </bpmndi:BPMNDiagram>
+            </definitions>
+            """.trimIndent()
+
+        val parsed = reverse.parse(xml)
+
+        assertEquals(
+            mapOf(
+                "start" to BpmnDiShape(10.0, 20.0, 36.0, 36.0),
+                "container" to BpmnDiShape(60.0, 20.0, 100.0, 80.0),
+            ),
+            parsed.diShapes,
+        )
     }
 
     @Test

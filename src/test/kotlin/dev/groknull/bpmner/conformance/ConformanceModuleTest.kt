@@ -7,6 +7,7 @@ package dev.groknull.bpmner.conformance
 
 import dev.groknull.bpmner.TestBpmnFixtures
 import dev.groknull.bpmner.bpmn.BpmnDefinition
+import dev.groknull.bpmner.bpmn.BpmnDiShape
 import dev.groknull.bpmner.bpmn.BpmnElementIndex
 import dev.groknull.bpmner.bpmn.BpmnStartEvent
 import dev.groknull.bpmner.bpmn.BpmnUserTask
@@ -109,6 +110,27 @@ class ConformanceModuleTest {
         assertEquals(capabilities.keys, ruleDocs.keys)
         assertTrue(ruleDocs.values.all { it.isNotBlank() })
         assertNull(lintingPort.autoFix("", emptyList()))
+    }
+
+    @Test
+    fun `active DI overlap rule reaches the linting port and capabilities`() {
+        val definition = BpmnDefinition(
+            processId = "P",
+            processName = "P",
+            nodes = listOf(BpmnUserTask("first", "First"), BpmnUserTask("second", "Second")),
+            sequences = emptyList(),
+            diShapes = mapOf(
+                "first" to BpmnDiShape(0.0, 0.0, 100.0, 80.0),
+                "second" to BpmnDiShape(50.0, 0.0, 100.0, 80.0),
+            ),
+        )
+
+        val issues = requireNotNull(lintingPort.lint(definition))
+        assertEquals("gen-no-overlapping-elements", issues.single { it.rule == "gen-no-overlapping-elements" }.rule)
+        assertEquals(
+            "gen-no-overlapping-elements",
+            lintingPort.lintRuleCapabilities()["gen-no-overlapping-elements"]?.id,
+        )
     }
 
     @Test

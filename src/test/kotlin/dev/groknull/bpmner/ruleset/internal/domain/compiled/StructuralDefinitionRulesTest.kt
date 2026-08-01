@@ -7,6 +7,7 @@ package dev.groknull.bpmner.ruleset.internal.domain.compiled
 
 import dev.groknull.bpmner.bpmn.BpmnDefinition
 import dev.groknull.bpmner.bpmn.BpmnDefinitionContext
+import dev.groknull.bpmner.bpmn.BpmnDiShape
 import dev.groknull.bpmner.bpmn.BpmnEdge
 import dev.groknull.bpmner.bpmn.BpmnEndEvent
 import dev.groknull.bpmner.bpmn.BpmnExclusiveGateway
@@ -125,6 +126,45 @@ class StructuralDefinitionRulesTest {
 
         val diagnostics = rule.evaluate(context(BpmnInclusiveGateway("gateway")))
         assertEquals("gtw-no-inclusive-gateway", diagnostics.single().diagnosticCode)
+    }
+
+    @Test
+    fun `no BPMN-DI accepts definitions without diagrams and reports definitions with diagrams`() {
+        val rule = NoBpmnDiRule()
+
+        assertTrue(rule.evaluate(context(BpmnStartEvent("start"))).isEmpty())
+
+        val definition = BpmnDefinition("P", "P", listOf(BpmnStartEvent("start")), emptyList(), diagramCount = 1)
+        assertEquals("gen-no-bpmndi", rule.evaluate(BpmnDefinitionContext(definition)).single().diagnosticCode)
+    }
+
+    @Test
+    fun `overlapping elements report positive area intersections but exclude touching containers and unknown shapes`() {
+        val rule = NoOverlappingElementsRule()
+        val definition = BpmnDefinition(
+            "P",
+            "P",
+            listOf(BpmnUserTask("first"), BpmnUserTask("second"), BpmnSubProcess("container")),
+            emptyList(),
+            diShapes = mapOf(
+                "first" to BpmnDiShape(0.0, 0.0, 100.0, 80.0),
+                "second" to BpmnDiShape(50.0, 0.0, 100.0, 80.0),
+                "container" to BpmnDiShape(0.0, 0.0, 500.0, 300.0),
+                "edge-or-label" to BpmnDiShape(50.0, 0.0, 100.0, 80.0),
+            ),
+        )
+
+        val diagnostics = rule.evaluate(BpmnDefinitionContext(definition))
+        assertEquals(listOf("second"), diagnostics.map { it.elementId })
+        assertEquals("gen-no-overlapping-elements", diagnostics.single().diagnosticCode)
+
+        val touching = definition.copy(
+            diShapes = mapOf(
+                "first" to BpmnDiShape(0.0, 0.0, 100.0, 80.0),
+                "second" to BpmnDiShape(100.0, 0.0, 100.0, 80.0),
+            ),
+        )
+        assertTrue(rule.evaluate(BpmnDefinitionContext(touching)).isEmpty())
     }
 
     private fun context(vararg elements: Any): BpmnDefinitionContext = BpmnDefinitionContext(

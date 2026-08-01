@@ -92,6 +92,8 @@ data class BpmnDefinition(
     // benign extra field on serialize and an unknown field on deserialize (skipped).
     @field:com.fasterxml.jackson.annotation.JsonIgnore
     val diagramCount: Int = 0,
+    @field:com.fasterxml.jackson.annotation.JsonIgnore
+    val diShapes: Map<String, BpmnDiShape> = emptyMap(),
 ) {
 
     /**
@@ -166,6 +168,14 @@ data class BpmnDefinition(
         }
     }
 }
+
+/** Read-only bounds of a semantic BPMN element's DI shape, when the source XML supplies one. */
+data class BpmnDiShape(
+    val x: Double,
+    val y: Double,
+    val width: Double,
+    val height: Double,
+)
 
 private const val BLANK_ID_LABEL: String = "<blank>"
 

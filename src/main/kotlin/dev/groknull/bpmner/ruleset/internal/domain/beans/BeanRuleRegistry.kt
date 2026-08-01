@@ -26,6 +26,11 @@ internal class BeanRuleRegistry(
     bpmnRules: List<BpmnRule>,
     private val llmRuleSpecs: List<LlmRuleSpec>,
 ) : RuleRegistry {
+    companion object {
+        private const val NO_BPMNDI = "gen-no-bpmndi"
+        private const val NO_DUPLICATE_DIAGRAMS = "gen-no-duplicate-diagrams"
+    }
+
     private val executableRules: List<BpmnRule> = bpmnRules.filterNot { it is LlmRuleSpec }
     private val byId: Map<String, BpmnRule>
     private val byAlias: Map<String, BpmnRule>
@@ -50,6 +55,10 @@ internal class BeanRuleRegistry(
         val crossSetCollisions = executableIds.toSet().intersect(llmIds.toSet())
         require(crossSetCollisions.isEmpty()) {
             "BeanRuleRegistry: rule ids appear in both executable rules and LLM specs: $crossSetCollisions"
+        }
+
+        require(!(NO_BPMNDI in executableIds && NO_DUPLICATE_DIAGRAMS in executableIds)) {
+            "BeanRuleRegistry: no-bpmndi and no-duplicate-diagrams cannot both be executable"
         }
 
         val resolvableRules = executableRules + llmRuleSpecs

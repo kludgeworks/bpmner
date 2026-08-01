@@ -878,6 +878,35 @@ Detect bpmn:Definitions roots containing more than one bpmndi:BPMNDiagram.
 - **Kind**: `LLM_MODEL_PATCH`
 - **Safety**: `LLM_ONLY`
 
+## gen-no-overlapping-elements
+
+- **Name**: No Overlapping Elements
+- **Category**: General
+- **Severity**: ERROR
+- **Target Elements**: `bpmndi:BPMNShape`
+- **Legacy Aliases**: `no-overlapping-elements`
+
+### Purpose
+
+Keep rendered BPMN element shapes from obscuring each other.
+
+### Modeller Guidance
+
+Keep element shapes separate; touching borders and contained subprocess geometry are allowed.
+
+### AI Guidance
+
+Flag only positive-area intersections between eligible non-container BPMN shapes.
+
+### Diagnostic Messages
+
+- `default`: BPMN element shape overlaps another element shape
+
+### Repair
+
+- **Kind**: `LLM_MODEL_PATCH`
+- **Safety**: `LLM_ONLY`
+
 ## gtw-converging-gateway-unnamed
 
 - **Name**: Converging Gateway Unnamed

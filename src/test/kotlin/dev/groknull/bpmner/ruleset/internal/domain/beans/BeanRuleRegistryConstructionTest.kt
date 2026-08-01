@@ -5,14 +5,18 @@
 
 package dev.groknull.bpmner.ruleset.internal.domain.beans
 
+import dev.groknull.bpmner.bpmn.BpmnRule
 import dev.groknull.bpmner.bpmn.RuleSeverity
 import dev.groknull.bpmner.ruleset.BpmnerLintConfig
 import dev.groknull.bpmner.ruleset.internal.domain.DeterministicRule
 import dev.groknull.bpmner.ruleset.internal.domain.RuleProfileFactory
+import dev.groknull.bpmner.ruleset.internal.domain.compiled.NoBpmnDiRule
+import dev.groknull.bpmner.ruleset.internal.domain.compiled.NoInclusiveGatewayRule
 import dev.groknull.bpmner.ruleset.internal.domain.primitives.ElementConstraintCheckConfig
 import dev.groknull.bpmner.ruleset.internal.domain.primitives.PropertyPatternCheckConfig
 import dev.groknull.bpmner.ruleset.internal.domain.primitives.VocabularyCheckConfig
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatIllegalArgumentException
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.`when`
@@ -30,8 +34,8 @@ internal class BeanRuleRegistryConstructionTest {
             val llmSpecs = ruleRegistry.llmRuleSpecs()
             val llmIds = llmSpecs.map { it.metadata.id }
 
-            // Executable rules: 41 bean + 7 compiled = 48
-            assertThat(activeRules).hasSize(48)
+            // Executable rules: 41 bean + 8 compiled = 49
+            assertThat(activeRules).hasSize(49)
             assertThat(activeIds).doesNotHaveDuplicates()
 
             // LLM rule specs: 2 metadata-only rules (excluded from activeRules)
@@ -89,6 +93,7 @@ internal class BeanRuleRegistryConstructionTest {
                 // General (2)
                 "gen-bpmn-subset",
                 "gen-no-duplicate-diagrams",
+                "gen-no-overlapping-elements",
                 // Lane (2)
                 "lane-actor-artifact-usage",
                 "lane-lane-labels-business-roles-performers",
@@ -119,6 +124,22 @@ internal class BeanRuleRegistryConstructionTest {
                 "gtw-no-inclusive-gateway",
             )
         }
+    }
+
+    @Test
+    fun `registry rejects both members of each exclusive default family`() {
+        assertThatIllegalArgumentException().isThrownBy {
+            BeanRuleRegistry(
+                listOf(NoInclusiveGatewayRule()),
+                listOf(GatewayRuleConfig().gtwNoInclusiveGateway()),
+            )
+        }.withMessageContaining("rule ids appear in both executable rules and LLM specs")
+
+        val noDuplicateDiagrams = mock(BpmnRule::class.java)
+        `when`(noDuplicateDiagrams.id).thenReturn("gen-no-duplicate-diagrams")
+        assertThatIllegalArgumentException().isThrownBy {
+            BeanRuleRegistry(listOf(NoBpmnDiRule(), noDuplicateDiagrams), emptyList())
+        }.withMessageContaining("no-bpmndi and no-duplicate-diagrams cannot both be executable")
     }
 
     @Test
