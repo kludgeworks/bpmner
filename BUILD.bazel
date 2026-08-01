@@ -15,7 +15,10 @@ package(default_visibility = ["//visibility:public"])
 
 npm_link_all_packages(name = "node_modules")
 
-exports_files(["toast-process.txt"])
+exports_files([
+    "rules.md",
+    "toast-process.txt",
+])
 
 filegroup(
     name = "git_info",
@@ -100,7 +103,6 @@ VALE_SRCS = [
     args = [mode],
     data = VALE_SRCS + [
         "//:node_modules/@vvago/vale",
-        "//linter:vale_docs",
     ],
     entry_point = "tools/vale/vale-test.mjs",
 ) for mode in [

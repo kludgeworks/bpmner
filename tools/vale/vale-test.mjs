@@ -21,7 +21,6 @@
  */
 
 import { spawnSync } from "node:child_process"
-import fs from "node:fs"
 import { createRequire } from "node:module"
 import { dirname, join } from "node:path"
 
@@ -35,9 +34,6 @@ const valeBin = join(
 
 const staticProductionDocs = [
 	"README.md",
-	"linter/README.md",
-	"linter/docs/toolbox.md",
-	"linter/docs/template.md",
 ]
 
 function runVale(files) {
@@ -92,8 +88,6 @@ function assertFixtureAlerts() {
 		"BPMN.RuleProse",
 		"BPMN.Terms",
 		"BPMN.Terms",
-		"BPMN.Terms",
-		"BPMN.Terms",
 	].sort()
 
 	if (JSON.stringify(checks) !== JSON.stringify(expected)) {
@@ -106,16 +100,7 @@ function assertFixtureAlerts() {
 const mode = process.argv[2]
 
 if (mode === "docs") {
-	const ruleDocsDir = process.argv[3]
-	const docs = [...staticProductionDocs]
-	if (ruleDocsDir) {
-		const ruleFiles = fs
-			.readdirSync(ruleDocsDir)
-			.filter((file) => file.endsWith(".md") && file !== "README.md")
-			.map((file) => join(ruleDocsDir, file))
-		docs.push(...ruleFiles)
-	}
-	assertNoAlerts(docs)
+	assertNoAlerts(staticProductionDocs)
 } else if (mode === "fixtures") {
 	assertFixtureAlerts()
 } else {

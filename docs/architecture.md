@@ -16,7 +16,7 @@ infrastructure. See §2 for the authoritative module map and [ADR-004](./adr/adr
 | Context / Layer | Role | Owns | Current modules (as-built) |
 | --- | --- | --- | --- |
 | **Authoring** | Core domain | The BPMN process graph as a behaviour-bearing domain object; its structural invariants; generation / contract drafting | `bpmn`, `authoring`, `contract`, `layout` |
-| **Conformance** | Supporting domain | Rule catalogue + evaluation + repair; own ubiquitous language (rule id / severity / capability, Pkl-fed) | `ruleset`, `conformance`, `repair`, `alignment` |
+| **Conformance** | Supporting domain | Validation + repair | `ruleset`, `conformance`, `repair`, `alignment` |
 | **Intake / Readiness** | Supporting domain | Request readiness + clarification subdomain | `readiness` |
 | **Generation Orchestration** | Application layer — not a domain context | Single `BpmnGenerationAgent`, GOAP wiring, `@Action` shims; HTTP + shell inbound adapters | `pipeline` |
 | **Delivery adapters** | Inbound/primary adapters — not contexts | HTTP + shell dissolved into `pipeline` in epic #451 S5 | *(see `pipeline` above)* |
@@ -239,21 +239,6 @@ Repair uses cost-aware escalation (Deterministic Local → LLM Label → LLM Str
 LLM Rewrite). Exits early when all blocking diagnostics are resolved, or after
 `maxRepairIterations`.
 
-### The repair / Pkl contract
-
-Every rule declares `RepairMetadata` in its Kotlin bean config:
-
-| Field | Type | Default | Meaning |
-| --- | --- | --- | --- |
-| `kind` | `RepairKind` | `LLM_MODEL_PATCH` | Repair strategy |
-| `safety` | `RepairSafety` | `LLM_ONLY` | Whether repair needs operator review |
-| `handler` | `String?` | `null` | For `LOCAL_MODEL_FIX`, the Spring bean name of the handler |
-| `replacementMap` | `Map<String, String>?` | `null` | Optional source→replacement map |
-
-`BpmnLocalRepairCapabilityValidator` (`repair/internal/domain/`) fails context refresh if
-any `LOCAL_MODEL_FIX` rule names an unregistered handler. `AgentDeploymentValidator`
-(`pipeline/internal/adapter/inbound/`) performs an analogous startup check on deployed agents.
-
 ---
 
 ## 5. End-to-end pipeline
@@ -264,10 +249,10 @@ any `LOCAL_MODEL_FIX` rule names an unregistered handler. `AgentDeploymentValida
 
 | Module | Owns | Key public types |
 | --- | --- | --- |
-| `bpmn/` | BPMN language kernel. Root: annotation-free graph interfaces + rule SPI. `bpmn/internal/model/`: Jackson-bound concrete implementations. No Spring or Embabel imports in root. | `BpmnDefinition`, `BpmnNode`, `BpmnRequest`, `BpmnRule`, `RuleMetadata`, `RuleCategory`, `RepairKind`, `LaidOutProcessGraph`, `RenderedBpmn`. Also: `styleGuideContribution()` (ADR-005 Decision 1). |
+| `bpmn/` | BPMN language kernel. Root: annotation-free graph interfaces. `bpmn/internal/model/`: Jackson-bound concrete implementations. No Spring or Embabel imports in root. | `BpmnDefinition`, `BpmnNode`, `BpmnRequest`, `LaidOutProcessGraph`, `RenderedBpmn`. Also: `styleGuideContribution()` (ADR-005 Decision 1). |
 | `authoring/` | Request drafting, typed LLM generation, composition, XML rendering, agent invocation. | `BpmnRequestDrafter` (port), `BpmnProcessGenerator` (port), `BpmnAgentInvoker`, `AgentPlatformBpmnAgentInvoker`, `BpmnResult`. |
 | `conformance/` | Diagnostic discovery: structural checks, XSD, in-process rule evaluation. | `BpmnLintingPort`, `BpmnXsdValidationPort`, `ValidatedBpmnXml`, `FinalValidatedBpmnXml`. |
-| `ruleset/` | Modelling-rule catalogue + rule engine. | `RuleEngine` (port), `RuleRegistry` (port), `BpmnerLintConfig`. |
+| `ruleset/` | Validation support. | `RuleEngine` (port), `RuleRegistry` (port), `BpmnerLintConfig`. |
 | `contract/` | Guardrail 2: source-grounded process contracts. | `ProcessContractExtractor` (port), `LlmProcessContractExtractor`, `ProcessContract`, `ValidatedProcessContract`. |
 | `readiness/` | Guardrail 1: LLM input assessment, ready-state handoff, scoped sub-process. | `BpmnReadinessInvoker` (port), `AgentPlatformBpmnReadinessInvoker`, `ProcessInputAssessment`, `ReadyBpmnContext`. |
 | `alignment/` | Guardrail 3: semantic comparison vs process contract. | `BpmnAligner` (port), `LlmBpmnAligner`, `BpmnAlignmentReport`. |
