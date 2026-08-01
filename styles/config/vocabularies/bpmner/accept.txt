@@ -49,3 +49,10 @@ Greptile
 DeepSeek
 OpenRouter
 Cerebras
+activityRef
+decisionRef
+isDefault
+messageRef
+sequenceFlow
+sourceRef
+targetRef
