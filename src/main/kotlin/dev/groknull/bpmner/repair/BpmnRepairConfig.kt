@@ -25,6 +25,7 @@ data class BpmnRepairConfig(
     val labelRepairer: Actor<Persona> = DEFAULT_LABEL_REPAIRER,
     val patchRepairer: Actor<Persona> = DEFAULT_PATCH_REPAIRER,
     val rewriteRepairer: Actor<Persona> = DEFAULT_REWRITE_REPAIRER,
+    val trimHistory: Boolean = false,
 ) {
     companion object {
         private const val CONCISE_AND_EXACT = "concise and exact"

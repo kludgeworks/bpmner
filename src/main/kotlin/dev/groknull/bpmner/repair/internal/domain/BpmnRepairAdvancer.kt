@@ -21,6 +21,7 @@ import dev.groknull.bpmner.readiness.ReadyBpmnContext
 import dev.groknull.bpmner.repair.BpmnAttemptHistory
 import dev.groknull.bpmner.repair.BpmnAttemptRecord
 import dev.groknull.bpmner.repair.BpmnRepairAttempt
+import dev.groknull.bpmner.repair.BpmnRepairConfig
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 
@@ -32,6 +33,7 @@ internal class BpmnRepairAdvancer(
     private val promptFactory: BpmnRepairPromptPort,
     private val fingerprints: BpmnFingerprintService,
     private val processGenerator: BpmnProcessGenerator,
+    private val config: BpmnRepairConfig,
 ) {
     private val logger = LoggerFactory.getLogger(BpmnRepairAdvancer::class.java)
 
@@ -123,7 +125,14 @@ internal class BpmnRepairAdvancer(
             repairAttempts = prior.repairAttempts + 1,
         )
 
-        val nextMessages = prior.messages + appendedMessages
+        val nextMessages = if (config.trimHistory && prior.messages.isNotEmpty()) {
+            listOf(
+                prior.messages.first(),
+                com.embabel.chat.AssistantMessage(fingerprints.serializeDefinition(stamped)),
+            )
+        } else {
+            prior.messages + appendedMessages
+        }
         val nextAttempt = BpmnRepairAttempt(
             attemptNumber = prior.history.size + 1,
             repairAttempts = prior.repairAttempts + 1,

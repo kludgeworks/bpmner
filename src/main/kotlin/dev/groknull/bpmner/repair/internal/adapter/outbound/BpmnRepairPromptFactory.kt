@@ -66,16 +66,19 @@ internal class BpmnRepairPromptFactory(
         diagnostics: List<BpmnDiagnostic>,
     ): String {
         requireRecognized(attempt.definition)
-        return templateRenderer.renderLoadedTemplate(
-            "bpmner/repair/full_feedback",
-            mapOf(
-                "guidance" to ruleGuidance.getLlmRuleGuidance(),
-                "canonicalJson" to fingerprints.serializeDefinition(attempt.definition),
-                "renderedXml" to (attempt.evaluation.rendered?.xml ?: renderFailureContext(attempt.evaluation)),
-                "scopeBlock" to scopeBlock(diagnostics),
-                "diagnosticBlock" to diagnosticBlock(diagnostics),
-            ),
+        val context = mutableMapOf<String, Any>(
+            "guidance" to ruleGuidance.getLlmRuleGuidance(),
+            "canonicalJson" to fingerprints.serializeDefinition(attempt.definition),
+            "scopeBlock" to scopeBlock(diagnostics),
+            "diagnosticBlock" to diagnosticBlock(diagnostics),
         )
+        val hasRenderOrXsd = diagnostics.any {
+            it.source == BpmnDiagnosticSource.XSD || it.source == BpmnDiagnosticSource.RENDER
+        }
+        if (hasRenderOrXsd) {
+            context["renderedXml"] = attempt.evaluation.rendered?.xml ?: renderFailureContext(attempt.evaluation)
+        }
+        return templateRenderer.renderLoadedTemplate("bpmner/repair/full_feedback", context)
     }
 
     override fun lintRuleDocsPrompt(diagnostics: List<BpmnDiagnostic>): PromptContributor? {

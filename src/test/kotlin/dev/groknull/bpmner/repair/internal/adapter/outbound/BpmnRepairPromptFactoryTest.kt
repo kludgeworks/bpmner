@@ -77,18 +77,40 @@ class BpmnRepairPromptFactoryTest {
         val factory = RepairFixtures.factory()
         val definition = RepairFixtures.sampleDefinition()
         val attempt = RepairFixtures.attempt(definition, diagnostics = emptyList())
-        val llmDiag = RepairFixtures.lintDiagnostic(
+        val xsdDiag = dev.groknull.bpmner.conformance.BpmnDiagnostic(
+            source = dev.groknull.bpmner.conformance.BpmnDiagnosticSource.XSD,
+            message = "Schema violation",
+            severity = dev.groknull.bpmner.conformance.BpmnDiagnosticSeverity.ERROR,
+            elementId = "Task_1",
+        )
+
+        val prompt = factory.fullRepairFeedback(attempt, listOf(xsdDiag))
+
+        assertTrue(prompt.contains("Rendered BPMN XML:"), "expected rendered-XML section in full-repair prompt")
+        assertTrue(prompt.contains("Use the rendered BPMN XML only as supporting context"))
+        assertFalse(prompt.contains("local-fix-failed"))
+    }
+
+    @Test
+    fun `fullRepairFeedback excludes the rendered XML section when only LINT diagnostics exist`() {
+        val factory = RepairFixtures.factory()
+        val definition = RepairFixtures.sampleDefinition()
+        val attempt = RepairFixtures.attempt(definition, diagnostics = emptyList())
+        val lintDiag = RepairFixtures.lintDiagnostic(
             "bpmner/name-02",
             "Task_1",
             "Use action verb",
             RepairKind.LLM_MODEL_PATCH,
         )
 
-        val prompt = factory.fullRepairFeedback(attempt, listOf(llmDiag))
+        val prompt = factory.fullRepairFeedback(attempt, listOf(lintDiag))
 
-        assertTrue(prompt.contains("Rendered BPMN XML:"), "expected rendered-XML section in full-repair prompt")
+        assertFalse(prompt.contains("Rendered BPMN XML:"), "expected XML section to be omitted")
+        assertFalse(
+            prompt.contains("Use the rendered BPMN XML only as supporting context"),
+            "expected XML instruction to be omitted",
+        )
         assertTrue(prompt.contains("rule=bpmner/name-02"))
-        assertFalse(prompt.contains("local-fix-failed"))
     }
 
     @Test

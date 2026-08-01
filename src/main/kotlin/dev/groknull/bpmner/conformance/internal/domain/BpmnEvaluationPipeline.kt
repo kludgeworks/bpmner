@@ -178,9 +178,11 @@ internal class BpmnEvaluationPipeline(
         rendered: RenderedBpmn?,
     ) {
         if (!config.dumpArtifacts) return
+        val serialized = fingerprints.serializeDefinitionPretty(definition)
+            ?: fingerprints.serializeDefinition(definition)
         logger.debug(
             "Artifact dump [definition]: {}",
-            fingerprints.serializeDefinition(definition).truncate(config.artifactPreviewLength),
+            serialized?.truncate(config.artifactPreviewLength),
         )
         rendered?.let {
             logger.debug("Artifact dump [renderedXml]: {}", it.xml.truncate(config.artifactPreviewLength))
