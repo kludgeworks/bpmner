@@ -25,6 +25,14 @@ Both fields are bound at `bpmner.budget` via `@ConfigurationProperties` in the a
 Both fields are bound at `bpmner.readiness`. Interactive generation permits at most three
 clarification rounds; the per-assessment question limit does not increase that round limit.
 
+### Repair loop
+
+| Key | Default | Effect |
+| --- | --- | --- |
+| `bpmner.trim-history` | `false` | When `true`, prunes LLM chat message history in the repair loop. Only the initial generation prompt and the assistant's latest serialized definition are retained, saving tokens and avoiding context bloat at the cost of diagnostic turn context. |
+
+This field is bound at `bpmner.trimHistory` under the repair capability configuration.
+
 ### Rule profile + severity overrides
 
 | Key | Default | Effect |
