@@ -193,12 +193,18 @@ jobs:
         with:
           bazel-cache-save: "false"
 
+      - name: Cache SonarCloud packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.sonar/cache
+          key: ${{ runner.os }}-sonar
+          restore-keys: ${{ runner.os }}-sonar
+
       - name: Run Bazel coverage
         id: coverage
         run: |
           bazel coverage //... \
-            --config=ci \
-            --strategy=CoverageReport=local \
+            --config=rbe \
             --remote_header=x-buildbuddy-api-key="${BUILDBUDDY_API_KEY}" \
             --combined_report=lcov \
             --coverage_report_generator=@bazel_sonarqube//:sonarqube_coverage_generator \
@@ -234,4 +240,5 @@ jobs:
             -Dsonar.organization=kludgeworks \
             -Dsonar.host.url=https://sonarcloud.io \
             -Dsonar.token="${SONAR_TOKEN}" \
-            -Dsonar.coverageReportPaths="$GITHUB_WORKSPACE/coverage_report.dat"
+            -Dsonar.coverageReportPaths="$GITHUB_WORKSPACE/coverage_report.dat" \
+            -Dsonar.typescript.tsconfigPaths=web/tsconfig.json
