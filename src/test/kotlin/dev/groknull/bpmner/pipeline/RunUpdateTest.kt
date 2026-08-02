@@ -94,9 +94,9 @@ class RunUpdateTest {
         }
     }
 
-    // Stage 3 (#662 residual): pins the JSON shape web/src/run-update.ts hand-mirrors. No
-    // Jackson customization exists anywhere in src/main (grep-verified), so the auto-configured
-    // Spring mapper's behavior matches jacksonObjectMapper()'s Kotlin+Jackson defaults.
+    // Pins the JSON shape web/src/run-update.ts hand-mirrors. No Jackson customization exists
+    // anywhere in src/main, so the auto-configured Spring mapper's behavior matches
+    // jacksonObjectMapper()'s Kotlin+Jackson defaults.
     @Test
     fun `Terminal serializes to exactly the fields the client expects`() {
         val terminal: RunUpdate = RunUpdate.Terminal(

@@ -183,10 +183,10 @@ class BpmnGenerationPipelineTest : EmbabelMockitoIntegrationTest() {
         ).run()
     }
 
-    // Stage 3 (#662 residual): asserts a real run actually produces an ordered RunUpdate
-    // sequence — every other RunUpdate test feeds itself fabricated updates directly. The sink
-    // is a bounded replay buffer and emitTerminal() completes it, so subscribing after a
-    // completed run still replays the whole sequence with no timing coordination needed.
+    // Asserts a real run actually produces an ordered RunUpdate sequence — every other
+    // RunUpdate test feeds itself fabricated updates directly. The sink is a bounded replay
+    // buffer and emitTerminal() completes it, so subscribing after a completed run still
+    // replays the whole sequence with no timing coordination needed.
     private fun assertRunUpdateStream(processId: String) {
         val updates = runUpdateSinkRegistry.subscribe(processId).collectList().block(Duration.ofSeconds(5))!!
         assertTrue(updates.isNotEmpty(), "expected at least one RunUpdate from a real run")

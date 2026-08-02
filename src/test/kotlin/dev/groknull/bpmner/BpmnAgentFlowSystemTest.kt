@@ -246,10 +246,10 @@ class BpmnAgentFlowSystemTest : EmbabelMockitoIntegrationTest() {
 
         assertEquals(AgentProcessStatusCode.WAITING, process.status)
 
-        // Stage 3 (#662 residual): the process pauses via Embabel's AgentProcessWaitingEvent,
-        // which BpmnRunUpdateChannel (an AgenticEventListener auto-registered globally, not
-        // passed via this test's own ProcessOptions) translates into an AWAITING_INPUT update —
-        // asserting the HITL pause is real on the delivery path, not just on process.status.
+        // The process pauses via Embabel's AgentProcessWaitingEvent, which BpmnRunUpdateChannel
+        // (an AgenticEventListener auto-registered globally, not passed via this test's own
+        // ProcessOptions) translates into an AWAITING_INPUT update — asserting the HITL pause is
+        // real on the delivery path, not just on process.status.
         val awaiting = runUpdateSinkRegistry.subscribe(process.id)
             .filter { it.phase == RunPhase.AWAITING_INPUT }
             .next()
