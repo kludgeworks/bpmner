@@ -10,6 +10,7 @@ import dev.groknull.bpmner.pipeline.RunOutcome
 import dev.groknull.bpmner.pipeline.RunPhase
 import dev.groknull.bpmner.pipeline.RunUpdate
 import org.jmolecules.architecture.onion.simplified.InfrastructureRing
+import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Sinks
@@ -52,15 +53,15 @@ internal class RunUpdateSinkRegistry {
     ) {
         lastKnown[processId] = phase to artifactState
         val processSink = sinkFor(processId)
-        processSink.sink.tryEmitNext(
-            RunUpdate.Progress(
-                seq = processSink.seq.incrementAndGet(),
-                phase = phase,
-                artifactState = artifactState,
-                summary = summary,
-                detail = detail,
-            ),
+        val update = RunUpdate.Progress(
+            seq = processSink.seq.incrementAndGet(),
+            phase = phase,
+            artifactState = artifactState,
+            summary = summary,
+            detail = detail,
         )
+        logUpdate(processId, update)
+        processSink.sink.tryEmitNext(update)
     }
 
     /**
@@ -87,15 +88,15 @@ internal class RunUpdateSinkRegistry {
     ) {
         lastKnown.remove(processId)
         val processSink = sinkFor(processId)
-        processSink.sink.tryEmitNext(
-            RunUpdate.Terminal(
-                seq = processSink.seq.incrementAndGet(),
-                artifactState = artifactState,
-                summary = summary,
-                outcome = outcome,
-                detail = detail,
-            ),
+        val update = RunUpdate.Terminal(
+            seq = processSink.seq.incrementAndGet(),
+            artifactState = artifactState,
+            summary = summary,
+            outcome = outcome,
+            detail = detail,
         )
+        logUpdate(processId, update)
+        processSink.sink.tryEmitNext(update)
         processSink.sink.tryEmitComplete()
     }
 
@@ -105,6 +106,25 @@ internal class RunUpdateSinkRegistry {
      * a sink is created lazily and simply has nothing to replay yet.
      */
     fun subscribe(processId: String): Flux<RunUpdate> = sinkFor(processId).sink.asFlux()
+
+    // Mirrors the flat wire shape the SSE endpoint serializes (seq/phase/artifactState/outcome?/
+    // summary/detail), so the log is a faithful, greppable stand-in for the bytes the browser
+    // receives — useful for tracing a run's ordered stream without attaching to the SSE endpoint.
+    // DEBUG so it is off in normal INFO operation; enable by keeping this class at DEBUG.
+    private fun logUpdate(processId: String, update: RunUpdate) {
+        if (!logger.isDebugEnabled) return
+        val outcome = (update as? RunUpdate.Terminal)?.outcome?.let { " outcome=$it" } ?: ""
+        logger.debug(
+            "RunUpdate[{}] seq={} phase={} artifactState={}{} summary=\"{}\" detail={}",
+            processId,
+            update.seq,
+            update.phase,
+            update.artifactState,
+            outcome,
+            update.summary,
+            update.detail,
+        )
+    }
 
     private fun sinkFor(processId: String): ProcessSink = sinks.computeIfAbsent(processId) {
         evictOneIfFull()
@@ -121,6 +141,7 @@ internal class RunUpdateSinkRegistry {
     }
 
     companion object {
+        private val logger = LoggerFactory.getLogger(RunUpdateSinkRegistry::class.java)
         private const val REPLAY_LIMIT = 100
         private const val MAX_PROCESS_BUFFERS = 1000
     }
