@@ -92,6 +92,12 @@ export SPRING_PROFILES_ACTIVE="${profiles}"
 
 bazelisk build //src:bpmner_app
 bazel_bin="$(bazelisk info bazel-bin)"
+# Force the live SSE progress stream (epic #605) to the log file: RunUpdateSinkRegistry logs each
+# emitted RunUpdate at DEBUG in the exact wire shape. logback-spring.xml already defaults this
+# package to DEBUG, but pinning the level here via a Spring property keeps the capture working even
+# if a profile's `logging.level.*` later demotes the package. Grep the log for "RunUpdate[" to pull
+# one run's ordered sequence (see plans/605/UI-HANDOFF.md §7).
 exec java \
   -Dspring.profiles.active="${SPRING_PROFILES_ACTIVE}" \
+  -Dlogging.level.dev.groknull.bpmner.pipeline.internal.adapter.inbound.RunUpdateSinkRegistry=DEBUG \
   -jar "${bazel_bin}/src/bpmner_app.jar"
