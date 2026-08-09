@@ -25,6 +25,7 @@ import dev.groknull.bpmner.alignment.AlignmentVerdict
 import dev.groknull.bpmner.alignment.BpmnAligner
 import dev.groknull.bpmner.alignment.BpmnAlignmentReport
 import dev.groknull.bpmner.authoring.BpmnGenerationStatus
+import dev.groknull.bpmner.authoring.BpmnOutlineGenerationException
 import dev.groknull.bpmner.authoring.BpmnProcessGenerator
 import dev.groknull.bpmner.authoring.BpmnRequestDraft
 import dev.groknull.bpmner.authoring.BpmnRequestDrafter
@@ -38,6 +39,7 @@ import dev.groknull.bpmner.bpmn.RenderedBpmn
 import dev.groknull.bpmner.conformance.BpmnXsdValidationPort
 import dev.groknull.bpmner.conformance.FinalValidatedBpmnXml
 import dev.groknull.bpmner.conformance.ValidatedBpmnXml
+import dev.groknull.bpmner.contract.BpmnContractExtractionException
 import dev.groknull.bpmner.contract.ProcessContractExtractor
 import dev.groknull.bpmner.contract.ValidatedProcessContract
 import dev.groknull.bpmner.layout.BpmnLayoutCompletedEvent
@@ -45,6 +47,7 @@ import dev.groknull.bpmner.layout.BpmnLayoutPort
 import dev.groknull.bpmner.layout.LayoutedBpmnXml
 import dev.groknull.bpmner.readiness.BpmnClarificationAnswers
 import dev.groknull.bpmner.readiness.BpmnReadinessAssessedEvent
+import dev.groknull.bpmner.readiness.BpmnReadinessAssessmentException
 import dev.groknull.bpmner.readiness.BpmnReadinessInvoker
 import dev.groknull.bpmner.readiness.ClarificationExchange
 import dev.groknull.bpmner.readiness.ProcessInputAssessment
@@ -77,11 +80,18 @@ internal class BpmnGenerationAgent(
         return requestResolver.resolveShellRequest(draft)
     }
 
+    // Readiness assessment is fallible: the sub-agent throws when the model cannot produce a
+    // structured verdict. Catching it here turns a process-killing throw into a state the
+    // planner can route to a terminal, so the run reports why it stopped instead of going silent.
     @Action
-    fun assessReadiness(request: BpmnRequest): ProcessInputAssessment {
-        val assessment = readinessInvoker.assess(request)
+    fun assessReadiness(request: BpmnRequest): ReadinessStage {
+        val assessment = try {
+            readinessInvoker.assess(request)
+        } catch (e: BpmnReadinessAssessmentException) {
+            return ReadinessFailed(request, e.message ?: "Readiness assessment failed")
+        }
         publishReadinessAssessed(request, assessment)
-        return assessment
+        return Assessing(request, assessment, round = 0)
     }
 
     @Action
@@ -104,16 +114,25 @@ internal class BpmnGenerationAgent(
     }
 
     @Action
-    fun extractContract(ready: ReadyBpmnContext, ctx: OperationContext): ValidatedProcessContract {
-        return contractExtractor.extract(ready, ctx)
+    fun extractContract(ready: ReadyBpmnContext, ctx: OperationContext): ContractStage {
+        return try {
+            ContractReady(contractExtractor.extract(ready, ctx))
+        } catch (e: BpmnContractExtractionException) {
+            ContractFailed(ready.request, e.message ?: "Contract extraction failed")
+        }
     }
 
     @Action
-    fun createOutline(ready: ReadyBpmnContext, c: ValidatedProcessContract, ctx: OperationContext): ValidatedOutline {
-        return processGenerator.createOutline(ready, c, ctx)
+    fun createOutline(ready: ReadyBpmnContext, c: ValidatedProcessContract, ctx: OperationContext): OutlineStage {
+        return try {
+            OutlineReady(processGenerator.createOutline(ready, c, ctx))
+        } catch (e: BpmnOutlineGenerationException) {
+            OutlineFailed(ready.request, e.message ?: "Outline generation failed")
+        }
     }
 
-    @Action fun composeGraph(outline: ValidatedOutline): LaidOutProcessGraph {
+    @Action
+    fun composeGraph(outline: ValidatedOutline): LaidOutProcessGraph {
         return processGenerator.composeGraph(outline)
     }
 
@@ -138,19 +157,20 @@ internal class BpmnGenerationAgent(
     }
 
     @Action(actionRetryPolicy = ActionRetryPolicy.FIRE_ONCE)
-    fun layout(validated: ValidatedBpmnXml): FinalValidatedBpmnXml {
+    fun layout(ready: ReadyBpmnContext, validated: ValidatedBpmnXml): LayoutStage {
         val layoutedXml = layoutPort.layout(validated.xml)
         val layouted = LayoutedBpmnXml(definition = validated.definition, xml = layoutedXml)
         val xsdIssues = xsdValidationPort.validateDetailed(layouted.xml)
         if (xsdIssues.isNotEmpty()) {
             val details = xsdIssues.mapNotNull { it.message }.joinToString("; ").ifBlank { "Unknown XSD validation error" }
-            error("Auto-layout produced structurally invalid BPMN: $details")
+            // Layout is deterministic, so retrying cannot help; report the reason and stop.
+            return LayoutFailed(ready.request, "Auto-layout produced structurally invalid BPMN: $details", layouted.xml)
         }
         // Publish the laid-out (DI-bearing) XML so telemetry can forward a LAYOUT_COMPLETE
         // snapshot over the SSE channel, enabling the web client to switch from its client-side
         // preview layout to the canonical server geometry (ARCH ADR-ss-007).
         eventPublisher.publishEvent(BpmnLayoutCompletedEvent(layouted.xml, processId = AgentProcess.get()?.id))
-        return FinalValidatedBpmnXml(definition = layouted.definition, xml = layouted.xml)
+        return LayoutReady(FinalValidatedBpmnXml(definition = layouted.definition, xml = layouted.xml))
     }
 
     @Action(actionRetryPolicy = ActionRetryPolicy.FIRE_ONCE)
@@ -263,6 +283,112 @@ data class Blocked(
         outputFile = request.outputFile,
         status = BpmnGenerationStatus.NEEDS_CLARIFICATION,
         readinessReport = assessment,
+    )
+}
+
+@State
+data class ReadinessFailed(
+    val request: BpmnRequest,
+    val detail: String,
+) : ReadinessStage {
+    @AchievesGoal(
+        description = "Terminate with readiness failure",
+        export = Export(
+            name = "generateBpmn",
+            startingInputTypes = [UserInput::class, BpmnRequest::class, ProcessInputAssessment::class],
+        ),
+    )
+    @Action
+    fun terminate(): BpmnResult = BpmnResult(
+        outputFile = request.outputFile,
+        status = BpmnGenerationStatus.READINESS_FAILED,
+        failureDetail = detail,
+    )
+}
+
+// Sealed supertype for polymorphic contract-extraction returns
+sealed interface ContractStage
+
+@State
+data class ContractReady(val contract: ValidatedProcessContract) : ContractStage {
+    @Action fun proceed(): ValidatedProcessContract = contract
+}
+
+@State
+data class ContractFailed(
+    val request: BpmnRequest,
+    val detail: String,
+) : ContractStage {
+    @AchievesGoal(
+        description = "Terminate with contract extraction failure",
+        export = Export(
+            name = "generateBpmn",
+            startingInputTypes = [UserInput::class, BpmnRequest::class, ProcessInputAssessment::class],
+        ),
+    )
+    @Action
+    fun terminate(): BpmnResult = BpmnResult(
+        outputFile = request.outputFile,
+        status = BpmnGenerationStatus.CONTRACT_FAILED,
+        failureDetail = detail,
+    )
+}
+
+// Sealed supertype for polymorphic outline-generation returns
+sealed interface OutlineStage
+
+@State
+data class OutlineReady(val outline: ValidatedOutline) : OutlineStage {
+    @Action fun proceed(): ValidatedOutline = outline
+}
+
+@State
+data class OutlineFailed(
+    val request: BpmnRequest,
+    val detail: String,
+) : OutlineStage {
+    @AchievesGoal(
+        description = "Terminate with outline generation failure",
+        export = Export(
+            name = "generateBpmn",
+            startingInputTypes = [UserInput::class, BpmnRequest::class, ProcessInputAssessment::class],
+        ),
+    )
+    @Action
+    fun terminate(): BpmnResult = BpmnResult(
+        outputFile = request.outputFile,
+        status = BpmnGenerationStatus.OUTLINE_FAILED,
+        failureDetail = detail,
+    )
+}
+
+// Sealed supertype for polymorphic layout returns
+sealed interface LayoutStage
+
+@State
+data class LayoutReady(val laidOut: FinalValidatedBpmnXml) : LayoutStage {
+    @Action fun proceed(): FinalValidatedBpmnXml = laidOut
+}
+
+@State
+data class LayoutFailed(
+    val request: BpmnRequest,
+    val detail: String,
+    val xml: String,
+) : LayoutStage {
+    @AchievesGoal(
+        description = "Terminate with layout failure",
+        export = Export(
+            name = "generateBpmn",
+            startingInputTypes = [UserInput::class, BpmnRequest::class, ProcessInputAssessment::class],
+        ),
+    )
+    @Action
+    fun terminate(): BpmnResult = BpmnResult(
+        outputFile = request.outputFile,
+        status = BpmnGenerationStatus.LAYOUT_FAILED,
+        xml = xml,
+        failureDetail = detail,
     )
 }
 

@@ -116,6 +116,7 @@ internal class BpmnRunUpdateChannel(
             outcome = if (result.status == BpmnGenerationStatus.GENERATED) RunOutcome.COMPLETED else RunOutcome.FAILED,
             detail = buildMap {
                 put("status", result.status.name)
+                result.failureDetail?.takeIf { it.isNotBlank() }?.let { put("failureDetail", it) }
                 result.alignmentReport?.verdict?.name?.let { put("alignmentVerdict", it) }
                 result.alignmentReport?.rationale?.let { put("alignmentReport", it) }
                 result.validationDiagnostics
@@ -134,8 +135,13 @@ internal class BpmnRunUpdateChannel(
 
 private fun artifactStateFor(status: BpmnGenerationStatus): ArtifactState = when (status) {
     BpmnGenerationStatus.GENERATED, BpmnGenerationStatus.ALIGNMENT_FAILED -> ArtifactState.FINAL
-    BpmnGenerationStatus.VALIDATION_FAILED -> ArtifactState.DIAGNOSTIC
-    BpmnGenerationStatus.NEEDS_CLARIFICATION -> ArtifactState.NONE
+    // LAYOUT_FAILED still carries the laid-out XML, so the client has something to show.
+    BpmnGenerationStatus.VALIDATION_FAILED, BpmnGenerationStatus.LAYOUT_FAILED -> ArtifactState.DIAGNOSTIC
+    BpmnGenerationStatus.NEEDS_CLARIFICATION,
+    BpmnGenerationStatus.READINESS_FAILED,
+    BpmnGenerationStatus.CONTRACT_FAILED,
+    BpmnGenerationStatus.OUTLINE_FAILED,
+    -> ArtifactState.NONE
 }
 
 private fun summaryFor(status: BpmnGenerationStatus): String = when (status) {
@@ -143,4 +149,8 @@ private fun summaryFor(status: BpmnGenerationStatus): String = when (status) {
     BpmnGenerationStatus.NEEDS_CLARIFICATION -> "Needs clarification — generation stopped."
     BpmnGenerationStatus.ALIGNMENT_FAILED -> "Alignment failed — reviewing the generated BPMN."
     BpmnGenerationStatus.VALIDATION_FAILED -> "Validation failed — generation stopped."
+    BpmnGenerationStatus.READINESS_FAILED -> "Readiness assessment failed — generation stopped."
+    BpmnGenerationStatus.CONTRACT_FAILED -> "Could not extract a valid process contract — generation stopped."
+    BpmnGenerationStatus.OUTLINE_FAILED -> "Could not draft the process — generation stopped."
+    BpmnGenerationStatus.LAYOUT_FAILED -> "Diagram layout failed — generation stopped."
 }

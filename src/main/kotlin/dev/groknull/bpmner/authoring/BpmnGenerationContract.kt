@@ -22,6 +22,18 @@ enum class BpmnGenerationStatus {
     NEEDS_CLARIFICATION,
     ALIGNMENT_FAILED,
     VALIDATION_FAILED,
+
+    /** Readiness assessment could not produce a usable verdict. */
+    READINESS_FAILED,
+
+    /** Contract extraction could not produce a contract that passes its own validation. */
+    CONTRACT_FAILED,
+
+    /** Outline generation could not produce a definition faithful to the contract. */
+    OUTLINE_FAILED,
+
+    /** Auto-layout produced XML that fails XSD validation. */
+    LAYOUT_FAILED,
 }
 
 fun BpmnRequest.generationPrompt(): String = buildString {
@@ -58,6 +70,8 @@ data class BpmnResult(
     @field:Valid
     @get:JsonPropertyDescription("Validation diagnostics when validation has failed")
     val validationDiagnostics: List<BpmnDiagnostic>? = null,
+    @get:JsonPropertyDescription("Why the run stopped, when a stage failed short of a diagram")
+    val failureDetail: String? = null,
 ) : HasInfoString,
     HasContent {
     override fun infoString(
@@ -100,10 +114,27 @@ data class BpmnResult(
                     (reportFile?.let { " Report: ${outputFileName(it)}" } ?: "")
             }
 
-            else ->
+            BpmnGenerationStatus.READINESS_FAILED ->
+                stageFailureContent("Readiness assessment failed")
+
+            BpmnGenerationStatus.CONTRACT_FAILED ->
+                stageFailureContent("Could not extract a valid process contract")
+
+            BpmnGenerationStatus.OUTLINE_FAILED ->
+                stageFailureContent("Could not generate an outline faithful to the contract")
+
+            BpmnGenerationStatus.LAYOUT_FAILED ->
+                stageFailureContent("Auto-layout produced structurally invalid BPMN")
+
+            BpmnGenerationStatus.ALIGNMENT_FAILED ->
                 "BPMN generation did not complete (status=$status)." +
                     (reportFile?.let { " Report: ${outputFileName(it)}" } ?: "")
         }
+
+    private fun stageFailureContent(summary: String): String =
+        "$summary." +
+            (failureDetail?.takeIf { it.isNotBlank() }?.let { " $it" } ?: "") +
+            (reportFile?.let { " Report: ${outputFileName(it)}" } ?: "")
 }
 
 // Prefix of the GENERATED [BpmnResult.content] line. Shared so the shell command can recover the

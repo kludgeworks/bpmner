@@ -89,7 +89,13 @@ internal class LlmBpmnProcessGenerator(
             val issues =
                 validatedContract.report.issues
                     .joinToString(separator = System.lineSeparator()) { "- ${it.format()}" }
-            error("Cannot generate BPMN from an invalid process contract:${System.lineSeparator()}$issues")
+            // Defensive: extraction no longer emits an invalid contract. Kept as a typed failure
+            // rather than error() so that, if one ever reaches here, the run reports a terminal
+            // reason instead of dying with no result. Unreachable once the contract type itself
+            // makes the invalid case unrepresentable.
+            throw BpmnOutlineGenerationException(
+                "Cannot generate BPMN from an invalid process contract:${System.lineSeparator()}$issues",
+            )
         }
         val promptRunner = config.generator.promptRunner(context)
 
