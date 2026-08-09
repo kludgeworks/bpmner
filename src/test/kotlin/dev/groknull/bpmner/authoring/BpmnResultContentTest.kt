@@ -86,4 +86,32 @@ class BpmnResultContentTest {
         assertTrue(result.content.contains("VALIDATION_FAILED"), "content: ${result.content}")
         assertTrue(result.content.contains("Missing start event"), "content: ${result.content}")
     }
+
+    @Test
+    fun `content explains each stage failure and carries its reason`() {
+        // A terminal exists so the author learns why the run stopped; a status name alone is not
+        // an explanation, so every stage-failure status must surface its detail.
+        val cases = mapOf(
+            BpmnGenerationStatus.CONTRACT_FAILED to "contract",
+            BpmnGenerationStatus.OUTLINE_FAILED to "outline",
+            BpmnGenerationStatus.LAYOUT_FAILED to "layout",
+        )
+
+        cases.forEach { (status, expectedWord) ->
+            val result = BpmnResult(
+                outputFile = null,
+                status = status,
+                failureDetail = "the specific reason",
+            )
+
+            assertTrue(
+                result.content.lowercase().contains(expectedWord),
+                "content for $status should name the stage: ${result.content}",
+            )
+            assertTrue(
+                result.content.contains("the specific reason"),
+                "content for $status should carry failureDetail: ${result.content}",
+            )
+        }
+    }
 }

@@ -5,11 +5,12 @@
 
 package dev.groknull.bpmner.authoring.internal.adapter.inbound
 
-import com.embabel.agent.core.Retryable
+import com.embabel.agent.core.NonRetryable
 import com.embabel.agent.test.unit.FakeOperationContext
 import dev.groknull.bpmner.authoring.BpmnAgentInvoker
 import dev.groknull.bpmner.authoring.BpmnContractFidelityPort
 import dev.groknull.bpmner.authoring.BpmnDefaultFlowPort
+import dev.groknull.bpmner.authoring.BpmnOutlineGenerationException
 import dev.groknull.bpmner.authoring.BpmnRenderer
 import dev.groknull.bpmner.authoring.internal.BpmnAuthoringConfig
 import dev.groknull.bpmner.authoring.internal.adapter.outbound.FlatBpmnDefinition
@@ -44,20 +45,19 @@ import org.mockito.Mockito.`when`
 import org.springframework.context.ApplicationEventPublisher
 import kotlin.test.Test
 import kotlin.test.assertContains
+import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
+import kotlin.test.assertNotEquals
 
 /**
- * Focused test for the #458 fidelity-to-exception seam in [LlmBpmnProcessGenerator.createOutline].
+ * Covers what [LlmBpmnProcessGenerator.createOutline] does when the generated definition does not
+ * faithfully encode the contract: it re-asks the model with the fidelity diagnostic in the prompt,
+ * and fails non-retryably once that budget is spent.
  *
- * Architecture §5 "fidelity-seam test" (R6): proves that ERROR-severity fidelity results are
- * converted to [RetryableBpmnGenerationException] with the violation count and per-issue
- * `- [code] message` body preserved in the exception message (ADR-002 (message-is-feedback): message IS the feedback).
- *
- * [LlmBpmnProcessGeneratorTest] remains @Disabled; this test covers the seam via
- * [FakeOperationContext] + a mocked [BpmnContractFidelityPort] so the LLM path is bypassed
- * entirely, as permitted by PLAN §1.3 / §5 R6.
+ * Drives the seam through [FakeOperationContext] plus a mocked [BpmnContractFidelityPort], so the
+ * assertions are about the prompts the generator builds rather than about any model's behaviour.
  */
 /**
  * Kotlin-safe wrapper for Mockito.any() that avoids NPE on non-null Kotlin parameters.
@@ -116,6 +116,23 @@ class LlmBpmnProcessGeneratorFidelitySeamTest {
         report = ContractValidationReport(issues = emptyList()),
     )
 
+    private val errorReport = BpmnFidelityReport(
+        issues = listOf(
+            BpmnFidelityIssue(
+                code = BpmnFidelityCode.ACTIVITY_TASK_KIND_MISMATCH,
+                severity = BpmnFidelitySeverity.ERROR,
+                message = "Activity 'act1' is a ServiceTask but contract requires UserTask",
+                bpmnElementId = "act1",
+            ),
+            BpmnFidelityIssue(
+                code = BpmnFidelityCode.DECISION_GATEWAY_MISSING,
+                severity = BpmnFidelitySeverity.ERROR,
+                message = "Decision 'dec1' has no corresponding gateway in the BPMN",
+                bpmnElementId = "dec1",
+            ),
+        ),
+    )
+
     private val ready = ReadyBpmnContext(
         request = BpmnRequest("Order processing seam test"),
         assessment = ProcessInputAssessment(
@@ -128,51 +145,62 @@ class LlmBpmnProcessGeneratorFidelitySeamTest {
         ),
     )
 
-    // --- #458 fidelity seam (R6) ---
+    // --- fidelity seam: correction, not re-rolling ---
 
     @Test
-    fun `createOutline converts ERROR fidelity result to RetryableBpmnGenerationException`() {
-        // #458 fidelity seam (R6): ERROR-severity fidelity result → RetryableBpmnGenerationException.
-        // The exception message must preserve the violation count and per-issue [code] message body
-        // so the repair loop has the feedback it needs (ADR-002 (message-is-feedback)).
+    fun `fidelity failure makes the next prompt state what was wrong`() {
+        // The point of retrying is that the model is told what it got wrong. A retry whose prompt
+        // is byte-identical to its predecessor is a re-roll, not a correction, so assert the
+        // difference directly rather than inferring it from an eventual success.
         val context = FakeOperationContext()
         context.expectResponse(flatLlmResponse)
+        context.expectResponse(flatLlmResponse)
 
-        // Use any() matcher since the BpmnDefinition instance created inside createOutline is
-        // a different object from flatLlmResponse.toSealed() (even if structurally equal).
         val stubbedDefinition = flatLlmResponse.toSealed()
         `when`(mockDefaultFlowAssigner.assign(anyKt(), anyKt())).thenReturn(stubbedDefinition)
-
-        val errorReport = BpmnFidelityReport(
-            issues = listOf(
-                BpmnFidelityIssue(
-                    code = BpmnFidelityCode.ACTIVITY_TASK_KIND_MISMATCH,
-                    severity = BpmnFidelitySeverity.ERROR,
-                    message = "Activity 'act1' is a ServiceTask but contract requires UserTask",
-                    bpmnElementId = "act1",
-                ),
-                BpmnFidelityIssue(
-                    code = BpmnFidelityCode.DECISION_GATEWAY_MISSING,
-                    severity = BpmnFidelitySeverity.ERROR,
-                    message = "Decision 'dec1' has no corresponding gateway in the BPMN",
-                    bpmnElementId = "dec1",
-                ),
-            ),
-        )
         `when`(mockFidelityChecker.checkDetailed(anyKt(), anyKt()))
             .thenReturn(errorReport)
+            .thenReturn(BpmnFidelityReport(issues = emptyList()))
 
-        val ex = assertFailsWith<RetryableBpmnGenerationException> {
+        generator.createOutline(ready, validatedContract, context)
+
+        assertEquals(2, context.llmInvocations.size, "second attempt should have been made")
+        val first = context.llmInvocations[0].prompt
+        val second = context.llmInvocations[1].prompt
+        assertNotEquals(first, second, "retry prompt must differ from the attempt it is correcting")
+
+        // The diagnostic itself must reach the model, not just a generic 'try again'.
+        assertContains(second, "ACTIVITY_TASK_KIND_MISMATCH")
+        assertContains(second, "Activity 'act1' is a ServiceTask but contract requires UserTask")
+        assertContains(second, "DECISION_GATEWAY_MISSING")
+
+        // The first attempt has nothing to correct, so it must not carry the feedback block.
+        assertFalse(
+            first.contains("ACTIVITY_TASK_KIND_MISMATCH"),
+            "first attempt must not claim a previous failure",
+        )
+    }
+
+    @Test
+    fun `outline generation fails non-retryably once the correction budget is spent`() {
+        // Exhausting the budget must surface a typed failure the planner can route to a terminal.
+        // A Retryable exception here would hand the whole loop back to the framework, which would
+        // re-run it from scratch with no diagnostic — the stochastic retry this loop replaced.
+        val context = FakeOperationContext()
+        repeat(DEFAULT_ATTEMPTS) { context.expectResponse(flatLlmResponse) }
+
+        val stubbedDefinition = flatLlmResponse.toSealed()
+        `when`(mockDefaultFlowAssigner.assign(anyKt(), anyKt())).thenReturn(stubbedDefinition)
+        `when`(mockFidelityChecker.checkDetailed(anyKt(), anyKt())).thenReturn(errorReport)
+
+        val ex = assertFailsWith<BpmnOutlineGenerationException> {
             generator.createOutline(ready, validatedContract, context)
         }
 
-        // Exception must implement Retryable (EG3 / R7 marker).
-        assertIs<Retryable>(ex)
+        assertIs<NonRetryable>(ex)
+        assertEquals(DEFAULT_ATTEMPTS, context.llmInvocations.size, "must respect the attempt budget")
 
-        // Message must carry the total issue count (R6 — count preserved).
-        assertContains(ex.message!!, "2 fidelity issue(s)")
-
-        // Message must carry each violation's code and body (R6 / ADR-002 (message-is-feedback) — feedback body preserved).
+        // The reason must survive into the terminal, or the run reports a failure with no cause.
         assertContains(ex.message!!, "- [ACTIVITY_TASK_KIND_MISMATCH] Activity 'act1' is a ServiceTask")
         assertContains(ex.message!!, "- [DECISION_GATEWAY_MISSING] Decision 'dec1' has no corresponding")
     }
@@ -194,10 +222,9 @@ class LlmBpmnProcessGeneratorFidelitySeamTest {
     }
 
     @Test
-    fun `invalid process contract throws non-retryable error (LlmBpmnProcessGenerator line 75)`() {
-        // ARCHITECTURE §4 "Do NOT convert"
-        // LlmBpmnProcessGenerator.createOutline line 75 — invalid-contract precondition must NOT
-        // be retryable. Retrying an invalid contract burns attempts without benefit (R2).
+    fun `invalid process contract fails without calling the model`() {
+        // Retrying cannot fix a contract that was already invalid when it arrived, so this must
+        // stay non-retryable — and must not spend an LLM call proving it.
         val context = FakeOperationContext()
         val invalidReport = ContractValidationReport(
             issues = listOf(
@@ -213,14 +240,21 @@ class LlmBpmnProcessGeneratorFidelitySeamTest {
             report = invalidReport,
         )
 
-        val ex = assertFailsWith<IllegalStateException> {
+        val ex = assertFailsWith<BpmnOutlineGenerationException> {
             generator.createOutline(ready, invalidContract, context)
         }
 
-        // Must NOT be RetryableBpmnGenerationException — kept precondition is non-retryable (R2).
+        assertIs<NonRetryable>(ex)
         assertFalse(
             ex is RetryableBpmnGenerationException,
             "Precondition error must not be RetryableBpmnGenerationException",
         )
+        assertEquals(0, context.llmInvocations.size, "guard must fail before any LLM call")
+        assertContains(ex.message!!, "Process contract has no trigger")
+    }
+
+    private companion object {
+        // Mirrors BpmnAuthoringConfig.maxOutlineAttempts, which this test leaves at its default.
+        const val DEFAULT_ATTEMPTS = 3
     }
 }

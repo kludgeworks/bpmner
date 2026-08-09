@@ -8,6 +8,7 @@ package dev.groknull.bpmner.pipeline.internal.adapter.inbound
 import com.embabel.agent.api.channel.ProgressOutputChannelEvent
 import com.embabel.agent.api.event.AgentProcessCompletedEvent
 import com.embabel.agent.api.event.AgentProcessFailedEvent
+import com.embabel.agent.api.event.AgentProcessStuckEvent
 import com.embabel.agent.api.event.AgentProcessWaitingEvent
 import com.embabel.agent.core.AgentProcess
 import com.embabel.agent.core.hitl.FormBindingRequest
@@ -192,6 +193,41 @@ class BpmnRunUpdateChannelTest {
 
         val updates = registry.subscribe("proc-priority").collectList().block(TIMEOUT)!!
         assertEquals(1, updates.size, "exactly one terminal update, never double-delivered")
+    }
+
+    @Test
+    fun `a stuck process emits a terminal FAILED update`() {
+        // A stuck process has no route to any goal and emits nothing further. It is not a
+        // "finished" event, so without an explicit branch a subscriber waits forever.
+        val process = mock(AgentProcess::class.java)
+        `when`(process.id).thenReturn("proc-stuck")
+
+        channel.onProcessEvent(AgentProcessStuckEvent(process))
+
+        val terminal = registry.subscribe("proc-stuck").collectList().block(TIMEOUT)!!.single()
+            as RunUpdate.Terminal
+        assertEquals(RunOutcome.FAILED, terminal.outcome)
+    }
+
+    @Test
+    fun `only the first terminal is delivered when a run reports one more than once`() {
+        // A run can reach a terminal by more than one route — its own result, a platform failure
+        // event, and the abort backstop. A consumer must still see exactly one.
+        val process = mock(AgentProcess::class.java)
+        `when`(process.id).thenReturn("proc-double")
+
+        channel.onProcessEvent(AgentProcessStuckEvent(process))
+        channel.onProcessEvent(AgentProcessFailedEvent(process))
+        registry.emitTerminal(
+            processId = "proc-double",
+            artifactState = ArtifactState.NONE,
+            summary = "late backstop",
+            outcome = RunOutcome.FAILED,
+        )
+
+        val updates = registry.subscribe("proc-double").collectList().block(TIMEOUT)!!
+        assertEquals(1, updates.size, "exactly one terminal, whichever route reported first")
+        assertEquals("BPMN generation could not continue.", updates.single().summary)
     }
 
     private fun processWithForm(

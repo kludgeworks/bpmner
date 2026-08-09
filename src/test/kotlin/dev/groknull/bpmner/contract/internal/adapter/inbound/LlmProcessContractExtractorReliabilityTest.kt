@@ -10,6 +10,7 @@ import com.embabel.agent.core.Retryable
 import com.embabel.agent.core.support.InvalidLlmReturnFormatException
 import com.embabel.agent.core.support.InvalidLlmReturnTypeException
 import com.embabel.agent.test.integration.EmbabelMockitoIntegrationTest
+import dev.groknull.bpmner.authoring.BpmnGenerationStatus
 import dev.groknull.bpmner.authoring.internal.adapter.outbound.AgentPlatformBpmnAgentInvoker
 import dev.groknull.bpmner.bpmn.BpmnRequest
 import dev.groknull.bpmner.contract.BpmnContractExtractionException
@@ -21,22 +22,23 @@ import dev.groknull.bpmner.readiness.ReadinessDimensionScore
 import dev.groknull.bpmner.readiness.ReadinessVerdict
 import dev.groknull.bpmner.readiness.SourceEvidence
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.assertThrows
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.test.context.TestPropertySource
+import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
-import kotlin.test.assertTrue
+import kotlin.test.assertNotNull
 
 /**
- * Regression guard for contract extraction's structured-output reliability: the framework's
- * own `InvalidLlmReturn*` failures — raised directly from the LLM call, before
- * `flat.toSealed()` runs — must translate to a [BpmnContractExtractionException] marked
- * [NonRetryable], not ride the action's default retry policy alongside the legitimate
- * `RetryableBpmnGenerationException` structural-incompleteness path. Exercises the real
- * `ProcessContractExtractor.extract(...)` call path via [AgentPlatformBpmnAgentInvoker.generate],
- * seeding a `READY` assessment directly (bypassing the readiness LLM call) so the process reaches
- * contract extraction in one pass, mirroring `BpmnAlignmentFailureIntegrationTest`'s shape.
+ * Regression guard for contract extraction's structured-output reliability: the framework's own
+ * `InvalidLlmReturn*` failures — raised directly from the LLM call, before `flat.toSealed()` runs
+ * — must end the run at a `CONTRACT_FAILED` terminal carrying a reason, rather than throwing out
+ * of the process, and must stay [NonRetryable] so the stage is not repeated wholesale.
+ *
+ * Exercises the real `ProcessContractExtractor.extract(...)` call path via
+ * [AgentPlatformBpmnAgentInvoker.generate], seeding a `READY` assessment directly (bypassing the
+ * readiness LLM call) so the process reaches contract extraction in one pass, mirroring
+ * `BpmnAlignmentFailureIntegrationTest`'s shape.
  */
 @TestPropertySource(
     properties = [
@@ -52,7 +54,7 @@ class LlmProcessContractExtractorReliabilityTest : EmbabelMockitoIntegrationTest
     private lateinit var bpmnAgentInvoker: AgentPlatformBpmnAgentInvoker
 
     @Test
-    fun `InvalidLlmReturnFormatException from the contract model surfaces as a NonRetryable BpmnContractExtractionException`() {
+    fun `malformed contract output ends the run at a CONTRACT_FAILED terminal`() {
         val formatFailure = InvalidLlmReturnFormatException(
             "not json",
             FlatContractTestFixtures.FLAT_PROCESS_CONTRACT_CLASS,
@@ -60,26 +62,30 @@ class LlmProcessContractExtractorReliabilityTest : EmbabelMockitoIntegrationTest
         )
         whenCreateObject({ true }, FlatContractTestFixtures.FLAT_PROCESS_CONTRACT_CLASS).thenThrow(formatFailure)
 
-        val thrown = assertThrows<BpmnContractExtractionException> {
-            bpmnAgentInvoker.generate(BpmnRequest(processDescription = READY_PROSE), readyAssessment())
-        }
+        val result = bpmnAgentInvoker.generate(BpmnRequest(processDescription = READY_PROSE), readyAssessment())
 
-        assertIs<InvalidLlmReturnFormatException>(thrown.cause)
-        assertTrue(thrown is NonRetryable)
-        assertFalse(thrown is Retryable)
+        assertEquals(BpmnGenerationStatus.CONTRACT_FAILED, result.status)
+        assertNotNull(result.failureDetail, "terminal must carry why the run stopped")
     }
 
     @Test
-    fun `InvalidLlmReturnTypeException from the contract model surfaces as a NonRetryable BpmnContractExtractionException`() {
+    fun `invalid contract output ends the run at a CONTRACT_FAILED terminal`() {
         val typeFailure = InvalidLlmReturnTypeException(returnedObject = "not-a-contract", constraintViolations = emptySet())
         whenCreateObject({ true }, FlatContractTestFixtures.FLAT_PROCESS_CONTRACT_CLASS).thenThrow(typeFailure)
 
-        val thrown = assertThrows<BpmnContractExtractionException> {
-            bpmnAgentInvoker.generate(BpmnRequest(processDescription = READY_PROSE), readyAssessment())
-        }
+        val result = bpmnAgentInvoker.generate(BpmnRequest(processDescription = READY_PROSE), readyAssessment())
 
-        assertIs<InvalidLlmReturnTypeException>(thrown.cause)
-        assertTrue(thrown is NonRetryable)
+        assertEquals(BpmnGenerationStatus.CONTRACT_FAILED, result.status)
+        assertNotNull(result.failureDetail, "terminal must carry why the run stopped")
+    }
+
+    @Test
+    fun `contract extraction failure stays non-retryable`() {
+        // The framework retries any exception it is not told is permanent. Contract extraction is
+        // several model calls, so an unmarked failure here would repeat the whole stage.
+        val extractionFailure = BpmnContractExtractionException("boom")
+        assertIs<NonRetryable>(extractionFailure)
+        assertFalse(extractionFailure is Retryable)
     }
 
     private fun readyAssessment() = ProcessInputAssessment(

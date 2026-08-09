@@ -9,6 +9,7 @@ import com.embabel.agent.core.NonRetryable
 import com.embabel.agent.core.support.InvalidLlmReturnFormatException
 import com.embabel.agent.core.support.InvalidLlmReturnTypeException
 import com.embabel.agent.test.integration.EmbabelMockitoIntegrationTest
+import dev.groknull.bpmner.authoring.BpmnGenerationStatus
 import dev.groknull.bpmner.authoring.BpmnOutlineGenerationException
 import dev.groknull.bpmner.authoring.internal.adapter.outbound.AgentPlatformBpmnAgentInvoker
 import dev.groknull.bpmner.authoring.internal.adapter.outbound.FlatBpmnDefinition
@@ -27,18 +28,20 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.test.context.TestPropertySource
+import kotlin.test.assertEquals
 import kotlin.test.assertIs
-import kotlin.test.assertTrue
+import kotlin.test.assertNotNull
 
 /**
- * Regression guard for outline generation's structured-output reliability: the framework's
- * own `InvalidLlmReturn*` failures — raised directly from the LLM call that produces the raw
- * [FlatBpmnDefinition], before `flat.toSealed()` runs — must translate to a
- * [BpmnOutlineGenerationException] marked [NonRetryable]. The existing, untouched
- * `toSealed()`-incompleteness path (a manufactured
+ * Regression guard for outline generation's structured-output reliability: the framework's own
+ * `InvalidLlmReturn*` failures — raised directly from the LLM call that produces the raw
+ * [FlatBpmnDefinition], before `flat.toSealed()` runs — must end the run at an `OUTLINE_FAILED`
+ * terminal carrying a reason, and the underlying failure must stay [NonRetryable].
+ *
+ * The existing, untouched `toSealed()`-incompleteness path (a manufactured
  * `InvalidLlmReturnFormatException`, re-thrown to keep the planner's outline-retry engaged) must
- * keep surfacing as that framework exception, never as [BpmnOutlineGenerationException] — the two
- * failure shapes must stay structurally distinct.
+ * keep surfacing as that framework exception — the two failure shapes must stay structurally
+ * distinct.
  */
 @TestPropertySource(
     properties = [
@@ -54,7 +57,7 @@ class LlmBpmnProcessGeneratorReliabilityTest : EmbabelMockitoIntegrationTest() {
     private lateinit var bpmnAgentInvoker: AgentPlatformBpmnAgentInvoker
 
     @Test
-    fun `InvalidLlmReturnFormatException from the generator model surfaces as a NonRetryable BpmnOutlineGenerationException`() {
+    fun `malformed generator output ends the run at an OUTLINE_FAILED terminal`() {
         mockValidContract()
         val formatFailure = InvalidLlmReturnFormatException(
             "not json",
@@ -63,26 +66,30 @@ class LlmBpmnProcessGeneratorReliabilityTest : EmbabelMockitoIntegrationTest() {
         )
         whenCreateObject({ true }, FlatBpmnDefinition::class.java).thenThrow(formatFailure)
 
-        val thrown = assertThrows<BpmnOutlineGenerationException> {
-            bpmnAgentInvoker.generate(BpmnRequest(processDescription = READY_PROSE), readyAssessment())
-        }
+        val result = bpmnAgentInvoker.generate(BpmnRequest(processDescription = READY_PROSE), readyAssessment())
 
-        assertIs<InvalidLlmReturnFormatException>(thrown.cause)
-        assertTrue(thrown is NonRetryable)
+        assertEquals(BpmnGenerationStatus.OUTLINE_FAILED, result.status)
+        assertNotNull(result.failureDetail, "terminal must carry why the run stopped")
     }
 
     @Test
-    fun `InvalidLlmReturnTypeException from the generator model surfaces as a NonRetryable BpmnOutlineGenerationException`() {
+    fun `invalid generator output ends the run at an OUTLINE_FAILED terminal`() {
         mockValidContract()
         val typeFailure = InvalidLlmReturnTypeException(returnedObject = "not-a-definition", constraintViolations = emptySet())
         whenCreateObject({ true }, FlatBpmnDefinition::class.java).thenThrow(typeFailure)
 
-        val thrown = assertThrows<BpmnOutlineGenerationException> {
-            bpmnAgentInvoker.generate(BpmnRequest(processDescription = READY_PROSE), readyAssessment())
-        }
+        val result = bpmnAgentInvoker.generate(BpmnRequest(processDescription = READY_PROSE), readyAssessment())
 
-        assertIs<InvalidLlmReturnTypeException>(thrown.cause)
-        assertTrue(thrown is NonRetryable)
+        assertEquals(BpmnGenerationStatus.OUTLINE_FAILED, result.status)
+        assertNotNull(result.failureDetail, "terminal must carry why the run stopped")
+    }
+
+    @Test
+    fun `outline generation failure stays non-retryable`() {
+        // The framework retries any exception it is not told is permanent, and outline generation
+        // already spends its own correction budget before failing.
+        val outlineFailure = BpmnOutlineGenerationException("boom")
+        assertIs<NonRetryable>(outlineFailure)
     }
 
     /**

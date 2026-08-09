@@ -206,7 +206,7 @@ class BpmnRepairLoopIntegrationTest : EmbabelMockitoIntegrationTest() {
         val result = AgentPlatformTypedOps(platform).transform(
             request,
             BpmnResult::class.java,
-            ProcessOptions(budget = Budget(actions = 15), ephemeral = false),
+            ProcessOptions(budget = Budget(actions = ACTION_BUDGET), ephemeral = false),
         )
 
         assertEquals(BpmnGenerationStatus.GENERATED, result.status)
@@ -268,7 +268,7 @@ class BpmnRepairLoopIntegrationTest : EmbabelMockitoIntegrationTest() {
         val result = AgentPlatformTypedOps(platform).transform(
             request,
             BpmnResult::class.java,
-            ProcessOptions(budget = Budget(actions = 15), ephemeral = false),
+            ProcessOptions(budget = Budget(actions = ACTION_BUDGET), ephemeral = false),
         )
 
         assertEquals(BpmnGenerationStatus.GENERATED, result.status)
@@ -301,7 +301,7 @@ class BpmnRepairLoopIntegrationTest : EmbabelMockitoIntegrationTest() {
         val result = AgentPlatformTypedOps(platform).transform(
             request,
             BpmnResult::class.java,
-            ProcessOptions(budget = Budget(actions = 15), ephemeral = false),
+            ProcessOptions(budget = Budget(actions = ACTION_BUDGET), ephemeral = false),
         )
 
         // Config maxRepairIterations is 5.
@@ -333,11 +333,18 @@ class BpmnRepairLoopIntegrationTest : EmbabelMockitoIntegrationTest() {
         val result = AgentPlatformTypedOps(platform).transform(
             request,
             BpmnResult::class.java,
-            ProcessOptions(budget = Budget(actions = 15), ephemeral = false),
+            ProcessOptions(budget = Budget(actions = ACTION_BUDGET), ephemeral = false),
         )
 
         assertEquals(BpmnGenerationStatus.GENERATED, result.status)
         verify(llmRepairApplier, times(1)).applyLlmStructuralPatch(anyNonNull(), anyNonNull(), anyNonNull())
         verify(llmRepairApplier, times(1)).applyFullLlmRewrite(anyNonNull(), anyNonNull(), anyNonNull())
+    }
+
+    private companion object {
+        // Headroom over the happy path plus repair rounds, not a budget assertion. Each stage that
+        // can fail returns a sealed ready/failed pair, so its success branch costs one extra action
+        // to unwrap; production runs on a far larger budget.
+        const val ACTION_BUDGET = 25
     }
 }
