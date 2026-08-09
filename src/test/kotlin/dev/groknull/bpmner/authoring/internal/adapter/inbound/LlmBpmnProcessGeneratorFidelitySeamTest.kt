@@ -27,9 +27,6 @@ import dev.groknull.bpmner.bpmn.RetryableBpmnGenerationException
 import dev.groknull.bpmner.conformance.BpmnLoggingConfig
 import dev.groknull.bpmner.contract.ContractActivity
 import dev.groknull.bpmner.contract.ContractEndState
-import dev.groknull.bpmner.contract.ContractIssueSeverity
-import dev.groknull.bpmner.contract.ContractValidationCode
-import dev.groknull.bpmner.contract.ContractValidationIssue
 import dev.groknull.bpmner.contract.ContractValidationReport
 import dev.groknull.bpmner.contract.ProcessContract
 import dev.groknull.bpmner.contract.ProcessContractMarkdownRenderer
@@ -101,7 +98,7 @@ class LlmBpmnProcessGeneratorFidelitySeamTest {
         ),
     )
 
-    // Minimal valid contract — just enough for the isValid check and fidelityChecker.check() args.
+    // Minimal valid contract — just enough for fidelityChecker.check() args.
     private val contract = ProcessContract(
         id = "contract-seam",
         processName = "Seam test",
@@ -111,10 +108,10 @@ class LlmBpmnProcessGeneratorFidelitySeamTest {
         endStates = listOf(ContractEndState.Normal("end1", "Done")),
     )
 
-    private val validatedContract = ValidatedProcessContract(
+    private val validatedContract = ValidatedProcessContract.of(
         contract = contract,
         report = ContractValidationReport(issues = emptyList()),
-    )
+    )!!
 
     private val errorReport = BpmnFidelityReport(
         issues = listOf(
@@ -219,38 +216,6 @@ class LlmBpmnProcessGeneratorFidelitySeamTest {
             "RuleCategory precondition must not be RetryableBpmnGenerationException",
         )
         assertContains(ex.message!!, "Unknown rule category")
-    }
-
-    @Test
-    fun `invalid process contract fails without calling the model`() {
-        // Retrying cannot fix a contract that was already invalid when it arrived, so this must
-        // stay non-retryable — and must not spend an LLM call proving it.
-        val context = FakeOperationContext()
-        val invalidReport = ContractValidationReport(
-            issues = listOf(
-                ContractValidationIssue(
-                    code = ContractValidationCode.MISSING_TRIGGER,
-                    severity = ContractIssueSeverity.ERROR,
-                    message = "Process contract has no trigger",
-                ),
-            ),
-        )
-        val invalidContract = ValidatedProcessContract(
-            contract = contract,
-            report = invalidReport,
-        )
-
-        val ex = assertFailsWith<BpmnOutlineGenerationException> {
-            generator.createOutline(ready, invalidContract, context)
-        }
-
-        assertIs<NonRetryable>(ex)
-        assertFalse(
-            ex is RetryableBpmnGenerationException,
-            "Precondition error must not be RetryableBpmnGenerationException",
-        )
-        assertEquals(0, context.llmInvocations.size, "guard must fail before any LLM call")
-        assertContains(ex.message!!, "Process contract has no trigger")
     }
 
     private companion object {

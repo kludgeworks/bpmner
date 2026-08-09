@@ -34,7 +34,6 @@ import dev.groknull.bpmner.conformance.BpmnLoggingConfig
 import dev.groknull.bpmner.conformance.BpmnRepairScope
 import dev.groknull.bpmner.contract.ProcessContractMarkdownRenderer
 import dev.groknull.bpmner.contract.ValidatedProcessContract
-import dev.groknull.bpmner.contract.format
 import dev.groknull.bpmner.llm.publishOnInvalidLlmReturn
 import dev.groknull.bpmner.readiness.ReadyBpmnContext
 import dev.groknull.bpmner.ruleset.BpmnNamingShapeAdvice
@@ -85,18 +84,6 @@ internal class LlmBpmnProcessGenerator(
         context: OperationContext,
     ): ValidatedOutline {
         val request = ready.request
-        if (!validatedContract.isValid) {
-            val issues =
-                validatedContract.report.issues
-                    .joinToString(separator = System.lineSeparator()) { "- ${it.format()}" }
-            // Defensive: extraction no longer emits an invalid contract. Kept as a typed failure
-            // rather than error() so that, if one ever reaches here, the run reports a terminal
-            // reason instead of dying with no result. Unreachable once the contract type itself
-            // makes the invalid case unrepresentable.
-            throw BpmnOutlineGenerationException(
-                "Cannot generate BPMN from an invalid process contract:${System.lineSeparator()}$issues",
-            )
-        }
         val promptRunner = config.generator.promptRunner(context)
 
         var previousFailure: String? = null
