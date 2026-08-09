@@ -47,7 +47,6 @@ import dev.groknull.bpmner.layout.BpmnLayoutPort
 import dev.groknull.bpmner.layout.LayoutedBpmnXml
 import dev.groknull.bpmner.readiness.BpmnClarificationAnswers
 import dev.groknull.bpmner.readiness.BpmnReadinessAssessedEvent
-import dev.groknull.bpmner.readiness.BpmnReadinessAssessmentException
 import dev.groknull.bpmner.readiness.BpmnReadinessInvoker
 import dev.groknull.bpmner.readiness.ClarificationExchange
 import dev.groknull.bpmner.readiness.ProcessInputAssessment
@@ -80,18 +79,17 @@ internal class BpmnGenerationAgent(
         return requestResolver.resolveShellRequest(draft)
     }
 
-    // Readiness assessment is fallible: the sub-agent throws when the model cannot produce a
-    // structured verdict. Catching it here turns a process-killing throw into a state the
-    // planner can route to a terminal, so the run reports why it stopped instead of going silent.
-    @Action
-    fun assessReadiness(request: BpmnRequest): ReadinessStage {
-        val assessment = try {
-            readinessInvoker.assess(request)
-        } catch (e: BpmnReadinessAssessmentException) {
-            return ReadinessFailed(request, e.message ?: "Readiness assessment failed")
-        }
+    // Must keep producing ProcessInputAssessment. An action's effect is the type it produces, and
+    // the planner drops actions whose effect already holds — which is what stops this costly LLM
+    // call being planned when a caller supplies its own assessment. Returning a wrapper type
+    // instead makes the effect always unsatisfied, so readiness would run even when handed an
+    // assessment. A readiness failure therefore has no typed terminal of its own and is reported
+    // by the run-aborted backstop; see BpmnReadinessAssessmentException.
+    @Action(actionRetryPolicy = ActionRetryPolicy.FIRE_ONCE)
+    fun assessReadiness(request: BpmnRequest): ProcessInputAssessment {
+        val assessment = readinessInvoker.assess(request)
         publishReadinessAssessed(request, assessment)
-        return Assessing(request, assessment, round = 0)
+        return assessment
     }
 
     @Action
@@ -283,26 +281,6 @@ data class Blocked(
         outputFile = request.outputFile,
         status = BpmnGenerationStatus.NEEDS_CLARIFICATION,
         readinessReport = assessment,
-    )
-}
-
-@State
-data class ReadinessFailed(
-    val request: BpmnRequest,
-    val detail: String,
-) : ReadinessStage {
-    @AchievesGoal(
-        description = "Terminate with readiness failure",
-        export = Export(
-            name = "generateBpmn",
-            startingInputTypes = [UserInput::class, BpmnRequest::class, ProcessInputAssessment::class],
-        ),
-    )
-    @Action
-    fun terminate(): BpmnResult = BpmnResult(
-        outputFile = request.outputFile,
-        status = BpmnGenerationStatus.READINESS_FAILED,
-        failureDetail = detail,
     )
 }
 

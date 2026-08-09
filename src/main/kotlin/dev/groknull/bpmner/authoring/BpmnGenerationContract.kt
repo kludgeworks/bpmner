@@ -23,9 +23,6 @@ enum class BpmnGenerationStatus {
     ALIGNMENT_FAILED,
     VALIDATION_FAILED,
 
-    /** Readiness assessment could not produce a usable verdict. */
-    READINESS_FAILED,
-
     /** Contract extraction could not produce a contract that passes its own validation. */
     CONTRACT_FAILED,
 
@@ -113,9 +110,6 @@ data class BpmnResult(
                 "BPMN generation did not complete (status=$status).$details" +
                     (reportFile?.let { " Report: ${outputFileName(it)}" } ?: "")
             }
-
-            BpmnGenerationStatus.READINESS_FAILED ->
-                stageFailureContent("Readiness assessment failed")
 
             BpmnGenerationStatus.CONTRACT_FAILED ->
                 stageFailureContent("Could not extract a valid process contract")

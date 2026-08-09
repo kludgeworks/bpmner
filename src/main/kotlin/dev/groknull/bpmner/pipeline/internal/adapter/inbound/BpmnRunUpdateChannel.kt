@@ -153,7 +153,6 @@ private fun artifactStateFor(status: BpmnGenerationStatus): ArtifactState = when
     // LAYOUT_FAILED still carries the laid-out XML, so the client has something to show.
     BpmnGenerationStatus.VALIDATION_FAILED, BpmnGenerationStatus.LAYOUT_FAILED -> ArtifactState.DIAGNOSTIC
     BpmnGenerationStatus.NEEDS_CLARIFICATION,
-    BpmnGenerationStatus.READINESS_FAILED,
     BpmnGenerationStatus.CONTRACT_FAILED,
     BpmnGenerationStatus.OUTLINE_FAILED,
     -> ArtifactState.NONE
@@ -164,7 +163,6 @@ private fun summaryFor(status: BpmnGenerationStatus): String = when (status) {
     BpmnGenerationStatus.NEEDS_CLARIFICATION -> "Needs clarification — generation stopped."
     BpmnGenerationStatus.ALIGNMENT_FAILED -> "Alignment failed — reviewing the generated BPMN."
     BpmnGenerationStatus.VALIDATION_FAILED -> "Validation failed — generation stopped."
-    BpmnGenerationStatus.READINESS_FAILED -> "Readiness assessment failed — generation stopped."
     BpmnGenerationStatus.CONTRACT_FAILED -> "Could not extract a valid process contract — generation stopped."
     BpmnGenerationStatus.OUTLINE_FAILED -> "Could not draft the process — generation stopped."
     BpmnGenerationStatus.LAYOUT_FAILED -> "Diagram layout failed — generation stopped."
