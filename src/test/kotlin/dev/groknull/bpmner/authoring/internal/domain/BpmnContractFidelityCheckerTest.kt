@@ -997,6 +997,72 @@ class BpmnContractFidelityCheckerTest {
         )
     }
 
+    @Suppress("LongMethod")
+    @Test
+    fun `separate decisions may converge directly on the same activity`() {
+        val sources = listOf("ev1")
+        val contract =
+            ProcessContract(
+                id = "c-converging",
+                processName = "Payment processing",
+                summary = "Two payment decisions can mark an order paid",
+                trigger = "payment submitted",
+                triggerSourceIds = sources,
+                activities = listOf(
+                    ContractActivity.User(
+                        id = "act-mark-order-paid",
+                        name = "Mark order paid",
+                        sourceIds = sources,
+                    ),
+                ),
+                decisions = listOf(
+                    ContractDecision(
+                        id = "dec-payment-received",
+                        question = "Was payment received?",
+                        branches = listOf(
+                            ConditionalBranch("br-received", "Received", "received", "act-mark-order-paid"),
+                            ConditionalBranch("br-verify", "Verify", "verify", "dec-payment-verified"),
+                        ),
+                        sourceIds = sources,
+                    ),
+                    ContractDecision(
+                        id = "dec-payment-verified",
+                        question = "Was payment verified?",
+                        branches = listOf(
+                            ConditionalBranch("br-verified", "Verified", "verified", "act-mark-order-paid"),
+                            ConditionalBranch("br-rejected", "Rejected", "rejected", "end-rejected"),
+                        ),
+                        sourceIds = sources,
+                    ),
+                ),
+                endStates = listOf(ContractEndState(id = "end-rejected", name = "Rejected", sourceIds = sources)),
+            )
+        val definition =
+            BpmnDefinition(
+                processId = "P",
+                processName = "Payment processing",
+                nodes = listOf(
+                    BpmnExclusiveGateway("dec-payment-received", "Was payment received?"),
+                    BpmnExclusiveGateway("dec-payment-verified", "Was payment verified?"),
+                    BpmnUserTask("act-mark-order-paid", "Mark order paid"),
+                    BpmnEndEvent("end-rejected", "Rejected"),
+                ),
+                sequences = listOf(
+                    BpmnEdge("F1", "dec-payment-received", "act-mark-order-paid"),
+                    BpmnEdge("F2", "dec-payment-received", "dec-payment-verified"),
+                    BpmnEdge("F3", "dec-payment-verified", "act-mark-order-paid"),
+                    BpmnEdge("F4", "dec-payment-verified", "end-rejected"),
+                ),
+            )
+
+        val report = checker.checkDetailed(contract, definition)
+
+        assertTrue(
+            report.issues.none { it.code == BpmnFidelityCode.BRANCH_FLOW_MISSING },
+            "expected both decisions to reach act-mark-order-paid; got: ${report.issues}",
+        )
+    }
+
     @Test
     fun `PARALLEL decision realized as BpmnParallelGateway passes`() {
         val report = checker.checkDetailed(parallelForkContract(), parallelForkDefinition(useParallelFork = true))

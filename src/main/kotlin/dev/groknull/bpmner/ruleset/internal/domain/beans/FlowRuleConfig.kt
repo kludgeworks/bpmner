@@ -18,24 +18,6 @@ import org.springframework.context.annotation.Configuration
 @Configuration
 internal class FlowRuleConfig {
     @Bean
-    fun flowDivergingFlowOutcomeLabel(nlp: BpmnNlp): BpmnRule = primitiveRule(
-        name = "Diverging Flow Outcome Label",
-        category = RuleCategory.Flow,
-        intent = "Encourage explicit outcome labels on flows from diverging decision gateways.",
-        forModellers = "Name flows leaving diverging exclusive, inclusive, or complex gateways " +
-            "with outcome conditions such as Valid or Not eligible.",
-        forAI = "Detect outgoing sequence flows from diverging exclusive, inclusive, or complex gateways " +
-            "that have empty or missing labels.",
-        targetElements = listOf("bpmn:ExclusiveGateway", "bpmn:InclusiveGateway", "bpmn:ComplexGateway"),
-        errorMessages = mapOf(
-            "default" to "Sequence flow from diverging gateway should use an outcome condition label",
-        ),
-        check = ConnectivityCheckConfig(mode = ConnectivityMode.OUTGOING_FLOWS_NAMED),
-        nlp = nlp,
-        severity = RuleSeverity.WARNING,
-    )
-
-    @Bean
     fun flowSequenceFlowWithinPool(nlp: BpmnNlp): BpmnRule = primitiveRule(
         name = "Sequence Flow Within Pool",
         category = RuleCategory.Flow,

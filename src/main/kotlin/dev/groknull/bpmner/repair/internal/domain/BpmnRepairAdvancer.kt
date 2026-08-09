@@ -186,7 +186,7 @@ internal class BpmnRepairAdvancer(
         if (nextEvaluation.blockingDiagnostics.isNotEmpty() &&
             nextRecord.blockingDiagnosticFingerprint == priorRecord.blockingDiagnosticFingerprint
         ) {
-            throw RepairReplans.signal(
+            throw StuckBlockingDiagnosticsException(
                 "unchanged blocking diagnostics after repair attempt $repairAttempts",
             )
         }

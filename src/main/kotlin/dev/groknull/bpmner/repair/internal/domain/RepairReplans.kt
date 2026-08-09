@@ -19,3 +19,7 @@ object RepairReplans {
         return ex
     }
 }
+
+internal class StuckBlockingDiagnosticsException(
+    message: String,
+) : RuntimeException(message)

@@ -30,6 +30,9 @@ internal object GenerationExamples {
     const val INCLUSIVE_LABEL: String =
         "INCLUSIVE fork with a DEFAULT branch: conditions are independent; the join waits only for the branches that fired"
 
+    const val CONVERGING_DECISIONS_LABEL: String =
+        "Converging decisions: separate decision gateways may each route directly to the same next activity"
+
     const val SUB_PROCESS_LABEL: String =
         "Embedded subprocess: a SUB_PROCESS node on the main flow whose members carry parentRef = the " +
             "subprocess id; the subprocess has its own inner start/end and no flow crosses its boundary"
@@ -55,6 +58,13 @@ internal object GenerationExamples {
     private const val EXTRAS_JOIN = "Gateway_join_extras"
     private const val LABEL = "act-label"
     private const val PACKED = "end-packed"
+
+    private const val PAYMENT_START = "StartEvent_payment"
+    private const val PAYMENT_RECEIVED = "dec-payment-received"
+    private const val PAYMENT_VERIFIED = "dec-payment-verified"
+    private const val MARK_PAID = "act-mark-order-paid"
+    private const val PAYMENT_REJECTED = "end-payment-rejected"
+    private const val PAYMENT_COMPLETED = "end-payment-completed"
 
     val parallelForkJoin: FlatBpmnDefinition =
         FlatBpmnDefinition(
@@ -109,6 +119,28 @@ internal object GenerationExamples {
                 BpmnEdge("Flow_7", SKIP, EXTRAS_JOIN),
                 BpmnEdge("Flow_8", EXTRAS_JOIN, LABEL),
                 BpmnEdge("Flow_9", LABEL, PACKED),
+            ),
+        )
+
+    val convergingDecisions: FlatBpmnDefinition =
+        FlatBpmnDefinition(
+            processId = "Process_payment",
+            processName = "Payment processing",
+            nodes = listOf(
+                FlatBpmnNode(PAYMENT_START, FlatBpmnNodeKind.START_EVENT, "Payment submitted"),
+                FlatBpmnNode(PAYMENT_RECEIVED, FlatBpmnNodeKind.EXCLUSIVE_GATEWAY, "Was payment received?"),
+                FlatBpmnNode(PAYMENT_VERIFIED, FlatBpmnNodeKind.EXCLUSIVE_GATEWAY, "Was payment verified?"),
+                FlatBpmnNode(MARK_PAID, FlatBpmnNodeKind.USER_TASK, "Mark order paid"),
+                FlatBpmnNode(PAYMENT_REJECTED, FlatBpmnNodeKind.END_EVENT, "Payment rejected"),
+                FlatBpmnNode(PAYMENT_COMPLETED, FlatBpmnNodeKind.END_EVENT, "Payment completed"),
+            ),
+            sequences = listOf(
+                BpmnEdge("Flow_1", PAYMENT_START, PAYMENT_RECEIVED),
+                BpmnEdge("Flow_2", PAYMENT_RECEIVED, MARK_PAID, conditionExpression = "received"),
+                BpmnEdge("Flow_3", PAYMENT_RECEIVED, PAYMENT_VERIFIED, conditionExpression = "requires verification"),
+                BpmnEdge("Flow_4", PAYMENT_VERIFIED, MARK_PAID, conditionExpression = "verified"),
+                BpmnEdge("Flow_5", PAYMENT_VERIFIED, PAYMENT_REJECTED, conditionExpression = "rejected"),
+                BpmnEdge("Flow_6", MARK_PAID, PAYMENT_COMPLETED),
             ),
         )
 
@@ -204,6 +236,7 @@ internal object GenerationExamples {
     val all: List<Pair<String, FlatBpmnDefinition>> = listOf(
         PARALLEL_LABEL to parallelForkJoin,
         INCLUSIVE_LABEL to inclusiveWithDefault,
+        CONVERGING_DECISIONS_LABEL to convergingDecisions,
         SUB_PROCESS_LABEL to embeddedSubProcess,
         POOLS_AND_LANES_LABEL to whiteBoxPoolWithLanes,
     )

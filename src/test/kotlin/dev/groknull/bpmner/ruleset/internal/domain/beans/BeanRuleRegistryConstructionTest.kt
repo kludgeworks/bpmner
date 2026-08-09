@@ -30,8 +30,8 @@ internal class BeanRuleRegistryConstructionTest {
             val llmSpecs = ruleRegistry.llmRuleSpecs()
             val llmIds = llmSpecs.map { it.metadata.id }
 
-            // Executable rules: 41 bean + 7 compiled = 48
-            assertThat(activeRules).hasSize(48)
+            // Executable rules: 40 bean + 7 compiled = 47
+            assertThat(activeRules).hasSize(47)
             assertThat(activeIds).doesNotHaveDuplicates()
 
             // LLM rule specs: 2 metadata-only rules (excluded from activeRules)
@@ -47,7 +47,7 @@ internal class BeanRuleRegistryConstructionTest {
                 assertThat(activeIds).doesNotContain(llmId)
             }
 
-            // All 41 active Pkl-derived bean ids (excluding 9 deferred rules).
+            // All 40 active Pkl-derived bean ids (excluding 9 deferred rules).
             // Includes the 7 compiled Kotlin rules in the total count.
             assertThat(activeIds).contains(
                 // Activity (5)
@@ -73,8 +73,7 @@ internal class BeanRuleRegistryConstructionTest {
                 "evt-message-start-has-message-flow",
                 "evt-start-no-incoming",
                 "evt-timer-start-events-block-until-time",
-                // Flow (2)
-                "flow-diverging-flow-outcome-label",
+                // Flow (1)
                 "flow-sequence-flow-within-pool",
                 // Gateway (10)
                 "gtw-converging-gateway-unnamed",

@@ -74,9 +74,9 @@ internal class BpmnRepairLoop(
 
     /**
      * Apply the single cheapest applicable fix tier to [prior] and return the next
-     * [BpmnRepairEvaluation].  When a no-progress / stuck replan signal fires from the
-     * applier, return [prior] unchanged so the evaluator can reject it and the loop
-     * advances towards the iteration bound (doc §3.4, approach 2).
+     * [BpmnRepairEvaluation]. When a structural patch leaves the blocking diagnostics
+     * unchanged, retry through the existing full-rewrite tier. Other replan signals
+     * return [prior] unchanged so the evaluator advances towards the iteration bound.
      */
     private fun selectAndApply(prior: BpmnRepairEvaluation, context: ActionContext): BpmnRepairEvaluation {
         return try {
@@ -88,7 +88,7 @@ internal class BpmnRepairLoop(
                     llmRepairApplier.applyLlmLabelPatch(prior, context, labelCandidates(prior))
 
                 prior.hasLlmStructuralEligible ->
-                    llmRepairApplier.applyLlmStructuralPatch(prior, context, structuralCandidates(prior))
+                    applyStructuralPatchOrRewrite(prior, context)
 
                 prior.hasLlmEligible ->
                     llmRepairApplier.applyFullLlmRewrite(prior, context, rewriteCandidates(prior))
@@ -96,13 +96,23 @@ internal class BpmnRepairLoop(
                 else -> prior // nothing applicable; evaluator rejects, loop ends
             }
         } catch (e: ReplanRequestedException) {
-            // No-progress / stuck / malformed-LLM guard fired.  Return prior unchanged so the
-            // evaluator scores it non-accepting and the iteration bound terminates the loop
-            // (doc §3.4 approach 2: catch at the loop seam, do not weaken the guards).
+            // No-progress or malformed-LLM guard fired. Return prior unchanged so the evaluator
+            // scores it non-accepting and the iteration bound terminates the loop.
             logger.debug("Repair loop: replan signal caught — returning prior to advance iteration bound. Reason: {}", e.message)
             prior
         }
     }
+
+    private fun applyStructuralPatchOrRewrite(
+        prior: BpmnRepairEvaluation,
+        context: ActionContext,
+    ): BpmnRepairEvaluation =
+        try {
+            llmRepairApplier.applyLlmStructuralPatch(prior, context, structuralCandidates(prior))
+        } catch (e: StuckBlockingDiagnosticsException) {
+            logger.debug("Repair loop: structural patch stalled — escalating to full rewrite. Reason: {}", e.message)
+            llmRepairApplier.applyFullLlmRewrite(prior, context, rewriteCandidates(prior))
+        }
 
     /** Convert a [BpmnRepairEvaluation] into a [TextFeedback] score for the evaluator. */
     private fun evaluate(result: BpmnRepairEvaluation): TextFeedback {

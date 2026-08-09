@@ -44,7 +44,16 @@ internal class DefaultBpmnRepairer(
         // Run the RepeatUntilAcceptable loop — no-op when seedEval.diagnosticsResolved.
         val finalEval = repairLoop.run(seedEval, context)
 
-        logAdvisoryDiagnostics(finalEval.evaluation.advisoryDiagnostics, finalEval.repairAttempts)
+        val blockingDiagnostics = finalEval.evaluation.blockingDiagnostics
+        if (blockingDiagnostics.isEmpty()) {
+            logAdvisoryDiagnostics(finalEval.evaluation.advisoryDiagnostics, finalEval.repairAttempts)
+        } else {
+            logger.info(
+                "Pipeline validation failed after {} repair attempt(s) with {} blocking diagnostic(s) remaining",
+                finalEval.repairAttempts,
+                blockingDiagnostics.size,
+            )
+        }
         val xml = finalEval.evaluation.validatedXml
             ?: finalEval.rendered?.xml
             ?: error("validateInitial fired with no validated XML and no rendered XML")
