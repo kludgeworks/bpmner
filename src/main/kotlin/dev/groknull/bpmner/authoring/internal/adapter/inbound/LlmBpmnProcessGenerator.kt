@@ -22,12 +22,12 @@ import dev.groknull.bpmner.authoring.ValidatedOutline
 import dev.groknull.bpmner.authoring.internal.BpmnAuthoringConfig
 import dev.groknull.bpmner.authoring.internal.adapter.outbound.FlatBpmnDefinition
 import dev.groknull.bpmner.authoring.internal.adapter.outbound.toSealed
+import dev.groknull.bpmner.authoring.internal.domain.BpmnFidelityReport
 import dev.groknull.bpmner.authoring.internal.domain.BpmnFidelitySeverity
 import dev.groknull.bpmner.authoring.internal.domain.ProcessOutline
 import dev.groknull.bpmner.bpmn.BpmnRequest
 import dev.groknull.bpmner.bpmn.LaidOutProcessGraph
 import dev.groknull.bpmner.bpmn.RenderedBpmn
-import dev.groknull.bpmner.bpmn.RetryableBpmnGenerationException
 import dev.groknull.bpmner.conformance.BpmnDiagnostic
 import dev.groknull.bpmner.conformance.BpmnDiagnosticSource
 import dev.groknull.bpmner.conformance.BpmnLoggingConfig
@@ -65,12 +65,20 @@ internal class LlmBpmnProcessGenerator(
     /**
      * Single LLM-driven action: contract → outline → fidelity-checked [ValidatedOutline].
      *
+     * The fidelity check is corrective, not stochastic: on a fidelity violation, the next
+     * attempt's prompt states what the previous attempt got wrong
+     * ([templateModel]'s `previousFailure`), up to [BpmnAuthoringConfig.maxOutlineAttempts].
+     *
+     * The loop lives here rather than delegating to the framework's action retry because that
+     * retry re-invokes the action from scratch and hands it no per-attempt state: the diagnostic
+     * computed on one attempt cannot reach the next, so the model would be asked the identical
+     * question every time and never told it got it wrong.
+     *
      * The LLM call and its deterministic post-validation are one logical step — no intermediate
      * `createObject` null-guard is needed because `createObject` returns non-null by Embabel's
      * contract and throws `InvalidLlmReturnFormatException` on failure
      * (see [Embabel `LlmOperations.createObject`]).
      */
-    @Suppress("LongMethod")
     override fun createOutline(
         ready: ReadyBpmnContext,
         validatedContract: ValidatedProcessContract,
@@ -84,7 +92,54 @@ internal class LlmBpmnProcessGenerator(
             error("Cannot generate BPMN from an invalid process contract:${System.lineSeparator()}$issues")
         }
         val promptRunner = config.generator.promptRunner(context)
-        val flat = requestFlatDefinition(promptRunner, request, validatedContract)
+
+        var previousFailure: String? = null
+        lateinit var lastAttempt: OutlineAttempt
+        for (attempt in 1..config.maxOutlineAttempts) {
+            lastAttempt = attemptOutline(request, validatedContract, promptRunner, previousFailure)
+            if (lastAttempt.fidelityReport.isValid) {
+                return ValidatedOutline(
+                    outline = lastAttempt.outline,
+                    diagnostics = lastAttempt.diagnostics,
+                    fidelityReport = lastAttempt.fidelityReport,
+                )
+            }
+            if (attempt < config.maxOutlineAttempts) {
+                logger.warn(
+                    "Outline attempt {}/{} failed fidelity check ({} issue(s)); retrying with diagnostic feedback",
+                    attempt,
+                    config.maxOutlineAttempts,
+                    lastAttempt.fidelityReport.issues.size,
+                )
+            }
+            previousFailure = lastAttempt.violations
+        }
+        throw BpmnOutlineGenerationException(
+            "Generated BPMN did not faithfully encode the source contract topology after " +
+                "${config.maxOutlineAttempts} corrective attempt(s):" +
+                "${System.lineSeparator()}${lastAttempt.violations}",
+        )
+    }
+
+    /** One outline generation + fidelity-check pass within [createOutline]'s corrective loop. */
+    private data class OutlineAttempt(
+        val outline: ProcessOutline,
+        val diagnostics: List<BpmnDiagnostic>,
+        val fidelityReport: BpmnFidelityReport,
+    ) {
+        val violations: String
+            get() = fidelityReport.issues
+                .filter { it.severity == BpmnFidelitySeverity.ERROR }
+                .joinToString(separator = System.lineSeparator()) { "- [${it.code}] ${it.message}" }
+    }
+
+    private fun attemptOutline(
+        request: BpmnRequest,
+        validatedContract: ValidatedProcessContract,
+        promptRunner: PromptRunner,
+        previousFailure: String?,
+    ): OutlineAttempt {
+        val flat = requestFlatDefinition(promptRunner, request, validatedContract, previousFailure)
         val rawDefinition = try {
             flat.toSealed()
         } catch (e: IllegalArgumentException) {
@@ -127,18 +182,7 @@ internal class LlmBpmnProcessGenerator(
         }
 
         val fidelityReport = fidelityChecker.checkDetailed(validatedContract.contract, outline.definition)
-        if (fidelityReport.issues.any { it.severity == BpmnFidelitySeverity.ERROR }) {
-            val violations =
-                fidelityReport.issues
-                    .filter { it.severity == BpmnFidelitySeverity.ERROR }
-                    .joinToString(separator = System.lineSeparator()) { "- [${it.code}] ${it.message}" }
-            throw RetryableBpmnGenerationException(
-                "Generated BPMN does not faithfully encode the source contract topology " +
-                    "(${fidelityReport.issues.size} fidelity issue(s)):${System.lineSeparator()}$violations",
-            )
-        }
-
-        return ValidatedOutline(outline = outline, diagnostics = diagnostics, fidelityReport = fidelityReport)
+        return OutlineAttempt(outline, diagnostics, fidelityReport)
     }
 
     /**
@@ -153,6 +197,7 @@ internal class LlmBpmnProcessGenerator(
         promptRunner: PromptRunner,
         request: BpmnRequest,
         validatedContract: ValidatedProcessContract,
+        previousFailure: String?,
     ): FlatBpmnDefinition = try {
         eventPublisher.publishOnInvalidLlmReturn("authoring") {
             // Typed few-shot examples for the non-obvious topologies (fork/join, data, subprocesses, pools).
@@ -160,7 +205,7 @@ internal class LlmBpmnProcessGenerator(
                 .fold(promptRunner.creating(FlatBpmnDefinition::class.java)) { acc, (label, example) ->
                     acc.withExample(label, example)
                 }
-            creating.fromTemplate("bpmner/generate_bpmn", templateModel(request, validatedContract))
+            creating.fromTemplate("bpmner/generate_bpmn", templateModel(request, validatedContract, previousFailure))
         }
     } catch (e: InvalidLlmReturnFormatException) {
         throw BpmnOutlineGenerationException(
@@ -267,10 +312,12 @@ internal class LlmBpmnProcessGenerator(
     private fun templateModel(
         request: BpmnRequest,
         validatedContract: ValidatedProcessContract,
+        previousFailure: String?,
     ): Map<String, Any> = mapOf(
         "contractMarkdown" to contractRenderer.render(validatedContract.contract).trim(),
         "processDescription" to request.processDescription,
         "styleGuide" to (request.styleGuide ?: ""),
+        "previousFailure" to (previousFailure ?: ""),
         "namingShapeAdvice" to BpmnNamingShapeAdvice.allAdvice().map { advice ->
             val examples = advice.examples.joinToString(", ") { "\"$it\"" }
             val avoid = advice.antiExamples.joinToString(", ") { "\"$it\"" }

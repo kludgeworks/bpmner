@@ -75,3 +75,8 @@ Original input for traceability only:
 Style guide:
 {{ styleGuide }}
 {% endif %}
+{% if previousFailure %}
+Your previous attempt was rejected: it did not faithfully encode the contract's topology.
+Fix every issue below in this attempt — do not repeat them:
+{{ previousFailure }}
+{% endif %}
