@@ -54,29 +54,46 @@ internal class LlmProcessContractExtractor(
                 .promptRunner(context)
                 .withPromptContributor(PromptContributor.fixed(request.styleGuideContribution()))
 
-        val flat = requestFlatContract(promptRunner, request, assessment)
-        val contract = try {
-            flat.toSealed()
-        } catch (e: IllegalArgumentException) {
-            throw RetryableBpmnGenerationException(
-                "LLM generated a structurally incomplete ProcessContract: ${e.message}",
-                e,
-            )
-        }
+        var previousIssues: String? = null
+        lateinit var lastValidated: ValidatedProcessContract
+        for (attempt in 1..thresholds.maxExtractionAttempts) {
+            val flat = requestFlatContract(promptRunner, request, assessment, previousIssues)
+            val contract = try {
+                flat.toSealed()
+            } catch (e: IllegalArgumentException) {
+                throw RetryableBpmnGenerationException(
+                    "LLM generated a structurally incomplete ProcessContract: ${e.message}",
+                    e,
+                )
+            }
 
-        logger.info("Contract extracted:\n{}", markdownRenderer.render(contract))
-        val report = validator.validate(contract)
-        if (!report.isValid) {
+            logger.info("Contract extracted:\n{}", markdownRenderer.render(contract))
+            val report = validator.validate(contract)
+            lastValidated = ValidatedProcessContract(contract = contract, report = report)
+            if (report.isValid) {
+                eventPublisher.publishEvent(
+                    BpmnContractExtractedEvent(lastValidated, processId = AgentProcess.get()?.id),
+                )
+                return lastValidated
+            }
             val errorCount = report.issues.count { it.severity == ContractIssueSeverity.ERROR }
             logger.warn(
-                "Contract validation found {} error(s): {}",
+                "Contract extraction attempt {}/{} found {} error(s): {}",
+                attempt,
+                thresholds.maxExtractionAttempts,
                 errorCount,
                 report.issues.joinToString { it.format() },
             )
+            previousIssues = report.issues.joinToString(System.lineSeparator()) { "- ${it.format()}" }
         }
-        val validated = ValidatedProcessContract(contract = contract, report = report)
-        eventPublisher.publishEvent(BpmnContractExtractedEvent(validated, processId = AgentProcess.get()?.id))
-        return validated
+        // Exhausted the corrective budget without a valid contract. Returning `lastValidated`
+        // here would hand a contract with isValid == false to the next stage, which treats that
+        // same condition as fatal — so fail here, where the diagnostic is still actionable,
+        // rather than one stage later where retrying cannot fix it.
+        throw BpmnContractExtractionException(
+            "Process contract failed validation after ${thresholds.maxExtractionAttempts} " +
+                "corrective attempt(s):${System.lineSeparator()}$previousIssues",
+        )
     }
 
     /**
@@ -90,6 +107,7 @@ internal class LlmProcessContractExtractor(
         promptRunner: PromptRunner,
         request: BpmnRequest,
         assessment: ProcessInputAssessment,
+        previousIssues: String?,
     ): FlatProcessContract = try {
         eventPublisher.publishOnInvalidLlmReturn("contract") {
             promptRunner
@@ -112,7 +130,7 @@ internal class LlmProcessContractExtractor(
                     ContractExtractionExamples.businessRuleTaskExample,
                 )
                 .withExample(ContractExtractionExamples.SUB_PROCESS_LABEL, ContractExtractionExamples.subProcessExample)
-                .fromTemplate("bpmner/extract_contract", templateModel(request, assessment))
+                .fromTemplate("bpmner/extract_contract", templateModel(request, assessment, previousIssues))
         }
     } catch (e: InvalidLlmReturnFormatException) {
         throw BpmnContractExtractionException(
@@ -129,8 +147,10 @@ internal class LlmProcessContractExtractor(
     private fun templateModel(
         request: BpmnRequest,
         assessment: ProcessInputAssessment,
+        previousIssues: String?,
     ): Map<String, Any> = mapOf(
         "maxAssumptions" to thresholds.maxAssumptions,
+        "previousIssues" to (previousIssues ?: ""),
         "rationale" to assessment.rationale,
         "missingAreas" to assessment.missingAreas.map { it.name },
         "evidence" to assessment.evidence.map {

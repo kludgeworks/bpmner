@@ -12,8 +12,10 @@ Every `bpmner.*` YAML key, default, range, when to tune.
 | --- | --- | --- | --- |
 | `bpmner.budget.generation` | `100` | ≥ 1 | Bump if the generation+repair loop terminates with `ProcessExecutionTerminatedException` on inputs you believe are tractable. Lower at your peril — the budget covers generation AND the entire repair loop in one process. |
 | `bpmner.budget.readiness` | `20` | ≥ 1 | Rarely tuned. Readiness has no repair loop; 20 is generous. |
+| `bpmner.max-outline-attempts` | `3` | ≥ 1 | Corrective attempts `createOutline` makes on a fidelity failure before terminating `OUTLINE_FAILED`; each attempt after the first states the prior attempt's diagnostic in the prompt. |
+| `bpmner.contract.max-extraction-attempts` | `3` | ≥ 1 | Corrective attempts `extractContract` makes on a self-validation failure before terminating `CONTRACT_FAILED`; each attempt after the first states the prior attempt's validation issues in the prompt. |
 
-Both fields are bound at `bpmner.budget` via `@ConfigurationProperties` in the authoring and readiness capability config files.
+Both budget fields are bound at `bpmner.budget` via `@ConfigurationProperties` in the authoring and readiness capability config files.
 
 ### Readiness and clarification
 

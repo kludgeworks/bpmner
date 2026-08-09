@@ -55,4 +55,9 @@ internal data class BpmnContractConfig(
 internal data class BpmnContractThresholdsConfig(
     @field:Min(0)
     val maxAssumptions: Int = 10,
+    // Bounds extraction's corrective retry on a self-validation failure. Each attempt after the
+    // first states the previous attempt's validation issues in the prompt, so extraction never
+    // has to return an invalid ValidatedProcessContract.
+    @field:Min(1)
+    val maxExtractionAttempts: Int = 3,
 )

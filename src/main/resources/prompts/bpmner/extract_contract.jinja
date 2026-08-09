@@ -51,6 +51,12 @@ Clarification answers (in order). Use questionId in `sourceIds` when relevant:
 Style guide (constraints on naming and structure):
 {{ styleGuide }}
 {% endif %}
+{% if previousIssues %}
+
+Your previous attempt was rejected: it failed contract validation.
+Fix every issue below in this attempt — do not repeat them:
+{{ previousIssues }}
+{% endif %}
 
 Original BPMN request text:
 {{ processDescription }}
