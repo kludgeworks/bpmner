@@ -103,11 +103,18 @@ data class ContractValidationReport(
     val isValid: Boolean = issues.none { it.severity == ContractIssueSeverity.ERROR }
 }
 
-data class ValidatedProcessContract(
+@ConsistentCopyVisibility
+data class ValidatedProcessContract private constructor(
     val contract: ProcessContract,
     val report: ContractValidationReport,
 ) {
-    val isValid: Boolean = report.isValid
+    companion object {
+        /** Returns `null` when [report] carries an ERROR-severity issue. */
+        fun of(
+            contract: ProcessContract,
+            report: ContractValidationReport,
+        ): ValidatedProcessContract? = if (report.isValid) ValidatedProcessContract(contract, report) else null
+    }
 }
 
 fun ContractValidationIssue.format(): String = buildString {

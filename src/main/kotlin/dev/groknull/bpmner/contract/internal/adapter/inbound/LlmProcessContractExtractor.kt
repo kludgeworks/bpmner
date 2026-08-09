@@ -68,8 +68,8 @@ internal class LlmProcessContractExtractor(
 
             logger.info("Contract extracted:\n{}", markdownRenderer.render(contract))
             val report = validator.validate(contract)
-            if (report.isValid) {
-                val validated = ValidatedProcessContract(contract = contract, report = report)
+            val validated = ValidatedProcessContract.of(contract, report)
+            if (validated != null) {
                 eventPublisher.publishEvent(
                     BpmnContractExtractedEvent(validated, processId = AgentProcess.get()?.id),
                 )
