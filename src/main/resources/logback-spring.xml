@@ -25,6 +25,9 @@
     <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
     <springProperty scope="context" name="LOG_DIR" source="bpmner.logging.dir" defaultValue="logs"/>
     <springProperty scope="context" name="LOG_FILE_OVERRIDE" source="bpmner.logging.file"/>
+    <!-- Stdout threshold only — never the file appender's, and never a per-logger level.
+         See bpmner.logging.console-level in application.yaml for the operational rationale. -->
+    <springProperty scope="context" name="CONSOLE_LOG_LEVEL" source="bpmner.logging.console-level" defaultValue="INFO"/>
     <timestamp key="RUN_TS" datePattern="yyyyMMdd-HHmmss-SSS" timeReference="contextBirth"/>
 
     <property name="CONSOLE_PATTERN"
@@ -36,7 +39,7 @@
 
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
         <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
-            <level>INFO</level>
+            <level>${CONSOLE_LOG_LEVEL}</level>
         </filter>
         <encoder>
             <pattern>${CONSOLE_PATTERN}</pattern>

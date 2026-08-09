@@ -59,6 +59,7 @@ The `Persona` slot for each agent (`bpmner.generator`, `bpmner.repairer`, `bpmne
 | `bpmner.logging.dump-artifacts` | `false` | When `true`, every intermediate artifact (outline JSON, rendered XML, repair attempts) is logged at DEBUG with a length cap. Off for production. Override via env: `BPMNER_LOGGING_DUMP_ARTIFACTS=true`. |
 | `bpmner.logging.artifact-preview-length` | `8000` | Truncation cap for dumped artifacts (characters). |
 | `bpmner.logging.llm-interactions` | `false` | When `true`, Embabel prints complete prompts and structured LLM responses for CLI and web generation. These messages can contain user process descriptions, style guides, clarification answers, and model output. Enable only in a trusted diagnostic environment. Override via env: `BPMNER_LOGGING_LLM_INTERACTIONS=true`. |
+| `bpmner.logging.console-level` | `INFO` | The console appender's threshold — independent of the file appender's (unfiltered) and of per-logger levels (`dev.groknull.bpmner`/`Embabel` are `DEBUG` by default in `logback-spring.xml` regardless of this setting). In a deployment with no mounted log volume, the file appender's output is unreachable and `kubectl logs` only ever shows stdout — set `BPMNER_LOGGING_CONSOLE_LEVEL=DEBUG` to make existing DEBUG logging (including the run-update stream `RunUpdateSinkRegistry` emits, see [`architecture.md` §`RunUpdate` wire contract](architecture.md#wire-contract)) visible there. |
 
 The `verbose` Spring profile enables `bpmner.logging.llm-interactions`. Treat verbose logs as
 sensitive data: restrict access and retention, and do not use that profile in production unless
@@ -133,6 +134,12 @@ is the Embabel `OutputChannel` registered on every run plus the platform lifecyc
 is where bpmner's own deterministic `@DomainEvent` milestones land. Add a new milestone listener
 there (and, if it is a new deterministic domain event, at its producer site) when you add a stage
 worth surfacing to the author.
+
+`RunUpdateSinkRegistry` also logs every emitted update at `DEBUG` in the same flat shape the SSE
+endpoint serializes (`seq`/`phase`/`artifactState`/`outcome?`/`summary`/`detail`) — grep a log for
+`RunUpdate[<processId>]` to trace one run's ordered sequence outside a browser. This logger is
+`DEBUG` by default; see `bpmner.logging.console-level` above to make it reach `kubectl logs` in a
+deployment with no mounted log volume.
 
 ### Custom Embabel listeners
 

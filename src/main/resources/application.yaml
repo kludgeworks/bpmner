@@ -41,6 +41,11 @@ bpmner:
     # Includes user prose, full prompts, and structured LLM responses. Opt in only for local
     # diagnostics because process descriptions and model messages may contain sensitive data.
     llm-interactions: ${BPMNER_LOGGING_LLM_INTERACTIONS:false}
+    # Console (stdout) threshold — independent of the file appender and of per-logger levels
+    # (dev.groknull.bpmner/Embabel are DEBUG by default regardless of this setting). Deployments
+    # without a mounted log volume have no other way to see DEBUG: `kubectl logs` only ever shows
+    # stdout. Override with `BPMNER_LOGGING_CONSOLE_LEVEL=DEBUG` to make it visible there too.
+    console-level: ${BPMNER_LOGGING_CONSOLE_LEVEL:INFO}
   # Rule profile and per-rule severity overrides are now sourced from bpmner.pkl (via
   # BpmnerLintConfig). To override the conventions source, set bpmner.rules.config-uri to a
   # file: URI pointing at a local bpmner.pkl that amends the packaged BpmnerLintConfig.pkl.
