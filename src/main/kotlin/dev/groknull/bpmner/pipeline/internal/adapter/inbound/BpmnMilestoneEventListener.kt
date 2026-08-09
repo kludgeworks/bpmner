@@ -61,10 +61,8 @@ internal class BpmnMilestoneEventListener(
             processId = processId,
             phase = RunPhase.CONTRACT,
             artifactState = ArtifactState.NONE,
-            summary = "Extracted the process contract" +
-                (if (event.contract.isValid) "." else " (with issues)."),
+            summary = "Extracted the process contract.",
             detail = mapOf(
-                "valid" to event.contract.isValid.toString(),
                 "issueCount" to event.contract.report.issues.size.toString(),
             ),
         )

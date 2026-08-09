@@ -92,7 +92,7 @@ class BpmnMilestoneEventListenerTest {
         val update = registry.subscribe("proc-contract").take(1).collectList().block(TIMEOUT)!!.single()
         assertEquals(RunPhase.CONTRACT, update.phase)
         assertEquals(ArtifactState.NONE, update.artifactState)
-        assertEquals("true", update.detail["valid"])
+        assertEquals("Extracted the process contract.", update.summary)
         assertEquals("0", update.detail["issueCount"])
     }
 
@@ -210,10 +210,10 @@ class BpmnMilestoneEventListenerTest {
         rationale = "Fully aligned.",
     )
 
-    private fun validContract(): ValidatedProcessContract = ValidatedProcessContract(
+    private fun validContract(): ValidatedProcessContract = ValidatedProcessContract.of(
         contract = mock(ProcessContract::class.java),
         report = ContractValidationReport(issues = emptyList()),
-    )
+    )!!
 
     private fun minimalGraph(): LaidOutProcessGraph = LaidOutProcessGraph(
         ownedGraph = mock(OwnedElementGraph::class.java),
