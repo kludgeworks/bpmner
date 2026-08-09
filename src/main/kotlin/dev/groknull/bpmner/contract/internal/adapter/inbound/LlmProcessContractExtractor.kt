@@ -55,7 +55,6 @@ internal class LlmProcessContractExtractor(
                 .withPromptContributor(PromptContributor.fixed(request.styleGuideContribution()))
 
         var previousIssues: String? = null
-        lateinit var lastValidated: ValidatedProcessContract
         for (attempt in 1..thresholds.maxExtractionAttempts) {
             val flat = requestFlatContract(promptRunner, request, assessment, previousIssues)
             val contract = try {
@@ -69,12 +68,12 @@ internal class LlmProcessContractExtractor(
 
             logger.info("Contract extracted:\n{}", markdownRenderer.render(contract))
             val report = validator.validate(contract)
-            lastValidated = ValidatedProcessContract(contract = contract, report = report)
             if (report.isValid) {
+                val validated = ValidatedProcessContract(contract = contract, report = report)
                 eventPublisher.publishEvent(
-                    BpmnContractExtractedEvent(lastValidated, processId = AgentProcess.get()?.id),
+                    BpmnContractExtractedEvent(validated, processId = AgentProcess.get()?.id),
                 )
-                return lastValidated
+                return validated
             }
             val errorCount = report.issues.count { it.severity == ContractIssueSeverity.ERROR }
             logger.warn(
