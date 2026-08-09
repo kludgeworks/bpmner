@@ -43,6 +43,9 @@ internal class RunUpdateSinkRegistry {
     /** Last-known phase/artifact per process, so a bare narration ([emitNarration]) can be placed in context. */
     private val lastKnown = ConcurrentHashMap<String, Pair<RunPhase, ArtifactState>>()
 
+    /** Processes that have already emitted their terminal — see [emitTerminal]. */
+    private val terminated = ConcurrentHashMap.newKeySet<String>()
+
     /** Publishes an ordered, non-terminal [RunUpdate.Progress] for [processId]. */
     fun emit(
         processId: String,
@@ -78,6 +81,10 @@ internal class RunUpdateSinkRegistry {
     /**
      * Publishes the single terminal [RunUpdate.Terminal] for [processId] and completes its
      * sink — no further updates are possible for this process afterwards.
+     *
+     * A run can reach a terminal by more than one route (a typed result, a platform failure
+     * event, or the abort backstop), and more than one may fire for the same run. The first
+     * wins and the rest are dropped, so a consumer always sees exactly one terminal.
      */
     fun emitTerminal(
         processId: String,
@@ -86,6 +93,10 @@ internal class RunUpdateSinkRegistry {
         outcome: RunOutcome,
         detail: Map<String, String> = emptyMap(),
     ) {
+        if (!terminated.add(processId)) {
+            logger.debug("Terminal already emitted for {}; dropping duplicate ({})", processId, summary)
+            return
+        }
         lastKnown.remove(processId)
         val processSink = sinkFor(processId)
         val update = RunUpdate.Terminal(
@@ -137,7 +148,11 @@ internal class RunUpdateSinkRegistry {
         val victim = sinks.entries.filter { it.value.sink.currentSubscriberCount() == 0 }
             .minByOrNull { it.value.createdAt }
             ?: sinks.entries.minByOrNull { it.value.createdAt }
-        victim?.let { sinks.remove(it.key) }
+        victim?.let {
+            sinks.remove(it.key)
+            // Bounded with the sinks it guards, or it would grow for the lifetime of the process.
+            terminated.remove(it.key)
+        }
     }
 
     companion object {

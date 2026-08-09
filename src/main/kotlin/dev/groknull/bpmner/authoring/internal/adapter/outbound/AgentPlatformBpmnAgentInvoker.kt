@@ -8,17 +8,22 @@ package dev.groknull.bpmner.authoring.internal.adapter.outbound
 import com.embabel.agent.api.channel.OutputChannel
 import com.embabel.agent.api.common.autonomy.AgentProcessExecution
 import com.embabel.agent.core.AgentPlatform
+import com.embabel.agent.core.AgentProcess
 import com.embabel.agent.core.Budget
 import com.embabel.agent.core.ProcessOptions
 import com.embabel.agent.core.Verbosity
 import dev.groknull.bpmner.authoring.BpmnAgentInvoker
 import dev.groknull.bpmner.authoring.BpmnResult
+import dev.groknull.bpmner.authoring.BpmnRunAbortedEvent
 import dev.groknull.bpmner.authoring.internal.BpmnAuthoringBudgetConfig
 import dev.groknull.bpmner.bpmn.BpmnRequest
 import dev.groknull.bpmner.llm.LlmInteractionLoggingConfig
 import dev.groknull.bpmner.readiness.ProcessInputAssessment
 import org.jmolecules.architecture.onion.simplified.InfrastructureRing
+import org.slf4j.LoggerFactory
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Component
+import java.util.concurrent.CompletionException
 
 @InfrastructureRing
 @Component
@@ -28,7 +33,9 @@ internal class AgentPlatformBpmnAgentInvoker(
     private val logging: LlmInteractionLoggingConfig,
     /** Framework port — keeps `authoring` free of importing `pipeline.internal`. */
     private val outputChannel: OutputChannel,
+    private val eventPublisher: ApplicationEventPublisher,
 ) : BpmnAgentInvoker {
+    private val logger = LoggerFactory.getLogger(AgentPlatformBpmnAgentInvoker::class.java)
     override fun generate(
         request: BpmnRequest,
         assessment: ProcessInputAssessment,
@@ -69,7 +76,7 @@ internal class AgentPlatformBpmnAgentInvoker(
                 request,
                 assessment,
             )
-        agentPlatform.start(process)
+        startReportingAbort(process)
         return process.id
     }
 
@@ -88,8 +95,31 @@ internal class AgentPlatformBpmnAgentInvoker(
                 asyncGenerationProcessOptions(),
                 request,
             )
-        agentPlatform.start(process)
+        startReportingAbort(process)
         return process.id
+    }
+
+    /**
+     * Starts [process] in the background and publishes [BpmnRunAbortedEvent] if it ends by
+     * throwing.
+     *
+     * An exception raised by an action propagates out of the process's run loop before the
+     * platform can set a terminal status, so no lifecycle event is emitted and the failure would
+     * otherwise be swallowed by this future — leaving a subscriber waiting on a run that has
+     * already died.
+     */
+    private fun startReportingAbort(process: AgentProcess) {
+        agentPlatform.start(process).whenComplete { _, error ->
+            if (error == null) return@whenComplete
+            val cause = (error as? CompletionException)?.cause ?: error
+            logger.error("Generation process {} aborted with an unhandled exception", process.id, cause)
+            eventPublisher.publishEvent(
+                BpmnRunAbortedEvent(
+                    processId = process.id,
+                    detail = cause.message ?: cause::class.simpleName ?: "Unknown error",
+                ),
+            )
+        }
     }
 
     // Short CLI run, never polled for status → ephemeral=true. Listeners aren't passed via

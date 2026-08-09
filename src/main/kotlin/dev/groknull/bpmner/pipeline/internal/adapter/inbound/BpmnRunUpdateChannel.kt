@@ -11,6 +11,7 @@ import com.embabel.agent.api.channel.ProgressOutputChannelEvent
 import com.embabel.agent.api.event.AgentProcessEvent
 import com.embabel.agent.api.event.AgentProcessFailedEvent
 import com.embabel.agent.api.event.AgentProcessFinishedEvent
+import com.embabel.agent.api.event.AgentProcessStuckEvent
 import com.embabel.agent.api.event.AgentProcessWaitingEvent
 import com.embabel.agent.api.event.AgenticEventListener
 import com.embabel.agent.core.AgentProcess
@@ -64,6 +65,10 @@ internal class BpmnRunUpdateChannel(
             // wins this `when` before the broader FinishedEvent branch.
             is AgentProcessFailedEvent -> onFailed(event.agentProcess)
             is AgentProcessFinishedEvent -> onFinished(event.agentProcess)
+            // A stuck process has no plan to reach any goal and will emit nothing further.
+            // It is not a "finished" event, so without this branch the run goes silent and a
+            // subscriber waits forever.
+            is AgentProcessStuckEvent -> onStuck(event.agentProcess)
             else -> {}
         }
     }
@@ -93,6 +98,16 @@ internal class BpmnRunUpdateChannel(
             processId = process.id,
             artifactState = ArtifactState.NONE,
             summary = "BPMN generation failed to complete.",
+            outcome = RunOutcome.FAILED,
+        )
+    }
+
+    private fun onStuck(process: AgentProcess) {
+        clarificationRounds.remove(process.id)
+        registry.emitTerminal(
+            processId = process.id,
+            artifactState = ArtifactState.NONE,
+            summary = "BPMN generation could not continue.",
             outcome = RunOutcome.FAILED,
         )
     }
