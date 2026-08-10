@@ -97,7 +97,18 @@ bazel_bin="$(bazelisk info bazel-bin)"
 # package to DEBUG, but pinning the level here via a Spring property keeps the capture working even
 # if a profile's `logging.level.*` later demotes the package. Grep the log for "RunUpdate[" to pull
 # one run's ordered sequence (see plans/605/UI-HANDOFF.md §7).
-exec java \
-  -Dspring.profiles.active="${SPRING_PROFILES_ACTIVE}" \
-  -Dlogging.level.dev.groknull.bpmner.pipeline.internal.adapter.inbound.RunUpdateSinkRegistry=DEBUG \
-  -jar "${bazel_bin}/src/bpmner_app.jar"
+java_args=(
+  -Dspring.profiles.active="${SPRING_PROFILES_ACTIVE}"
+  -Dlogging.level.dev.groknull.bpmner.pipeline.internal.adapter.inbound.RunUpdateSinkRegistry=DEBUG
+)
+if [[ ${usage_verbose:-false} == "true" ]]; then
+  # Surface the raw HTTP exchange with the model provider — status code, rate-limit headers,
+  # retry-after — so a stalled LLM call can be told apart from a 429 throttle instead of both
+  # looking like a bare "timed out after Nms" in the app-level log.
+  java_args+=(
+    -Dlogging.level.org.springframework.web.client.RestClient=DEBUG
+    -Dlogging.level.org.springframework.ai.openai=DEBUG
+  )
+fi
+
+exec java "${java_args[@]}" -jar "${bazel_bin}/src/bpmner_app.jar"
