@@ -77,30 +77,39 @@ internal class LlmProcessContractExtractor(
             logger.info("Contract extracted:\n{}", markdownRenderer.render(contract))
             val report = validator.validate(contract)
             val validated = ValidatedProcessContract.of(contract, report)
-            if (validated != null) {
-                val drops = detectConservationDrops(contract, previousContract, previousReport)
-                if (drops.isEmpty()) {
-                    eventPublisher.publishEvent(
-                        BpmnContractExtractedEvent(validated, processId = AgentProcess.get()?.id),
-                    )
-                    return validated
-                }
-                previousIssues = conservationDropFeedback(attempt, drops)
+            val drops = detectConservationDrops(contract, previousContract, previousReport)
+            if (validated != null && drops.isEmpty()) {
+                eventPublisher.publishEvent(
+                    BpmnContractExtractedEvent(validated, processId = AgentProcess.get()?.id),
+                )
+                return validated
+            }
+
+            val validationFeedback = if (validated == null) {
+                val errorCount = report.issues.count { it.severity == ContractIssueSeverity.ERROR }
+                logger.warn(
+                    "Contract extraction attempt {}/{} found {} error(s): {}",
+                    attempt,
+                    thresholds.maxExtractionAttempts,
+                    errorCount,
+                    report.issues.joinToString { it.format() },
+                )
+                report.issues.joinToString(System.lineSeparator()) { "- ${it.format()}" }
+            } else {
+                null
+            }
+            val dropFeedback = if (drops.isNotEmpty()) conservationDropFeedback(attempt, drops) else null
+            previousIssues = listOfNotNull(validationFeedback, dropFeedback).joinToString(System.lineSeparator())
+
+            // R5: an attempt that drops previously-present content must never become the
+            // conservation baseline — valid or not. Otherwise the *next* attempt is only ever
+            // compared against the already-diminished content, and the drop this attempt made
+            // silently escapes detection forever (verified against both an invalid intermediate
+            // attempt and a valid-but-dropping one — the same bug in either branch).
+            if (drops.isEmpty()) {
                 previousContract = contract
                 previousReport = report
-                continue
             }
-            val errorCount = report.issues.count { it.severity == ContractIssueSeverity.ERROR }
-            logger.warn(
-                "Contract extraction attempt {}/{} found {} error(s): {}",
-                attempt,
-                thresholds.maxExtractionAttempts,
-                errorCount,
-                report.issues.joinToString { it.format() },
-            )
-            previousIssues = report.issues.joinToString(System.lineSeparator()) { "- ${it.format()}" }
-            previousContract = contract
-            previousReport = report
         }
         // Exhausted the corrective budget without a valid contract. Returning `lastValidated`
         // here would hand a contract with isValid == false to the next stage, which treats that

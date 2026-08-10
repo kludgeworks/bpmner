@@ -66,7 +66,7 @@ internal class DefaultBpmnRepairer(
         )
 
         val processId = AgentProcess.get()?.id
-        if (finalEval.diagnostics.isEmpty()) {
+        if (blockingDiagnostics.isEmpty()) {
             eventPublisher.publishEvent(
                 BpmnValidationPassedEvent(finalEval.request, result.xml, finalEval.repairAttempts, processId),
             )

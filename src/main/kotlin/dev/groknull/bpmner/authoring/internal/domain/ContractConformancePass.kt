@@ -115,7 +115,7 @@ internal class ContractConformancePass : BpmnContractConformancePort {
         corrections: MutableList<ContractCorrection>,
     ) {
         decision.branches.forEach { branch ->
-            val matched = resolveOutboundEdge(branch.nextRef, outbound) ?: return@forEach
+            val matched = resolveOutboundEdge(branch.nextRef, outbound, decision.branches.size) ?: return@forEach
             var edge = edgesById.getValue(matched.id)
 
             if (branch is DefaultBranch && (!edge.isDefault || !edge.conditionExpression.isNullOrBlank())) {
@@ -143,9 +143,14 @@ internal class ContractConformancePass : BpmnContractConformancePort {
     private fun resolveOutboundEdge(
         nextRef: String?,
         outbound: List<BpmnEdge>,
+        branchCount: Int,
     ): BpmnEdge? = when {
         nextRef != null -> outbound.singleOrNull { it.targetRef == nextRef }
-        outbound.size == 1 -> outbound.single()
+        // Only unambiguous when the decision has exactly one branch: with more than one branch,
+        // a second nextRef-less branch would resolve to the same sole edge and overwrite the
+        // first branch's stamp (a GATEWAY_BRANCH_COUNT_INSUFFICIENT topology the fidelity check
+        // rejects and retries anyway — this pass must not guess which branch owns the edge).
+        branchCount == 1 && outbound.size == 1 -> outbound.single()
         else -> null
     }
 

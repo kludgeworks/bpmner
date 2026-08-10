@@ -15,6 +15,7 @@ import org.springframework.stereotype.Component
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Sinks
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.atomic.AtomicLong
 
 /**
@@ -43,8 +44,16 @@ internal class RunUpdateSinkRegistry {
     /** Last-known phase/artifact per process, so a bare narration ([emitNarration]) can be placed in context. */
     private val lastKnown = ConcurrentHashMap<String, Pair<RunPhase, ArtifactState>>()
 
-    /** Processes that have already emitted their terminal — see [emitTerminal]. */
+    /**
+     * Processes that have already emitted their terminal — see [emitTerminal]. Bounded
+     * **independently** of [sinks]: a run can reach a terminal by more than one route, so a
+     * late/duplicate terminal arriving after this process's *sink* was evicted must still find
+     * its id here and be dropped, or `emitTerminal` would create a fresh sink and re-emit a
+     * terminal a subscriber already saw. [terminatedOrder] tracks insertion order for eviction
+     * once [MAX_TERMINATED] — deliberately larger than [MAX_PROCESS_BUFFERS] — is exceeded.
+     */
     private val terminated = ConcurrentHashMap.newKeySet<String>()
+    private val terminatedOrder = ConcurrentLinkedQueue<String>()
 
     /** Publishes an ordered, non-terminal [RunUpdate.Progress] for [processId]. */
     fun emit(
@@ -97,6 +106,8 @@ internal class RunUpdateSinkRegistry {
             logger.debug("Terminal already emitted for {}; dropping duplicate ({})", processId, summary)
             return
         }
+        terminatedOrder.add(processId)
+        evictOldestTerminatedIfFull()
         lastKnown.remove(processId)
         val processSink = sinkFor(processId)
         val update = RunUpdate.Terminal(
@@ -143,15 +154,22 @@ internal class RunUpdateSinkRegistry {
     }
 
     // Evicts before growing past the cap: prefers the oldest unsubscribed sink, else the oldest.
+    // Deliberately does NOT touch `terminated`/`terminatedOrder` — those are bounded on their own
+    // schedule (see their KDoc) precisely so evicting a sink can never resurrect a duplicate
+    // terminal for the process it belonged to.
     private fun evictOneIfFull() {
         if (sinks.size < MAX_PROCESS_BUFFERS) return
         val victim = sinks.entries.filter { it.value.sink.currentSubscriberCount() == 0 }
             .minByOrNull { it.value.createdAt }
             ?: sinks.entries.minByOrNull { it.value.createdAt }
-        victim?.let {
-            sinks.remove(it.key)
-            // Bounded with the sinks it guards, or it would grow for the lifetime of the process.
-            terminated.remove(it.key)
+        victim?.let { sinks.remove(it.key) }
+    }
+
+    // Bounds `terminated` on its own bound, independent of `sinks`' churn.
+    private fun evictOldestTerminatedIfFull() {
+        while (terminated.size > MAX_TERMINATED) {
+            val oldest = terminatedOrder.poll() ?: break
+            terminated.remove(oldest)
         }
     }
 
@@ -159,5 +177,10 @@ internal class RunUpdateSinkRegistry {
         private val logger = LoggerFactory.getLogger(RunUpdateSinkRegistry::class.java)
         private const val REPLAY_LIMIT = 100
         private const val MAX_PROCESS_BUFFERS = 1000
+
+        // Deliberately larger than MAX_PROCESS_BUFFERS: retention here must outlast the sink
+        // buffer's own churn, so a late-arriving duplicate terminal still finds its process id
+        // marked terminated even after that process's sink was long since evicted.
+        private const val MAX_TERMINATED = MAX_PROCESS_BUFFERS * 5
     }
 }

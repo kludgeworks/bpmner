@@ -8,18 +8,34 @@ package dev.groknull.bpmner.authoring.internal.domain
 import dev.groknull.bpmner.bpmn.BpmnDefinition
 import dev.groknull.bpmner.bpmn.BpmnEdge
 import dev.groknull.bpmner.bpmn.BpmnEndEvent
+import dev.groknull.bpmner.bpmn.BpmnErrorRef
 import dev.groknull.bpmner.bpmn.BpmnExclusiveGateway
+import dev.groknull.bpmner.bpmn.BpmnIntermediateThrowEvent
+import dev.groknull.bpmner.bpmn.BpmnMessageEventDefinition
+import dev.groknull.bpmner.bpmn.BpmnMessageRef
+import dev.groknull.bpmner.bpmn.BpmnNoneEventDefinition
+import dev.groknull.bpmner.bpmn.BpmnParallelGateway
 import dev.groknull.bpmner.bpmn.BpmnStartEvent
+import dev.groknull.bpmner.bpmn.BpmnTerminateEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnUserTask
+import dev.groknull.bpmner.bpmn.MultiInstanceLoopCharacteristics
+import dev.groknull.bpmner.bpmn.MultiInstanceMode
+import dev.groknull.bpmner.bpmn.StandardLoopCharacteristics
+import dev.groknull.bpmner.contract.ActivityModifiers
 import dev.groknull.bpmner.contract.ConditionalBranch
 import dev.groknull.bpmner.contract.ContractActivity
 import dev.groknull.bpmner.contract.ContractDecision
 import dev.groknull.bpmner.contract.ContractEndState
+import dev.groknull.bpmner.contract.ContractGatewayKind
+import dev.groknull.bpmner.contract.ContractIntermediateThrow
+import dev.groknull.bpmner.contract.ContractIteration
+import dev.groknull.bpmner.contract.ContractLoop
 import dev.groknull.bpmner.contract.DefaultBranch
 import dev.groknull.bpmner.contract.ProcessContract
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertIs
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -103,7 +119,9 @@ class ContractConformancePassTest {
     }
 
     @Test
-    fun `picks the single outbound edge when DefaultBranch has no nextRef`() {
+    fun `picks the single outbound edge when a single-branch decision's DefaultBranch has no nextRef`() {
+        // The null-nextRef fallback is only unambiguous for a single-branch decision. A second
+        // branch sharing the same sole edge is covered by the ambiguous-multi-branch test below.
         val contract =
             creditTierContract().copy(
                 decisions =
@@ -111,15 +129,7 @@ class ContractConformancePassTest {
                     ContractDecision(
                         id = "Gateway_solo",
                         question = "Continue?",
-                        branches =
-                        listOf(
-                            ConditionalBranch(
-                                id = "br-yes",
-                                label = "Yes",
-                                condition = "yes",
-                            ),
-                            DefaultBranch(id = "br-default", label = "Fallback"),
-                        ),
+                        branches = listOf(DefaultBranch(id = "br-default", label = "Fallback")),
                         sourceIds = listOf("ev1"),
                     ),
                 ),
@@ -172,6 +182,166 @@ class ContractConformancePassTest {
         val conformance = pass.conform(creditTierContract(), alreadyConforming)
         assertTrue(conformance.corrections.isEmpty(), "a second pass over stamped output must be a no-op")
         assertEquals(alreadyConforming, conformance.definition)
+    }
+
+    @Test
+    fun `stamp 3 - sets task multiInstance from the contract's iteration modifier`() {
+        val contract = creditTierContract().copy(
+            activities = creditTierContract().activities.map {
+                if (it.id == "Task_fast") {
+                    (it as ContractActivity.Service).copy(
+                        modifiers = ActivityModifiers(
+                            iteration = ContractIteration(
+                                mode = MultiInstanceMode.PARALLEL,
+                                collectionDescription = "each applicant",
+                            ),
+                        ),
+                    )
+                } else {
+                    it
+                }
+            },
+        )
+        val conformance = pass.conform(contract, creditTierDefinition())
+
+        val task = conformance.definition.nodes.first { it.id == "Task_fast" } as BpmnUserTask
+        assertEquals(
+            MultiInstanceLoopCharacteristics(mode = MultiInstanceMode.PARALLEL, collectionDescription = "each applicant"),
+            task.multiInstance,
+        )
+        assertTrue(conformance.corrections.any { it.elementId == "Task_fast" && it.field == "multiInstance" })
+    }
+
+    @Test
+    fun `stamp 4 - sets task standardLoop from the contract's loop modifier`() {
+        val contract = creditTierContract().copy(
+            activities = creditTierContract().activities.map {
+                if (it.id == "Task_manual") {
+                    (it as ContractActivity.Service).copy(
+                        modifiers = ActivityModifiers(
+                            loop = ContractLoop(testBefore = false, loopCondition = "not yet approved", loopMaximum = 3),
+                        ),
+                    )
+                } else {
+                    it
+                }
+            },
+        )
+        val conformance = pass.conform(contract, creditTierDefinition())
+
+        val task = conformance.definition.nodes.first { it.id == "Task_manual" } as BpmnUserTask
+        assertEquals(
+            StandardLoopCharacteristics(testBefore = false, loopCondition = "not yet approved", loopMaximum = 3),
+            task.standardLoop,
+        )
+        assertTrue(conformance.corrections.any { it.elementId == "Task_manual" && it.field == "standardLoop" })
+    }
+
+    @Test
+    fun `stamp 5 - sets end-event eventDefinition from the contract's end-state kind`() {
+        val contract = creditTierContract().copy(
+            endStates = listOf(ContractEndState.Terminate(id = "end-offer", name = "Offer generated", sourceIds = listOf("ev1"))),
+        )
+        val conformance = pass.conform(contract, creditTierDefinition())
+
+        val endEvent = conformance.definition.nodes.first { it.id == "end-offer" } as BpmnEndEvent
+        assertEquals(BpmnTerminateEventDefinition, endEvent.eventDefinition)
+        assertTrue(conformance.corrections.any { it.elementId == "end-offer" && it.field == "eventDefinition" })
+    }
+
+    @Test
+    fun `stamp 5 - end-event ERROR resolution is best-effort against the definition's error catalogue`() {
+        val contract = creditTierContract().copy(
+            endStates = listOf(
+                ContractEndState.Error(
+                    id = "end-offer",
+                    name = "Offer generated",
+                    errorCode = "DECLINED",
+                    sourceIds = listOf("ev1"),
+                ),
+            ),
+        )
+        val withCatalogueEntry = creditTierDefinition().copy(errors = listOf(BpmnErrorRef(id = "Error_1", code = "DECLINED")))
+
+        val conformance = pass.conform(contract, withCatalogueEntry)
+        val endEvent = conformance.definition.nodes.first { it.id == "end-offer" } as BpmnEndEvent
+        assertEquals("Error_1", (endEvent.eventDefinition as dev.groknull.bpmner.bpmn.BpmnErrorEventDefinition).errorRef)
+
+        // Without a matching catalogue entry, the stamp cannot resolve and leaves the node untouched
+        // — inventing a catalogue entry is structural synthesis, out of scope for this pass.
+        val withoutCatalogueEntry = creditTierDefinition()
+        val unresolved = pass.conform(contract, withoutCatalogueEntry)
+        val unresolvedEndEvent = unresolved.definition.nodes.first { it.id == "end-offer" } as BpmnEndEvent
+        assertEquals(BpmnNoneEventDefinition, unresolvedEndEvent.eventDefinition)
+    }
+
+    @Test
+    fun `stamp 6 - sets intermediate-throw eventDefinition from a resolvable message catalogue entry`() {
+        val throwNode = BpmnIntermediateThrowEvent(id = "throw-1", eventDefinition = BpmnNoneEventDefinition)
+        val definition = creditTierDefinition().copy(
+            nodes = creditTierDefinition().nodes + throwNode,
+            messages = listOf(BpmnMessageRef(id = "Message_1", name = "receipt email")),
+        )
+        val contract = creditTierContract().copy(
+            intermediateThrows = listOf(
+                ContractIntermediateThrow.Message(id = "throw-1", name = "Send receipt", messageName = "receipt email"),
+            ),
+        )
+
+        val conformance = pass.conform(contract, definition)
+        val stamped = conformance.definition.nodes.first { it.id == "throw-1" } as BpmnIntermediateThrowEvent
+        assertEquals(BpmnMessageEventDefinition("Message_1"), stamped.eventDefinition)
+        assertTrue(conformance.corrections.any { it.elementId == "throw-1" && it.field == "eventDefinition" })
+    }
+
+    @Test
+    fun `stamp 7 - substitutes the gateway node subtype to match the contract's declared kind`() {
+        val contract = creditTierContract().copy(
+            decisions = creditTierContract().decisions.map { it.copy(kind = ContractGatewayKind.PARALLEL) },
+        )
+        val conformance = pass.conform(contract, creditTierDefinition())
+
+        val gateway = conformance.definition.nodes.first { it.id == "Gateway_1" }
+        assertIs<BpmnParallelGateway>(gateway)
+        assertEquals("Which credit tier?", gateway.name)
+        assertTrue(conformance.corrections.any { it.elementId == "Gateway_1" && it.field == "gatewayKind" })
+    }
+
+    @Test
+    fun `stamp 7 - no correction when the gateway node already matches the declared kind`() {
+        // creditTierContract's decision defaults to EXCLUSIVE, matching creditTierDefinition's
+        // BpmnExclusiveGateway node — no substitution should occur.
+        val conformance = pass.conform(creditTierContract(), creditTierDefinition())
+        assertFalse(conformance.corrections.any { it.field == "gatewayKind" })
+    }
+
+    @Test
+    fun `resolveOutboundEdge's null-nextRef fallback does not stamp an ambiguous multi-branch decision`() {
+        // A decision with two branches but only one outbound edge is a GATEWAY_BRANCH_COUNT_INSUFFICIENT
+        // topology the fidelity checker will reject and retry — the conformance pass must not guess
+        // which branch owns the sole edge by stamping both onto it.
+        val contract = creditTierContract().copy(
+            decisions = listOf(
+                ContractDecision(
+                    id = "Gateway_solo",
+                    question = "Continue?",
+                    branches = listOf(
+                        ConditionalBranch(id = "br-yes", label = "Yes", condition = "yes", nextRef = "Task_fast"),
+                        DefaultBranch(id = "br-default", label = "Fallback"),
+                    ),
+                    sourceIds = listOf("ev1"),
+                ),
+            ),
+        )
+        val original = creditTierDefinition().copy(
+            nodes = creditTierDefinition().nodes + BpmnExclusiveGateway("Gateway_solo", "Continue?"),
+            sequences = creditTierDefinition().sequences + BpmnEdge("Flow_solo", "Gateway_solo", "Task_fast"),
+        )
+
+        val result = pass.conform(contract, original).definition
+        val edge = result.sequences.first { it.id == "Flow_solo" }
+        assertFalse(edge.isDefault, "ambiguous fallback must not mark the shared edge default")
+        assertEquals("Yes", edge.name, "the nextRef-matched branch's label still stamps unambiguously")
     }
 
     private fun creditTierContract() = ProcessContract(

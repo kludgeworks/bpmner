@@ -48,6 +48,16 @@ internal class BpmnRunUpdateChannel(
     /** Clarification round counter keyed by process id, for the `AWAITING_INPUT` detail bag. */
     private val clarificationRounds = ConcurrentHashMap<String, Int>()
 
+    /**
+     * Clears [processId]'s clarification-round entry. Called from [BpmnMilestoneEventListener]'s
+     * abort backstop, which bypasses this channel's own lifecycle handlers entirely (a run that
+     * throws out of the process never reaches [onFailed]/[onStuck]/[onFinished]) — without this,
+     * a run that aborts while awaiting clarification leaks its entry here permanently.
+     */
+    fun clearClarificationState(processId: String) {
+        clarificationRounds.remove(processId)
+    }
+
     override fun send(event: OutputChannelEvent) {
         // Only ProgressOutputChannelEvent is meaningful here; no @Action in this codebase sends
         // one today, so this is presently dormant, but it is the seam any future LLM-authored

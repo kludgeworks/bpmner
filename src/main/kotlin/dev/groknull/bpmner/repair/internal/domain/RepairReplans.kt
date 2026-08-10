@@ -20,6 +20,19 @@ object RepairReplans {
     }
 }
 
+// Not a ReplanRequestedException subtype — that framework class is `final` — but
+// revalidateAndAdvance is reached by all three repair tiers (label patch, structural patch, full
+// rewrite), so BpmnRepairLoop.selectAndApply's outer catch must handle this alongside
+// ReplanRequestedException regardless of which tier stalled; see its catch clause.
 internal class StuckBlockingDiagnosticsException(
+    message: String,
+) : RuntimeException(message)
+
+// Distinct from the generic "unchanged patch" no-progress signal: the LLM's patch DID change
+// something, but the conformance pass stamped the result straight back to the prior state — the
+// edit never survived far enough to be judged, which is a different failure shape from an LLM
+// that produced no change at all. Escalated to a full rewrite by BpmnRepairLoop for the
+// structural tier; see its catch clauses.
+internal class NoEffectiveProgressException(
     message: String,
 ) : RuntimeException(message)

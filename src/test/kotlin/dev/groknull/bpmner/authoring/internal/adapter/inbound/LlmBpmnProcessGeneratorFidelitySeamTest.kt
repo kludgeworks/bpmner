@@ -23,6 +23,7 @@ import dev.groknull.bpmner.authoring.internal.domain.BpmnFidelityCode
 import dev.groknull.bpmner.authoring.internal.domain.BpmnFidelityIssue
 import dev.groknull.bpmner.authoring.internal.domain.BpmnFidelityReport
 import dev.groknull.bpmner.authoring.internal.domain.BpmnFidelitySeverity
+import dev.groknull.bpmner.bpmn.BpmnDefinition
 import dev.groknull.bpmner.bpmn.BpmnEdge
 import dev.groknull.bpmner.bpmn.BpmnRequest
 import dev.groknull.bpmner.bpmn.RetryableBpmnGenerationException
@@ -202,6 +203,36 @@ class LlmBpmnProcessGeneratorFidelitySeamTest {
         // The reason must survive into the terminal, or the run reports a failure with no cause.
         assertContains(ex.message!!, "- [ACTIVITY_TASK_KIND_MISMATCH] Activity 'act1' is a ServiceTask")
         assertContains(ex.message!!, "- [DECISION_GATEWAY_MISSING] Decision 'dec1' has no corresponding")
+    }
+
+    @Test
+    fun `conform runs before the fidelity check, over the conformance-corrected definition`() {
+        // Gate 6: the checks conformance supersedes must run over the post-conformance artifact,
+        // so a future refactor that reorders these two calls (or feeds the fidelity checker the
+        // model's raw, unstamped output) must fail this test.
+        val context = FakeOperationContext()
+        context.expectResponse(flatLlmResponse)
+
+        val rawDefinition = flatLlmResponse.toSealed()
+        val stampedDefinition = rawDefinition.copy(processName = "Stamped by conformance")
+        `when`(mockConformancePort.conform(anyKt(), anyKt())).thenReturn(BpmnConformance(stampedDefinition, emptyList()))
+        var fidelityCheckSawDefinition: BpmnDefinition? = null
+        `when`(mockFidelityChecker.checkDetailed(anyKt(), anyKt())).thenAnswer { invocation ->
+            fidelityCheckSawDefinition = invocation.getArgument(1)
+            BpmnFidelityReport(issues = emptyList())
+        }
+
+        generator.createOutline(ready, validatedContract, context)
+
+        val order = Mockito.inOrder(mockConformancePort, mockFidelityChecker)
+        order.verify(mockConformancePort).conform(anyKt(), anyKt())
+        order.verify(mockFidelityChecker).checkDetailed(anyKt(), anyKt())
+
+        assertEquals(
+            stampedDefinition,
+            fidelityCheckSawDefinition,
+            "fidelity check must run over the conformance-corrected definition, not the model's raw output",
+        )
     }
 
     // --- R2 regression guard: kept preconditions throw non-retryable error ---

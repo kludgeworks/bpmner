@@ -114,12 +114,13 @@ internal class BpmnContractFidelityChecker : BpmnContractFidelityPort {
         val issues = mutableListOf<BpmnFidelityIssue>()
         val nodeById = definition.nodes.associateBy { it.id }
         val outgoingBySource = definition.sequences.groupBy { it.sourceRef }
+        val boundaryEventsByAttachedTo = definition.nodes.filterIsInstance<BpmnBoundaryEvent>().groupBy { it.attachedToRef }
 
         contract.activities.forEach { activity ->
             checkActivityKind(activity, nodeById, issues)
             checkActivityIteration(activity, nodeById, issues)
             checkActivityLoop(activity, nodeById, issues)
-            checkActivityBoundaryEvents(activity, definition, issues)
+            checkActivityBoundaryEvents(activity, boundaryEventsByAttachedTo, outgoingBySource, issues)
             if (activity is ContractActivity.SubProcess) {
                 checkSubProcess(activity, nodeById, definition, issues)
             }
@@ -334,12 +335,12 @@ internal class BpmnContractFidelityChecker : BpmnContractFidelityPort {
         outgoingBySource: Map<String, List<BpmnEdge>>,
         nodeById: Map<String, BpmnNode>,
     ): String {
-        val (opaqueReachable, visited) =
+        val (opaqueReachable, path) =
             walkReachability(gateway, targetId, outgoingBySource, nodeById) { true }
         if (!opaqueReachable) {
             return "No path to '$targetId' exists at any hop — the model dropped an edge."
         }
-        val skipped = visited.mapNotNull { nodeById[it] }.filterIsInstance<BpmnTask>().map { it.id }
+        val skipped = path.mapNotNull { nodeById[it] }.filterIsInstance<BpmnTask>().map { it.id }
         return if (skipped.isEmpty()) {
             "A path to '$targetId' exists but only through routing-only nodes — the model dropped an edge."
         } else {
@@ -365,8 +366,9 @@ internal class BpmnContractFidelityChecker : BpmnContractFidelityPort {
     /**
      * Shared bounded BFS behind [targetReachableSemantically] and [branchFlowMissingDiscriminator]:
      * walks forward from [from] through nodes matching [isTransparent], returning whether
-     * [targetId] was reached plus every intermediate node id visited along the way (useful for a
-     * caller that needs to say *what* stood in the way, not just whether something did).
+     * [targetId] was reached plus the intermediate node ids on the actual path from [from] to
+     * [targetId] (not every node explored across unrelated frontier branches — a caller reporting
+     * *what* stood in the way must not name nodes on a sibling branch that never reaches the target).
      */
     private fun walkReachability(
         from: BpmnNode,
@@ -374,31 +376,50 @@ internal class BpmnContractFidelityChecker : BpmnContractFidelityPort {
         outgoingBySource: Map<String, List<BpmnEdge>>,
         nodeById: Map<String, BpmnNode>,
         isTransparent: (BpmnNode) -> Boolean,
-    ): Pair<Boolean, Set<String>> {
+    ): Pair<Boolean, List<String>> {
         val direct = outgoingBySource[from.id].orEmpty()
-        if (direct.any { it.targetRef == targetId }) return true to emptySet()
+        if (direct.any { it.targetRef == targetId }) return true to emptyList()
         val seen = mutableSetOf(from.id)
+        val predecessor = mutableMapOf<String, String>()
+        direct.forEach { predecessor.putIfAbsent(it.targetRef, from.id) }
         var frontier = direct.map { it.targetRef }.toSet() - from.id
-        val visited = mutableSetOf<String>()
 
         repeat(MAX_REACHABILITY_HOPS) {
-            if (frontier.isEmpty()) return false to visited
-            if (targetId in frontier) return true to visited
-            visited += frontier
+            if (frontier.isEmpty()) return false to emptyList()
+            if (targetId in frontier) return true to pathBetween(targetId, from.id, predecessor)
             // Step the BFS one hop: keep only unseen, transparent-per-[isTransparent] nodes;
-            // collect their outbound edge targets as the next frontier. Chained pipeline keeps
-            // the loop body free of multi-branch jumps (detekt LoopWithTooManyJumpStatements).
-            frontier =
+            // collect their outbound edge targets as the next frontier, recording each target's
+            // first-seen predecessor so the eventual path to targetId can be reconstructed.
+            // Chained pipeline keeps the loop body free of multi-branch jumps (detekt
+            // LoopWithTooManyJumpStatements).
+            val stepped =
                 frontier
                     .asSequence()
                     .filter { seen.add(it) }
                     .mapNotNull { nodeById[it] }
                     .filter(isTransparent)
-                    .flatMap { outgoingBySource[it.id].orEmpty().asSequence() }
-                    .map { it.targetRef }
-                    .toSet()
+                    .flatMap { node -> outgoingBySource[node.id].orEmpty().asSequence().map { node.id to it.targetRef } }
+                    .toList()
+            stepped.forEach { (source, target) -> predecessor.putIfAbsent(target, source) }
+            frontier = stepped.map { it.second }.toSet()
         }
-        return false to visited
+        return false to emptyList()
+    }
+
+    /** Intermediate node ids strictly between [root] and [target], walking [predecessor] backward. */
+    private fun pathBetween(
+        target: String,
+        root: String,
+        predecessor: Map<String, String>,
+    ): List<String> {
+        val path = mutableListOf<String>()
+        var current = target
+        while (current != root) {
+            val prior = predecessor[current] ?: break
+            if (prior != root) path.add(0, prior)
+            current = prior
+        }
+        return path
     }
 
     private companion object {
@@ -532,14 +553,14 @@ internal class BpmnContractFidelityChecker : BpmnContractFidelityPort {
      */
     private fun checkActivityBoundaryEvents(
         activity: ContractActivity,
-        definition: BpmnDefinition,
+        boundaryEventsByAttachedTo: Map<String, List<BpmnBoundaryEvent>>,
+        outgoingBySource: Map<String, List<BpmnEdge>>,
         issues: MutableList<BpmnFidelityIssue>,
     ) {
         val declared = activity.boundaryEvents
-        val attached = definition.nodes.filterIsInstance<BpmnBoundaryEvent>().filter { it.attachedToRef == activity.id }
+        val attached = boundaryEventsByAttachedTo[activity.id].orEmpty()
         if (declared.isEmpty() && attached.isEmpty()) return
 
-        val outgoingBySource = definition.sequences.groupBy { it.sourceRef }
         val unmatched = attached.toMutableList()
 
         declared.forEach { boundaryEvent ->

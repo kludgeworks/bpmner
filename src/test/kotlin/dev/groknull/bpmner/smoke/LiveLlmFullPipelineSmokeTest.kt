@@ -159,8 +159,13 @@ class LiveLlmFullPipelineSmokeTest {
                 "tokens_limit_reached" in message ||
                 "context_length_exceeded" in normalized ||
                 "credit balance" in normalized ||
-                "400" in message &&
-                "invalid_request_error" in normalized
+                // A generic 400 invalid_request_error is deliberately NOT treated as skippable —
+                // a malformed request or a genuine prompt/schema regression surfaces the same
+                // code, and this smoke test is the harness that must catch exactly that (#690).
+                // Only the two explicit, non-quota-adjacent request-size phrasings some providers
+                // use for "your request was too big" are recognized here.
+                "request too large" in normalized ||
+                "maximum context length" in normalized
         }
     }
 }

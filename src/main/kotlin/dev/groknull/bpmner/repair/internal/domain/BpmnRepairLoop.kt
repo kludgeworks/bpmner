@@ -100,6 +100,25 @@ internal class BpmnRepairLoop(
             // scores it non-accepting and the iteration bound terminates the loop.
             logger.debug("Repair loop: replan signal caught — returning prior to advance iteration bound. Reason: {}", e.message)
             prior
+        } catch (e: StuckBlockingDiagnosticsException) {
+            // Not a ReplanRequestedException (that framework class is final) — caught separately
+            // here so a stall during a label patch or a direct full rewrite (neither routed
+            // through applyStructuralPatchOrRewrite's own escalation catch) advances the
+            // iteration bound instead of propagating uncaught out of the repair loop.
+            logger.debug(
+                "Repair loop: stuck-blocking signal caught — returning prior to advance iteration bound. Reason: {}",
+                e.message,
+            )
+            prior
+        } catch (e: NoEffectiveProgressException) {
+            // Same rationale as the StuckBlockingDiagnosticsException catch above, for the
+            // label-patch and direct-full-rewrite tiers that don't get the structural tier's own
+            // escalation-to-rewrite handling below.
+            logger.debug(
+                "Repair loop: no-effective-progress signal caught — returning prior to advance iteration bound. Reason: {}",
+                e.message,
+            )
+            prior
         }
     }
 
@@ -111,6 +130,13 @@ internal class BpmnRepairLoop(
             llmRepairApplier.applyLlmStructuralPatch(prior, context, structuralCandidates(prior))
         } catch (e: StuckBlockingDiagnosticsException) {
             logger.debug("Repair loop: structural patch stalled — escalating to full rewrite. Reason: {}", e.message)
+            llmRepairApplier.applyFullLlmRewrite(prior, context, rewriteCandidates(prior))
+        } catch (e: NoEffectiveProgressException) {
+            logger.debug(
+                "Repair loop: structural patch had no effective progress after conformance —" +
+                    " escalating to full rewrite. Reason: {}",
+                e.message,
+            )
             llmRepairApplier.applyFullLlmRewrite(prior, context, rewriteCandidates(prior))
         }
 

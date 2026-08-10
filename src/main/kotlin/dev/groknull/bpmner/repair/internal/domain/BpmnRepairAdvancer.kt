@@ -105,7 +105,7 @@ internal class BpmnRepairAdvancer(
         val stampedFingerprint = fingerprints.definitionFingerprint(stamped)
         val priorRecord = prior.history.last
             ?: error("revalidateAndAdvance called with empty history — initialEvaluation must run first")
-        guardAgainstNoProgress(stampedFingerprint, prior, priorRecord)
+        guardAgainstNoProgress(stampedFingerprint, prior, priorRecord, conformance.corrections.isNotEmpty())
 
         val nextGraph = prior.graph.withUpdatedDefinition(stamped)
         var renderFailureMessage: String? = null
@@ -185,17 +185,28 @@ internal class BpmnRepairAdvancer(
         stampedFingerprint: String,
         prior: BpmnRepairEvaluation,
         priorRecord: BpmnAttemptRecord,
+        conformanceStampedSomething: Boolean,
     ) {
-        val reason = when {
+        val signal = when {
+            // The LLM's patch changed something, but the conformance pass stamped the result
+            // straight back to the prior state — the edit never survived far enough to be
+            // judged. Distinct from a genuinely stuck LLM (the branch below) so the structural
+            // tier can escalate to a full rewrite instead of silently burning an iteration on a
+            // patch that can never register.
+            stampedFingerprint == priorRecord.definitionFingerprint && conformanceStampedSomething ->
+                NoEffectiveProgressException(
+                    "patch on repair attempt ${priorRecord.attemptNumber} was fully re-corrected by conformance",
+                )
+
             stampedFingerprint == priorRecord.definitionFingerprint ->
-                "unchanged patch on repair attempt ${priorRecord.attemptNumber}"
+                RepairReplans.signal("unchanged patch on repair attempt ${priorRecord.attemptNumber}")
 
             prior.history.containsDefinitionFingerprint(stampedFingerprint) ->
-                "repeated invalid output on repair attempt ${priorRecord.attemptNumber}"
+                RepairReplans.signal("repeated invalid output on repair attempt ${priorRecord.attemptNumber}")
 
             else -> return
         }
-        throw RepairReplans.signal(reason)
+        throw signal
     }
 
     private fun guardAgainstStuckBlocking(
