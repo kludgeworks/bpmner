@@ -229,6 +229,25 @@ class ContractConformancePassTest {
     }
 
     @Test
+    fun `does not use a redirected edge when direct branch matches are ambiguous`() {
+        val ambiguous = creditTierDefinition().copy(
+            nodes = creditTierDefinition().nodes + BpmnExclusiveGateway("Join_manual", null),
+            sequences = creditTierDefinition().sequences.map {
+                if (it.id == "Flow_fast") it.copy(targetRef = "Join_manual") else it
+            } + listOf(
+                BpmnEdge("Flow_duplicate_manual", "Gateway_1", "Task_manual"),
+                BpmnEdge("Flow_aux_manual", "StartEvent_1", "Join_manual"),
+                BpmnEdge("Flow_join_manual", "Join_manual", "Task_manual"),
+            ),
+        )
+
+        val result = pass.conform(creditTierContract(), ambiguous).definition
+
+        assertFalse(result.sequences.single { it.id == "Flow_fast" }.isDefault)
+        assertEquals("Fast-track", result.sequences.single { it.id == "Flow_fast" }.name)
+    }
+
+    @Test
     fun `stamps a contract determined standard loop annotation and association`() {
         val activity = ContractActivity.Service(
             id = "Task_retry",

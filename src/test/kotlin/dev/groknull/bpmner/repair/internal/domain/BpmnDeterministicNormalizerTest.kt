@@ -55,6 +55,7 @@ class BpmnDeterministicNormalizerTest {
         val first = definition("first")
         val second = definition("second")
         val evaluation = evaluation(initial, listOf(diagnostic("first", "one"), diagnostic("second", "two")))
+        val stable = evaluation(second, emptyList())
         val reasons = mutableListOf<String?>()
         val results = ArrayDeque<PatchApplicationResult>(
             listOf(
@@ -69,13 +70,40 @@ class BpmnDeterministicNormalizerTest {
             results.removeFirst()
         }
         `when`(advancer.revalidateAndAdvance(anyNonNull(), anyNonNull(), anyNonNull(), anyNonNull(), anyBoolean()))
-            .thenReturn(evaluation)
+            .thenReturn(stable)
 
         normalizer.normalize(evaluation)
 
-        verify(patchApplier, org.mockito.Mockito.times(4)).apply(anyNonNull(), anyNonNull())
+        verify(patchApplier, org.mockito.Mockito.times(2)).apply(anyNonNull(), anyNonNull())
         assertEquals(listOf("LOCAL_MODEL_FIX: first on one", "LOCAL_MODEL_FIX: second on two"), reasons.take(2))
         verify(advancer).revalidateAndAdvance(
+            anyNonNull(),
+            anyNonNull(),
+            anyNonNull(),
+            anyNonNull(),
+            org.mockito.ArgumentMatchers.eq(false),
+        )
+    }
+
+    @Test
+    fun `refreshes diagnostics between changed normalization passes`() {
+        val initial = definition("initial")
+        val first = definition("first")
+        val second = definition("second")
+        val evaluation = evaluation(initial, listOf(diagnostic("first", "one")))
+        val refreshed = evaluation(first, listOf(diagnostic("second", "two")))
+        val stable = evaluation(second, emptyList())
+        `when`(patchApplier.apply(anyNonNull(), anyNonNull())).thenReturn(
+            PatchApplicationResult.Success(first),
+            PatchApplicationResult.Success(second),
+        )
+        `when`(advancer.revalidateAndAdvance(anyNonNull(), anyNonNull(), anyNonNull(), anyNonNull(), anyBoolean()))
+            .thenReturn(refreshed, stable)
+
+        assertEquals(stable, normalizer.normalize(evaluation))
+
+        verify(patchApplier, org.mockito.Mockito.times(2)).apply(anyNonNull(), anyNonNull())
+        verify(advancer, org.mockito.Mockito.times(2)).revalidateAndAdvance(
             anyNonNull(),
             anyNonNull(),
             anyNonNull(),
@@ -96,10 +124,10 @@ class BpmnDeterministicNormalizerTest {
             PatchApplicationResult.NoOp,
         )
         `when`(advancer.revalidateAndAdvance(anyNonNull(), anyNonNull(), anyNonNull(), anyNonNull(), anyBoolean()))
-            .thenReturn(evaluation)
+            .thenReturn(evaluation(changed, emptyList()))
 
         normalizer.normalize(evaluation)
-        verify(patchApplier, org.mockito.Mockito.times(4)).apply(anyNonNull(), anyNonNull())
+        verify(patchApplier, org.mockito.Mockito.times(2)).apply(anyNonNull(), anyNonNull())
 
         val stable = evaluation(initial, emptyList())
         org.mockito.Mockito.clearInvocations(advancer)
@@ -112,10 +140,13 @@ class BpmnDeterministicNormalizerTest {
         val initial = definition("initial")
         val changed = definition("changed")
         val evaluation = evaluation(initial, listOf(diagnostic("first", "one")))
+        val refreshed = evaluation(changed, listOf(diagnostic("first", "one")))
         `when`(patchApplier.apply(anyNonNull(), anyNonNull())).thenReturn(
             PatchApplicationResult.Success(changed),
             PatchApplicationResult.Success(initial),
         )
+        `when`(advancer.revalidateAndAdvance(anyNonNull(), anyNonNull(), anyNonNull(), anyNonNull(), anyBoolean()))
+            .thenReturn(refreshed)
 
         val error = assertFailsWith<IllegalStateException> { normalizer.normalize(evaluation) }
 

@@ -105,9 +105,7 @@ internal class BpmnRepairAdvancer(
         val nextRepairAttempts = prior.repairAttempts + if (modelRepair) 1 else 0
         logRepairPatchCorrections(nextRepairAttempts, conformance.corrections)
         val stampedFingerprint = fingerprints.definitionFingerprint(stamped)
-        val priorRecord = prior.history.last
-            ?: error("revalidateAndAdvance called with empty history — initialEvaluation must run first")
-        if (modelRepair) guardAgainstNoProgress(stampedFingerprint, prior, priorRecord)
+        if (modelRepair) guardAgainstNoProgress(stampedFingerprint, prior)
 
         val nextGraph = prior.graph.withUpdatedDefinition(stamped)
         var renderFailureMessage: String? = null
@@ -148,7 +146,7 @@ internal class BpmnRepairAdvancer(
         val nextRecord = modelRepairRecord(nextAttempt, promptText, modelRepair)
 
         if (nextRecord != null) {
-            guardAgainstStuckBlocking(nextEvaluation, nextRecord, priorRecord, nextAttempt.repairAttempts)
+            guardAgainstStuckBlocking(nextEvaluation, nextRecord, prior, nextAttempt.repairAttempts)
         }
 
         return BpmnRepairEvaluation(
@@ -195,14 +193,13 @@ internal class BpmnRepairAdvancer(
     private fun guardAgainstNoProgress(
         stampedFingerprint: String,
         prior: BpmnRepairEvaluation,
-        priorRecord: BpmnAttemptRecord,
     ) {
         val reason = when {
-            stampedFingerprint == priorRecord.definitionFingerprint ->
-                "unchanged patch on repair attempt ${priorRecord.attemptNumber}"
+            stampedFingerprint == fingerprints.definitionFingerprint(prior.definition) ->
+                "unchanged patch on repair attempt ${prior.repairAttempts}"
 
             prior.history.containsDefinitionFingerprint(stampedFingerprint) ->
-                "repeated invalid output on repair attempt ${priorRecord.attemptNumber}"
+                "repeated invalid output on repair attempt ${prior.repairAttempts}"
 
             else -> return
         }
@@ -212,11 +209,11 @@ internal class BpmnRepairAdvancer(
     private fun guardAgainstStuckBlocking(
         nextEvaluation: dev.groknull.bpmner.conformance.BpmnEvaluation,
         nextRecord: BpmnAttemptRecord,
-        priorRecord: BpmnAttemptRecord,
+        prior: BpmnRepairEvaluation,
         repairAttempts: Int,
     ) {
         if (nextEvaluation.blockingDiagnostics.isNotEmpty() &&
-            nextRecord.blockingDiagnosticFingerprint == priorRecord.blockingDiagnosticFingerprint
+            nextRecord.blockingDiagnosticFingerprint == fingerprints.blockingDiagnosticFingerprint(prior.evaluation.diagnostics)
         ) {
             throw StuckBlockingDiagnosticsException(
                 "unchanged blocking diagnostics after repair attempt $repairAttempts",

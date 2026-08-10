@@ -79,8 +79,9 @@ internal class BpmnRepairLoop(
      * return [prior] unchanged so the evaluator advances towards the iteration bound.
      */
     private fun selectAndApply(prior: BpmnRepairEvaluation, context: ActionContext): BpmnRepairEvaluation {
+        var normalized = prior
         return try {
-            val normalized = deterministicNormalizer.normalize(prior)
+            normalized = deterministicNormalizer.normalize(prior)
             if (normalized.diagnosticsResolved) return normalized
             val repaired = when {
                 normalized.hasLlmLabelEligible ->
@@ -99,7 +100,7 @@ internal class BpmnRepairLoop(
             // No-progress or malformed-LLM guard fired. Return prior unchanged so the evaluator
             // scores it non-accepting and the iteration bound terminates the loop.
             logger.debug("Repair loop: replan signal caught — returning prior to advance iteration bound. Reason: {}", e.message)
-            prior
+            normalized
         }
     }
 

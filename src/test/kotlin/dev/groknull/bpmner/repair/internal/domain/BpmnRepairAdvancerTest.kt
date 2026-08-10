@@ -67,7 +67,7 @@ class BpmnRepairAdvancerTest {
         val rendered = mock(RenderedBpmn::class.java)
 
         `when`(conformancePort.conform(anyNonNull(), anyNonNull())).thenReturn(BpmnConformance(definition, emptyList()))
-        `when`(fingerprints.definitionFingerprint(anyNonNull())).thenReturn("fp-stamped")
+        `when`(fingerprints.definitionFingerprint(anyNonNull())).thenReturn("fp-stamped", "fp-prior")
         `when`(fingerprints.promptFingerprint(anyNonNull())).thenReturn("fp-prompt")
         `when`(processGenerator.render(anyNonNull())).thenReturn(rendered)
         `when`(
@@ -106,7 +106,7 @@ class BpmnRepairAdvancerTest {
         val rendered = mock(RenderedBpmn::class.java)
 
         `when`(conformancePort.conform(anyNonNull(), anyNonNull())).thenReturn(BpmnConformance(definition, emptyList()))
-        `when`(fingerprints.definitionFingerprint(anyNonNull())).thenReturn("fp-stamped")
+        `when`(fingerprints.definitionFingerprint(anyNonNull())).thenReturn("fp-stamped", "fp-prior")
         `when`(fingerprints.promptFingerprint(anyNonNull())).thenReturn("fp-prompt")
         `when`(fingerprints.serializeDefinition(anyNonNull())).thenReturn("compact-serialized")
         `when`(processGenerator.render(anyNonNull())).thenReturn(rendered)

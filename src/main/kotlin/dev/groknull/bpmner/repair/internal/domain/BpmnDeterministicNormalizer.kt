@@ -25,13 +25,14 @@ internal class BpmnDeterministicNormalizer(
     private val logger = LoggerFactory.getLogger(BpmnDeterministicNormalizer::class.java)
 
     fun normalize(repairEval: BpmnRepairEvaluation): BpmnRepairEvaluation {
-        var definition = repairEval.definition
-        val seenFingerprints = mutableSetOf(fingerprints.definitionFingerprint(definition))
+        var normalized = repairEval
+        val seenFingerprints = mutableSetOf(fingerprints.definitionFingerprint(normalized.definition))
         val reasons = mutableListOf<String>()
 
         while (true) {
             var changed = false
-            repairEval.evaluation.blockingDiagnostics.forEach { diagnostic ->
+            var definition = normalized.definition
+            normalized.evaluation.blockingDiagnostics.forEach { diagnostic ->
                 val candidate = buildLocalFixCandidate(definition, diagnostic) ?: return@forEach
                 val applied = tryApplyLocalFix(definition, candidate) ?: return@forEach
                 if (applied == definition) return@forEach
@@ -44,18 +45,16 @@ internal class BpmnDeterministicNormalizer(
                     "deterministic normalization cycle detected after ${candidate.reason}"
                 }
             }
-            if (!changed) break
-        }
+            if (!changed) return normalized
 
-        if (definition == repairEval.definition) return repairEval
-        logger.info("Deterministic normalization applied {} local repair(s)", reasons.size)
-        return advancer.revalidateAndAdvance(
-            prior = repairEval,
-            repaired = definition,
-            appendedMessages = emptyList(),
-            promptText = reasons.joinToString("; "),
-            modelRepair = false,
-        )
+            normalized = advancer.revalidateAndAdvance(
+                prior = normalized,
+                repaired = definition,
+                appendedMessages = emptyList(),
+                promptText = reasons.joinToString("; "),
+                modelRepair = false,
+            )
+        }
     }
 
     private fun buildLocalFixCandidate(definition: BpmnDefinition, diagnostic: BpmnDiagnostic): LocalFixCandidate? {

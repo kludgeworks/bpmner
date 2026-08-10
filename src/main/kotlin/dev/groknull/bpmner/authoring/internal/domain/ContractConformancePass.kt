@@ -155,10 +155,22 @@ internal class ContractConformancePass : BpmnContractConformancePort {
         outbound: List<BpmnEdge>,
         definition: BpmnDefinition,
     ): BpmnEdge? = when {
-        nextRef != null -> outbound.singleOrNull { it.targetRef == nextRef }
-            ?: resolveRedirectedBranch(nextRef, outbound, definition)
+        nextRef != null -> resolveDirectOrRedirectedBranch(nextRef, outbound, definition)
         outbound.size == 1 -> outbound.single()
         else -> null
+    }
+
+    private fun resolveDirectOrRedirectedBranch(
+        nextRef: String,
+        outbound: List<BpmnEdge>,
+        definition: BpmnDefinition,
+    ): BpmnEdge? {
+        val direct = outbound.filter { it.targetRef == nextRef }
+        return when (direct.size) {
+            1 -> direct.single()
+            0 -> resolveRedirectedBranch(nextRef, outbound, definition)
+            else -> null
+        }
     }
 
     private fun resolveRedirectedBranch(
