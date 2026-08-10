@@ -7,6 +7,7 @@ package dev.groknull.bpmner.authoring.internal.adapter.inbound
 
 import com.embabel.agent.core.NonRetryable
 import com.embabel.agent.test.unit.FakeOperationContext
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import dev.groknull.bpmner.authoring.BpmnAgentInvoker
 import dev.groknull.bpmner.authoring.BpmnContractFidelityPort
 import dev.groknull.bpmner.authoring.BpmnDefaultFlowPort
@@ -29,8 +30,8 @@ import dev.groknull.bpmner.contract.ContractActivity
 import dev.groknull.bpmner.contract.ContractEndState
 import dev.groknull.bpmner.contract.ContractValidationReport
 import dev.groknull.bpmner.contract.ProcessContract
-import dev.groknull.bpmner.contract.ProcessContractMarkdownRenderer
 import dev.groknull.bpmner.contract.ValidatedProcessContract
+import dev.groknull.bpmner.llm.PromptJsonRenderer
 import dev.groknull.bpmner.readiness.ProcessInputAssessment
 import dev.groknull.bpmner.readiness.ReadinessDimension
 import dev.groknull.bpmner.readiness.ReadinessDimensionScore
@@ -77,7 +78,7 @@ class LlmBpmnProcessGeneratorFidelitySeamTest {
         metricsCalculator = BpmnGeneratorMetrics(),
         fidelityChecker = mockFidelityChecker,
         defaultFlowAssigner = mockDefaultFlowAssigner,
-        contractRenderer = ProcessContractMarkdownRenderer(),
+        jsonRenderer = PromptJsonRenderer(jacksonObjectMapper()),
         renderer = mock(BpmnRenderer::class.java),
         agentInvoker = mock(BpmnAgentInvoker::class.java),
         eventPublisher = mock(ApplicationEventPublisher::class.java),

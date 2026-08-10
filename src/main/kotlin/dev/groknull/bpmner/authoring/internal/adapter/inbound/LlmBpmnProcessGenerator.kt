@@ -32,8 +32,8 @@ import dev.groknull.bpmner.conformance.BpmnDiagnostic
 import dev.groknull.bpmner.conformance.BpmnDiagnosticSource
 import dev.groknull.bpmner.conformance.BpmnLoggingConfig
 import dev.groknull.bpmner.conformance.BpmnRepairScope
-import dev.groknull.bpmner.contract.ProcessContractMarkdownRenderer
 import dev.groknull.bpmner.contract.ValidatedProcessContract
+import dev.groknull.bpmner.llm.PromptJsonRenderer
 import dev.groknull.bpmner.llm.publishOnInvalidLlmReturn
 import dev.groknull.bpmner.readiness.ReadyBpmnContext
 import dev.groknull.bpmner.ruleset.BpmnNamingShapeAdvice
@@ -50,7 +50,7 @@ internal class LlmBpmnProcessGenerator(
     private val metricsCalculator: BpmnGeneratorMetrics,
     private val fidelityChecker: BpmnContractFidelityPort,
     private val defaultFlowAssigner: BpmnDefaultFlowPort,
-    private val contractRenderer: ProcessContractMarkdownRenderer,
+    private val jsonRenderer: PromptJsonRenderer,
     private val renderer: BpmnRenderer,
     private val agentInvoker: BpmnAgentInvoker,
     private val eventPublisher: ApplicationEventPublisher,
@@ -307,7 +307,7 @@ internal class LlmBpmnProcessGenerator(
         validatedContract: ValidatedProcessContract,
         previousFailure: String?,
     ): Map<String, Any> = mapOf(
-        "contractMarkdown" to contractRenderer.render(validatedContract.contract).trim(),
+        "contractJson" to jsonRenderer.render(validatedContract.contract),
         "processDescription" to request.processDescription,
         "styleGuide" to (request.styleGuide ?: ""),
         "previousFailure" to (previousFailure ?: ""),

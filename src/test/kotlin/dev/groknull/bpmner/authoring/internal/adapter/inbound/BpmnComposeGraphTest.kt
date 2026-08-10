@@ -18,7 +18,7 @@ import dev.groknull.bpmner.authoring.internal.adapter.outbound.toSealed
 import dev.groknull.bpmner.authoring.internal.domain.ProcessOutline
 import dev.groknull.bpmner.bpmn.BpmnRequest
 import dev.groknull.bpmner.conformance.BpmnLoggingConfig
-import dev.groknull.bpmner.contract.ProcessContractMarkdownRenderer
+import dev.groknull.bpmner.llm.PromptJsonRenderer
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -41,7 +41,7 @@ class BpmnComposeGraphTest {
         metricsCalculator = Mockito.mock(BpmnGeneratorMetrics::class.java),
         fidelityChecker = Mockito.mock(BpmnContractFidelityPort::class.java),
         defaultFlowAssigner = Mockito.mock(BpmnDefaultFlowPort::class.java),
-        contractRenderer = Mockito.mock(ProcessContractMarkdownRenderer::class.java),
+        jsonRenderer = Mockito.mock(PromptJsonRenderer::class.java),
         renderer = Mockito.mock(BpmnRenderer::class.java),
         agentInvoker = Mockito.mock(BpmnAgentInvoker::class.java),
         eventPublisher = Mockito.mock(ApplicationEventPublisher::class.java),
