@@ -34,6 +34,7 @@ data class ValidatedOutline internal constructor(
     internal val outline: ProcessOutline,
     val diagnostics: List<BpmnDiagnostic> = emptyList(),
     internal val fidelityReport: BpmnFidelityReport = BpmnFidelityReport.VALID,
+    val corrections: List<ContractCorrection> = emptyList(),
 ) {
     val definition: BpmnDefinition
         get() = outline.definition

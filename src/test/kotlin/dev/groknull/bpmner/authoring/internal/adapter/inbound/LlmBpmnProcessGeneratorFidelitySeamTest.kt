@@ -9,8 +9,9 @@ import com.embabel.agent.core.NonRetryable
 import com.embabel.agent.test.unit.FakeOperationContext
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import dev.groknull.bpmner.authoring.BpmnAgentInvoker
+import dev.groknull.bpmner.authoring.BpmnConformance
+import dev.groknull.bpmner.authoring.BpmnContractConformancePort
 import dev.groknull.bpmner.authoring.BpmnContractFidelityPort
-import dev.groknull.bpmner.authoring.BpmnDefaultFlowPort
 import dev.groknull.bpmner.authoring.BpmnOutlineGenerationException
 import dev.groknull.bpmner.authoring.BpmnRenderer
 import dev.groknull.bpmner.authoring.internal.BpmnAuthoringConfig
@@ -70,14 +71,14 @@ private fun <T> anyKt(): T {
 @Suppress("TooManyFunctions")
 class LlmBpmnProcessGeneratorFidelitySeamTest {
     private val mockFidelityChecker = mock(BpmnContractFidelityPort::class.java)
-    private val mockDefaultFlowAssigner = mock(BpmnDefaultFlowPort::class.java)
+    private val mockConformancePort = mock(BpmnContractConformancePort::class.java)
 
     private val generator = LlmBpmnProcessGenerator(
         config = BpmnAuthoringConfig(),
         logging = BpmnLoggingConfig(),
         metricsCalculator = BpmnGeneratorMetrics(),
         fidelityChecker = mockFidelityChecker,
-        defaultFlowAssigner = mockDefaultFlowAssigner,
+        conformancePort = mockConformancePort,
         jsonRenderer = PromptJsonRenderer(jacksonObjectMapper()),
         renderer = mock(BpmnRenderer::class.java),
         agentInvoker = mock(BpmnAgentInvoker::class.java),
@@ -155,7 +156,7 @@ class LlmBpmnProcessGeneratorFidelitySeamTest {
         context.expectResponse(flatLlmResponse)
 
         val stubbedDefinition = flatLlmResponse.toSealed()
-        `when`(mockDefaultFlowAssigner.assign(anyKt(), anyKt())).thenReturn(stubbedDefinition)
+        `when`(mockConformancePort.conform(anyKt(), anyKt())).thenReturn(BpmnConformance(stubbedDefinition, emptyList()))
         `when`(mockFidelityChecker.checkDetailed(anyKt(), anyKt()))
             .thenReturn(errorReport)
             .thenReturn(BpmnFidelityReport(issues = emptyList()))
@@ -188,7 +189,7 @@ class LlmBpmnProcessGeneratorFidelitySeamTest {
         repeat(DEFAULT_ATTEMPTS) { context.expectResponse(flatLlmResponse) }
 
         val stubbedDefinition = flatLlmResponse.toSealed()
-        `when`(mockDefaultFlowAssigner.assign(anyKt(), anyKt())).thenReturn(stubbedDefinition)
+        `when`(mockConformancePort.conform(anyKt(), anyKt())).thenReturn(BpmnConformance(stubbedDefinition, emptyList()))
         `when`(mockFidelityChecker.checkDetailed(anyKt(), anyKt())).thenReturn(errorReport)
 
         val ex = assertFailsWith<BpmnOutlineGenerationException> {

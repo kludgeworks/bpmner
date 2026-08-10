@@ -5,8 +5,9 @@
 
 package dev.groknull.bpmner.repair.internal.domain
 
-import dev.groknull.bpmner.authoring.BpmnDefaultFlowPort
+import dev.groknull.bpmner.authoring.BpmnContractConformancePort
 import dev.groknull.bpmner.authoring.BpmnProcessGenerator
+import dev.groknull.bpmner.authoring.ContractCorrection
 import dev.groknull.bpmner.bpmn.BpmnDefinition
 import dev.groknull.bpmner.bpmn.BpmnRequest
 import dev.groknull.bpmner.bpmn.LaidOutProcessGraph
@@ -27,7 +28,7 @@ import org.springframework.stereotype.Component
 
 @Component
 internal class BpmnRepairAdvancer(
-    private val defaultFlowAssigner: BpmnDefaultFlowPort,
+    private val conformancePort: BpmnContractConformancePort,
     private val contractAwareValidator: BpmnContractAwareValidator,
     private val attemptRecordFactory: BpmnAttemptRecordFactory,
     private val promptFactory: BpmnRepairPromptPort,
@@ -58,7 +59,7 @@ internal class BpmnRepairAdvancer(
             return shortCircuitUnrecognized(request, graph, rendered, contract, unrecognized)
         }
 
-        val normalisedDefinition = defaultFlowAssigner.assign(contract, rendered.definition)
+        val normalisedDefinition = conformancePort.conform(contract, rendered.definition).definition
         val normalisedRendered = rendered.copy(definition = normalisedDefinition)
         val initialMessages = promptFactory.initialMessages(request, normalisedDefinition)
         val evaluation = contractAwareValidator.evaluate(
@@ -98,7 +99,9 @@ internal class BpmnRepairAdvancer(
         appendedMessages: List<com.embabel.chat.Message>,
         promptText: String,
     ): BpmnRepairEvaluation {
-        val stamped = defaultFlowAssigner.assign(prior.contract, repaired)
+        val conformance = conformancePort.conform(prior.contract, repaired)
+        val stamped = conformance.definition
+        logRepairPatchCorrections(prior.repairAttempts + 1, conformance.corrections)
         val stampedFingerprint = fingerprints.definitionFingerprint(stamped)
         val priorRecord = prior.history.last
             ?: error("revalidateAndAdvance called with empty history — initialEvaluation must run first")
@@ -157,6 +160,24 @@ internal class BpmnRepairAdvancer(
             contract = prior.contract,
             repairAttempts = prior.repairAttempts + 1,
             renderFailureMessage = renderFailureMessage,
+        )
+    }
+
+    // A correction here means the repair patch clobbered a field the contract already
+    // determines — the most valuable signal this pass produces, since the patch was supposed to
+    // be surgical. Surfaced as its own log line rather than folded into the generic
+    // repair-attempt log, so it reads as a repair-quality signal, not noise.
+    private fun logRepairPatchCorrections(
+        repairAttempt: Int,
+        corrections: List<ContractCorrection>,
+    ) {
+        if (corrections.isEmpty()) return
+        logger.warn(
+            "Repair patch at repair attempt {} clobbered {} contract-determined field(s), " +
+                "re-corrected by the conformance pass: {}",
+            repairAttempt,
+            corrections.size,
+            corrections.joinToString { "${it.elementId}.${it.field}" },
         )
     }
 

@@ -17,6 +17,8 @@ import dev.groknull.bpmner.bpmn.styleGuideContribution
 import dev.groknull.bpmner.contract.BpmnContractExtractedEvent
 import dev.groknull.bpmner.contract.BpmnContractExtractionException
 import dev.groknull.bpmner.contract.ContractIssueSeverity
+import dev.groknull.bpmner.contract.ContractValidationReport
+import dev.groknull.bpmner.contract.ProcessContract
 import dev.groknull.bpmner.contract.ProcessContractExtractor
 import dev.groknull.bpmner.contract.ProcessContractMarkdownRenderer
 import dev.groknull.bpmner.contract.ValidatedProcessContract
@@ -24,6 +26,7 @@ import dev.groknull.bpmner.contract.format
 import dev.groknull.bpmner.contract.internal.BpmnContractConfig
 import dev.groknull.bpmner.contract.internal.BpmnContractThresholdsConfig
 import dev.groknull.bpmner.contract.internal.domain.BpmnContractValidator
+import dev.groknull.bpmner.contract.internal.domain.ContractConservation
 import dev.groknull.bpmner.llm.publishOnInvalidLlmReturn
 import dev.groknull.bpmner.readiness.ProcessInputAssessment
 import dev.groknull.bpmner.readiness.ReadyBpmnContext
@@ -55,6 +58,11 @@ internal class LlmProcessContractExtractor(
                 .withPromptContributor(PromptContributor.fixed(request.styleGuideContribution()))
 
         var previousIssues: String? = null
+        // R5 (ADR-685-26): the diagnostic behind the *previous* attempt's feedback and the
+        // contract it produced, so a conserving retry can be told what it dropped without being
+        // asked to.
+        var previousContract: ProcessContract? = null
+        var previousReport: ContractValidationReport? = null
         for (attempt in 1..thresholds.maxExtractionAttempts) {
             val flat = requestFlatContract(promptRunner, request, assessment, previousIssues)
             val contract = try {
@@ -70,10 +78,17 @@ internal class LlmProcessContractExtractor(
             val report = validator.validate(contract)
             val validated = ValidatedProcessContract.of(contract, report)
             if (validated != null) {
-                eventPublisher.publishEvent(
-                    BpmnContractExtractedEvent(validated, processId = AgentProcess.get()?.id),
-                )
-                return validated
+                val drops = detectConservationDrops(contract, previousContract, previousReport)
+                if (drops.isEmpty()) {
+                    eventPublisher.publishEvent(
+                        BpmnContractExtractedEvent(validated, processId = AgentProcess.get()?.id),
+                    )
+                    return validated
+                }
+                previousIssues = conservationDropFeedback(attempt, drops)
+                previousContract = contract
+                previousReport = report
+                continue
             }
             val errorCount = report.issues.count { it.severity == ContractIssueSeverity.ERROR }
             logger.warn(
@@ -84,6 +99,8 @@ internal class LlmProcessContractExtractor(
                 report.issues.joinToString { it.format() },
             )
             previousIssues = report.issues.joinToString(System.lineSeparator()) { "- ${it.format()}" }
+            previousContract = contract
+            previousReport = report
         }
         // Exhausted the corrective budget without a valid contract. Returning `lastValidated`
         // here would hand a contract with isValid == false to the next stage, which treats that
@@ -93,6 +110,39 @@ internal class LlmProcessContractExtractor(
             "Process contract failed validation after ${thresholds.maxExtractionAttempts} " +
                 "corrective attempt(s):${System.lineSeparator()}$previousIssues",
         )
+    }
+
+    // R5 (ADR-685-26): drops relative to the previous attempt, scoped to ids the driving
+    // diagnostic did not name. Empty on attempt 1 (no previous attempt to compare against).
+    private fun detectConservationDrops(
+        contract: ProcessContract,
+        previousContract: ProcessContract?,
+        previousReport: ContractValidationReport?,
+    ): List<String> = previousContract?.let { prior ->
+        ContractConservation.detectDrops(
+            named = previousReport?.issues.orEmpty().mapNotNull { it.targetId }.toSet(),
+            previous = prior,
+            next = contract,
+        )
+    }.orEmpty()
+
+    private fun conservationDropFeedback(
+        attempt: Int,
+        drops: List<String>,
+    ): String {
+        logger.warn(
+            "Contract extraction attempt {}/{} passed validation but dropped {} previously-present" +
+                " element(s)/field(s) the corrective feedback did not name: {}",
+            attempt,
+            thresholds.maxExtractionAttempts,
+            drops.size,
+            drops.joinToString(),
+        )
+        return buildString {
+            append("Attempt $attempt dropped the following, which the previous feedback did not")
+            append(" ask you to change — restore them:")
+            drops.forEach { append(System.lineSeparator()).append("- ").append(it) }
+        }
     }
 
     /**

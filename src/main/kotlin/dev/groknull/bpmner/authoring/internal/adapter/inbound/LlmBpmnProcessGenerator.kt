@@ -11,19 +11,21 @@ import com.embabel.agent.core.AgentProcess
 import com.embabel.agent.core.support.InvalidLlmReturnFormatException
 import com.embabel.agent.core.support.InvalidLlmReturnTypeException
 import dev.groknull.bpmner.authoring.BpmnAgentInvoker
+import dev.groknull.bpmner.authoring.BpmnContractConformancePort
 import dev.groknull.bpmner.authoring.BpmnContractFidelityPort
-import dev.groknull.bpmner.authoring.BpmnDefaultFlowPort
 import dev.groknull.bpmner.authoring.BpmnGeneratedEvent
 import dev.groknull.bpmner.authoring.BpmnGraphComposedEvent
 import dev.groknull.bpmner.authoring.BpmnOutlineGenerationException
 import dev.groknull.bpmner.authoring.BpmnProcessGenerator
 import dev.groknull.bpmner.authoring.BpmnRenderer
+import dev.groknull.bpmner.authoring.ContractCorrection
 import dev.groknull.bpmner.authoring.ValidatedOutline
 import dev.groknull.bpmner.authoring.internal.BpmnAuthoringConfig
 import dev.groknull.bpmner.authoring.internal.adapter.outbound.FlatBpmnDefinition
 import dev.groknull.bpmner.authoring.internal.adapter.outbound.toSealed
 import dev.groknull.bpmner.authoring.internal.domain.BpmnFidelityReport
 import dev.groknull.bpmner.authoring.internal.domain.BpmnFidelitySeverity
+import dev.groknull.bpmner.authoring.internal.domain.OutlineConservation
 import dev.groknull.bpmner.authoring.internal.domain.ProcessOutline
 import dev.groknull.bpmner.bpmn.BpmnRequest
 import dev.groknull.bpmner.bpmn.LaidOutProcessGraph
@@ -32,6 +34,7 @@ import dev.groknull.bpmner.conformance.BpmnDiagnostic
 import dev.groknull.bpmner.conformance.BpmnDiagnosticSource
 import dev.groknull.bpmner.conformance.BpmnLoggingConfig
 import dev.groknull.bpmner.conformance.BpmnRepairScope
+import dev.groknull.bpmner.contract.ProcessContract
 import dev.groknull.bpmner.contract.ValidatedProcessContract
 import dev.groknull.bpmner.llm.PromptJsonRenderer
 import dev.groknull.bpmner.llm.publishOnInvalidLlmReturn
@@ -49,7 +52,7 @@ internal class LlmBpmnProcessGenerator(
     private val logging: BpmnLoggingConfig,
     private val metricsCalculator: BpmnGeneratorMetrics,
     private val fidelityChecker: BpmnContractFidelityPort,
-    private val defaultFlowAssigner: BpmnDefaultFlowPort,
+    private val conformancePort: BpmnContractConformancePort,
     private val jsonRenderer: PromptJsonRenderer,
     private val renderer: BpmnRenderer,
     private val agentInvoker: BpmnAgentInvoker,
@@ -87,31 +90,80 @@ internal class LlmBpmnProcessGenerator(
         val promptRunner = config.generator.promptRunner(context)
 
         var previousFailure: String? = null
-        lateinit var lastAttempt: OutlineAttempt
+        // R5 (ADR-685-26): the previous attempt, so a conserving retry can be told what it
+        // dropped from a surviving successful outline without being asked to.
+        var previousAttempt: OutlineAttempt? = null
         for (attempt in 1..config.maxOutlineAttempts) {
-            lastAttempt = attemptOutline(request, validatedContract, promptRunner, previousFailure)
-            if (lastAttempt.fidelityReport.isValid) {
-                return ValidatedOutline(
-                    outline = lastAttempt.outline,
-                    diagnostics = lastAttempt.diagnostics,
-                    fidelityReport = lastAttempt.fidelityReport,
-                )
+            val currentAttempt = attemptOutline(request, validatedContract, promptRunner, previousFailure)
+            if (currentAttempt.fidelityReport.isValid) {
+                val drops = detectConservationDrops(validatedContract.contract, previousAttempt, currentAttempt)
+                if (drops.isEmpty()) {
+                    return ValidatedOutline(
+                        outline = currentAttempt.outline,
+                        diagnostics = currentAttempt.diagnostics,
+                        fidelityReport = currentAttempt.fidelityReport,
+                        corrections = currentAttempt.corrections,
+                    )
+                }
+                previousFailure = conservationDropFeedback(attempt, drops)
+                previousAttempt = currentAttempt
+                continue
             }
             if (attempt < config.maxOutlineAttempts) {
                 logger.warn(
                     "Outline attempt {}/{} failed fidelity check ({} issue(s)); retrying with diagnostic feedback",
                     attempt,
                     config.maxOutlineAttempts,
-                    lastAttempt.fidelityReport.issues.size,
+                    currentAttempt.fidelityReport.issues.size,
                 )
             }
-            previousFailure = lastAttempt.violations
+            previousFailure = currentAttempt.violations
+            previousAttempt = currentAttempt
         }
         throw BpmnOutlineGenerationException(
             "Generated BPMN did not faithfully encode the source contract topology after " +
                 "${config.maxOutlineAttempts} corrective attempt(s):" +
-                "${System.lineSeparator()}${lastAttempt.violations}",
+                "${System.lineSeparator()}$previousFailure",
         )
+    }
+
+    // R5 (ADR-685-26): drops relative to the previous attempt, scoped to ids the driving
+    // fidelity diagnostic did not name. Empty on attempt 1 (no previous attempt to compare
+    // against) — `named` comes only from the ERROR issues that drove the retry, matching
+    // `OutlineAttempt.violations`.
+    private fun detectConservationDrops(
+        contract: ProcessContract,
+        previousAttempt: OutlineAttempt?,
+        currentAttempt: OutlineAttempt,
+    ): List<String> = previousAttempt?.let { prior ->
+        OutlineConservation.detectDrops(
+            named = prior.fidelityReport.issues
+                .filter { it.severity == BpmnFidelitySeverity.ERROR }
+                .flatMap { listOfNotNull(it.contractElementId, it.bpmnElementId) }
+                .toSet(),
+            contract = contract,
+            previous = prior.outline.definition,
+            next = currentAttempt.outline.definition,
+        )
+    }.orEmpty()
+
+    private fun conservationDropFeedback(
+        attempt: Int,
+        drops: List<String>,
+    ): String {
+        logger.warn(
+            "Outline attempt {}/{} passed the fidelity check but dropped {} previously-present" +
+                " node(s)/field(s) the corrective feedback did not name: {}",
+            attempt,
+            config.maxOutlineAttempts,
+            drops.size,
+            drops.joinToString(),
+        )
+        return buildString {
+            append("Attempt $attempt dropped the following, which the previous feedback did not")
+            append(" ask you to change — restore them:")
+            drops.forEach { append(System.lineSeparator()).append("- ").append(it) }
+        }
     }
 
     /** One outline generation + fidelity-check pass within [createOutline]'s corrective loop. */
@@ -119,6 +171,7 @@ internal class LlmBpmnProcessGenerator(
         val outline: ProcessOutline,
         val diagnostics: List<BpmnDiagnostic>,
         val fidelityReport: BpmnFidelityReport,
+        val corrections: List<ContractCorrection>,
     ) {
         val violations: String
             get() = fidelityReport.issues
@@ -145,13 +198,14 @@ internal class LlmBpmnProcessGenerator(
                 cause = e,
             )
         }
-        // Stamp isDefault on outbound flows from EXCLUSIVE_GATEWAY nodes that the contract
-        // marks as DefaultBranch. The LLM is unreliable on this attribute, so we
-        // deterministically apply it here BEFORE the fidelity check runs (which fires
-        // DEFAULT_FLOW_MISSING as ERROR and would abort the pipeline). The repair engine
-        // also re-runs DefaultFlowAssigner on every repair candidate as a second line of
-        // defence against LLM drift during refinement iterations.
-        val definitionWithDefaults = defaultFlowAssigner.assign(validatedContract.contract, rawDefinition)
+        // Stamp every BPMN attribute the contract fully determines (default flows, branch
+        // labels, multi-instance/loop markers, end/throw event kinds, gateway kind) onto the
+        // raw definition BEFORE the fidelity check runs — the checks for those attributes fire
+        // as ERROR and would otherwise abort the pipeline on an LLM slip the contract already
+        // resolves. The repair engine also re-runs this pass on every repair candidate as a
+        // second line of defence against LLM drift during refinement iterations.
+        val conformance = conformancePort.conform(validatedContract.contract, rawDefinition)
+        val definitionWithDefaults = conformance.definition
         val outline =
             ProcessOutline(
                 request = request,
@@ -175,7 +229,7 @@ internal class LlmBpmnProcessGenerator(
         }
 
         val fidelityReport = fidelityChecker.checkDetailed(validatedContract.contract, outline.definition)
-        return OutlineAttempt(outline, diagnostics, fidelityReport)
+        return OutlineAttempt(outline, diagnostics, fidelityReport, conformance.corrections)
     }
 
     /**
@@ -252,7 +306,9 @@ internal class LlmBpmnProcessGenerator(
 
         val graph = LaidOutProcessGraph(ownedGraph = owned, definition = definition)
         logArtifactDump("graph", graph)
-        eventPublisher.publishEvent(BpmnGraphComposedEvent(graph, processId = AgentProcess.get()?.id))
+        eventPublisher.publishEvent(
+            BpmnGraphComposedEvent(graph, corrections = outline.corrections, processId = AgentProcess.get()?.id),
+        )
         return graph
     }
 

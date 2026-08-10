@@ -23,12 +23,12 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
-class DefaultFlowAssignerTest {
-    private val assigner = DefaultFlowAssigner()
+class ContractConformancePassTest {
+    private val pass = ContractConformancePass()
 
     @Test
     fun `sets isDefault on the edge matching DefaultBranch nextRef`() {
-        val result = assigner.assign(creditTierContract(), creditTierDefinition())
+        val result = pass.conform(creditTierContract(), creditTierDefinition()).definition
 
         val defaultEdge = result.sequences.first { it.id == "Flow_manual" }
         assertTrue(defaultEdge.isDefault, "matched edge must carry isDefault=true")
@@ -42,7 +42,7 @@ class DefaultFlowAssignerTest {
     @Test
     fun `clears any placeholder condition on the default edge`() {
         // LLM may have invented a placeholder condition like "otherwise" on the catch-all flow.
-        // The assigner must wipe it because default flows MUST NOT carry a condition (BPMN spec).
+        // The pass must wipe it because default flows MUST NOT carry a condition (BPMN spec).
         val polluted =
             creditTierDefinition().let { def ->
                 def.copy(
@@ -53,7 +53,7 @@ class DefaultFlowAssignerTest {
                 )
             }
 
-        val result = assigner.assign(creditTierContract(), polluted)
+        val result = pass.conform(creditTierContract(), polluted).definition
 
         val defaultEdge = result.sequences.first { it.id == "Flow_manual" }
         assertTrue(defaultEdge.isDefault)
@@ -61,11 +61,12 @@ class DefaultFlowAssignerTest {
     }
 
     @Test
-    fun `leaves definition unchanged when no DefaultBranch exists`() {
+    fun `leaves definition unchanged and reports no corrections when nothing needs stamping`() {
         val contract = creditTierContract().copy(decisions = emptyList())
         val original = creditTierDefinition()
-        val result = assigner.assign(contract, original)
-        assertEquals(original, result)
+        val conformance = pass.conform(contract, original)
+        assertEquals(original, conformance.definition)
+        assertTrue(conformance.corrections.isEmpty())
     }
 
     @Test
@@ -96,7 +97,7 @@ class DefaultFlowAssignerTest {
                 ),
             )
         val original = creditTierDefinition()
-        val result = assigner.assign(contract, original)
+        val result = pass.conform(contract, original).definition
         // No edge was changed because the nextRef didn't match any outbound target.
         assertEquals(original, result)
     }
@@ -132,9 +133,45 @@ class DefaultFlowAssignerTest {
                 creditTierDefinition().sequences +
                     BpmnEdge("Flow_solo", "Gateway_solo", "Task_fast"),
             )
-        val result = assigner.assign(contract, original)
+        val result = pass.conform(contract, original).definition
         val edge = result.sequences.first { it.id == "Flow_solo" }
         assertTrue(edge.isDefault, "single outbound edge should be marked default when nextRef is null")
+    }
+
+    @Test
+    fun `a diverging gateway whose branches carry labels produces named edges`() {
+        // Stamp 2: edge.name = branch.label. generate_bpmn.jinja never asks the model for this,
+        // so the model reliably emits unnamed edges; the pass names them from the contract.
+        val contract = creditTierContract()
+        val unnamed =
+            creditTierDefinition().copy(
+                sequences =
+                creditTierDefinition().sequences.map {
+                    if (it.id == "Flow_fast" || it.id == "Flow_manual") it.copy(name = null) else it
+                },
+            )
+        val conformance = pass.conform(contract, unnamed)
+
+        assertEquals("Fast-track", conformance.definition.sequences.first { it.id == "Flow_fast" }.name)
+        assertEquals("Manual review", conformance.definition.sequences.first { it.id == "Flow_manual" }.name)
+        assertTrue(conformance.corrections.any { it.elementId == "Flow_fast" && it.field == "name" })
+        assertTrue(conformance.corrections.any { it.elementId == "Flow_manual" && it.field == "name" })
+    }
+
+    @Test
+    fun `a correction is produced when the model disagrees with the contract`() {
+        val conformance = pass.conform(creditTierContract(), creditTierDefinition())
+        // Flow_manual is missing isDefault, and both branch edges are missing their labels —
+        // every one of those is a disagreement with the contract's determined value.
+        assertTrue(conformance.corrections.isNotEmpty())
+    }
+
+    @Test
+    fun `no correction is produced when the model already agrees with the contract`() {
+        val alreadyConforming = pass.conform(creditTierContract(), creditTierDefinition()).definition
+        val conformance = pass.conform(creditTierContract(), alreadyConforming)
+        assertTrue(conformance.corrections.isEmpty(), "a second pass over stamped output must be a no-op")
+        assertEquals(alreadyConforming, conformance.definition)
     }
 
     private fun creditTierContract() = ProcessContract(
@@ -173,7 +210,7 @@ class DefaultFlowAssignerTest {
         endStates = listOf(ContractEndState(id = "end-offer", name = "Offer generated", sourceIds = listOf("ev1"))),
     )
 
-    private fun creditTierDefinition() = BpmnDefinition(
+    private fun creditTierDefinition(): BpmnDefinition = BpmnDefinition(
         processId = "P",
         processName = "Credit-tier routing",
         nodes =
@@ -187,9 +224,9 @@ class DefaultFlowAssignerTest {
         sequences =
         listOf(
             BpmnEdge("Flow_1", "StartEvent_1", "Gateway_1"),
-            BpmnEdge("Flow_fast", "Gateway_1", "Task_fast", conditionExpression = "score >= 750"),
-            // The LLM emitted this one without isDefault and without condition — exactly the
-            // failure mode the assigner exists to fix.
+            BpmnEdge("Flow_fast", "Gateway_1", "Task_fast", name = "Fast-track", conditionExpression = "score >= 750"),
+            // The LLM emitted this one without isDefault, without a condition, and without a
+            // name — exactly the failure modes the pass exists to fix.
             BpmnEdge("Flow_manual", "Gateway_1", "Task_manual"),
             BpmnEdge("Flow_3", "Task_fast", "end-offer"),
             BpmnEdge("Flow_4", "Task_manual", "end-offer"),

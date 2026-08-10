@@ -79,6 +79,7 @@ internal class BpmnMilestoneEventListener(
             detail = mapOf(
                 "nodeCount" to event.graph.definition.nodes.size.toString(),
                 "edgeCount" to event.graph.definition.sequences.size.toString(),
+                "conformanceCorrections" to event.corrections.size.toString(),
             ),
         )
     }

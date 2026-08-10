@@ -18,9 +18,9 @@ import org.springframework.test.context.TestPropertySource
  * BootstrapMode.ALL_DEPENDENCIES (ADR-009 (bootstrap tiers) Tier 3 — deep integrator, settled post-S9):
  * `repair` is a genuine deep integrator across `authoring`, `conformance`, `contract`,
  * `readiness`, and `ruleset`. The S9 re-seam (ADR-009 (port-fronting) disposition a) has resolved the
- * root-package `internal` leak: `BpmnContractFidelityChecker` and `DefaultFlowAssigner` are
+ * root-package `internal` leak: `BpmnContractFidelityChecker` and `ContractConformancePass` are
  * now in `authoring.internal.domain` behind their respective ports (`BpmnContractFidelityPort`,
- * `BpmnDefaultFlowPort`). However, a DIRECT_DEPENDENCIES flip is still not achievable:
+ * `BpmnContractConformancePort`). However, a DIRECT_DEPENDENCIES flip is still not achievable:
  * the `authoring` module itself requires the `alignment` module to fully wire its beans
  * (e.g. `LlmBpmnProcessGenerator` depends on `BpmnLoggingConfig` from `conformance`, and
  * `BpmnGenerationAgent` wires `BpmnAligner` from `alignment`). Since `alignment` is not a
