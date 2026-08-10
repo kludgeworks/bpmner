@@ -6,6 +6,8 @@
 package dev.groknull.bpmner.authoring.internal.domain
 
 import dev.groknull.bpmner.authoring.BpmnContractFidelityPort
+import dev.groknull.bpmner.bpmn.BoundaryEventKind
+import dev.groknull.bpmner.bpmn.BpmnBoundaryEvent
 import dev.groknull.bpmner.bpmn.BpmnBusinessRuleTask
 import dev.groknull.bpmner.bpmn.BpmnCallActivity
 import dev.groknull.bpmner.bpmn.BpmnDefinition
@@ -30,6 +32,7 @@ import dev.groknull.bpmner.bpmn.BpmnServiceTask
 import dev.groknull.bpmner.bpmn.BpmnSubProcess
 import dev.groknull.bpmner.bpmn.BpmnTask
 import dev.groknull.bpmner.bpmn.BpmnTerminateEventDefinition
+import dev.groknull.bpmner.bpmn.BpmnTimerEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnUserTask
 import dev.groknull.bpmner.bpmn.isSemanticallyTransparent
 import dev.groknull.bpmner.bpmn.typeName
@@ -44,6 +47,7 @@ import dev.groknull.bpmner.contract.ContractGatewayKind
 import dev.groknull.bpmner.contract.ContractIntermediateThrow
 import dev.groknull.bpmner.contract.DefaultBranch
 import dev.groknull.bpmner.contract.ProcessContract
+import dev.groknull.bpmner.contract.boundaryEvents
 import dev.groknull.bpmner.contract.iteration
 import dev.groknull.bpmner.contract.kindName
 import dev.groknull.bpmner.contract.loop
@@ -115,6 +119,7 @@ internal class BpmnContractFidelityChecker : BpmnContractFidelityPort {
             checkActivityKind(activity, nodeById, issues)
             checkActivityIteration(activity, nodeById, issues)
             checkActivityLoop(activity, nodeById, issues)
+            checkActivityBoundaryEvents(activity, definition, issues)
             if (activity is ContractActivity.SubProcess) {
                 checkSubProcess(activity, nodeById, definition, issues)
             }
@@ -457,6 +462,81 @@ internal class BpmnContractFidelityChecker : BpmnContractFidelityPort {
                 contractElementId = activity.id,
                 bpmnElementId = activity.id,
             )
+    }
+
+    /**
+     * Verifies that each contract `boundaryEvents` entry is realised as a [BpmnBoundaryEvent]
+     * attached to the activity's BPMN task, with a matching `eventDefinition` kind and exactly
+     * one outbound sequence flow to the entry's `nextRef`, and that the task carries no
+     * undeclared boundary event. A [ContractBoundaryEvent] carries no id of its own, so matching
+     * is by (kind, nextRef) — the pair that fully expresses its routing intent.
+     *
+     * Deliberately does not compare `label` (free text) or `detail` (an ISO-8601 duration for
+     * TIMER, a catalogue business-error code for ERROR resolved indirectly via `errorRef`):
+     * ADR-685-17 reserves ERROR-severity fidelity checks for values that change the diagram's
+     * meaning — presence, kind, and routing — not prose.
+     */
+    private fun checkActivityBoundaryEvents(
+        activity: ContractActivity,
+        definition: BpmnDefinition,
+        issues: MutableList<BpmnFidelityIssue>,
+    ) {
+        val declared = activity.boundaryEvents
+        val attached = definition.nodes.filterIsInstance<BpmnBoundaryEvent>().filter { it.attachedToRef == activity.id }
+        if (declared.isEmpty() && attached.isEmpty()) return
+
+        val outgoingBySource = definition.sequences.groupBy { it.sourceRef }
+        val unmatched = attached.toMutableList()
+
+        declared.forEach { boundaryEvent ->
+            val match = unmatched.firstOrNull {
+                it.matchesKind(boundaryEvent.kind) && it.routesTo(boundaryEvent.nextRef, outgoingBySource)
+            }
+            if (match != null) {
+                unmatched.remove(match)
+                return@forEach
+            }
+            val message = if (attached.none { it.matchesKind(boundaryEvent.kind) }) {
+                "Activity '${activity.id}' declares a ${boundaryEvent.kind} boundary event but its BPMN task " +
+                    "carries no matching boundary event — the escape path was dropped."
+            } else {
+                "Activity '${activity.id}' declares a ${boundaryEvent.kind} boundary event routed to " +
+                    "'${boundaryEvent.nextRef}' but no matching BPMN boundary event routes there."
+            }
+            issues +=
+                BpmnFidelityIssue(
+                    code = BpmnFidelityCode.ACTIVITY_BOUNDARY_EVENT_MISMATCH,
+                    severity = BpmnFidelitySeverity.ERROR,
+                    message = message,
+                    contractElementId = activity.id,
+                    bpmnElementId = activity.id,
+                )
+        }
+
+        unmatched.forEach { extra ->
+            issues +=
+                BpmnFidelityIssue(
+                    code = BpmnFidelityCode.ACTIVITY_BOUNDARY_EVENT_MISMATCH,
+                    severity = BpmnFidelitySeverity.ERROR,
+                    message = "Activity '${activity.id}' does not declare a matching boundary event but its BPMN " +
+                        "task carries an undeclared boundary event '${extra.id}' — unexpected escape path.",
+                    contractElementId = activity.id,
+                    bpmnElementId = extra.id,
+                )
+        }
+    }
+
+    private fun BpmnBoundaryEvent.matchesKind(kind: BoundaryEventKind): Boolean = when (kind) {
+        BoundaryEventKind.TIMER -> eventDefinition is BpmnTimerEventDefinition
+        BoundaryEventKind.ERROR -> eventDefinition is BpmnErrorEventDefinition
+    }
+
+    private fun BpmnBoundaryEvent.routesTo(
+        nextRef: String,
+        outgoingBySource: Map<String, List<BpmnEdge>>,
+    ): Boolean {
+        val outgoing = outgoingBySource[id].orEmpty()
+        return outgoing.size == 1 && outgoing.single().targetRef == nextRef
     }
 
     /**

@@ -7,9 +7,12 @@
 
 package dev.groknull.bpmner.authoring.internal.domain
 
+import dev.groknull.bpmner.bpmn.BoundaryEventKind
+import dev.groknull.bpmner.bpmn.BpmnBoundaryEvent
 import dev.groknull.bpmner.bpmn.BpmnDefinition
 import dev.groknull.bpmner.bpmn.BpmnEdge
 import dev.groknull.bpmner.bpmn.BpmnEndEvent
+import dev.groknull.bpmner.bpmn.BpmnErrorEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnExclusiveGateway
 import dev.groknull.bpmner.bpmn.BpmnIntermediateThrowEvent
@@ -21,6 +24,8 @@ import dev.groknull.bpmner.bpmn.BpmnServiceTask
 import dev.groknull.bpmner.bpmn.BpmnStartEvent
 import dev.groknull.bpmner.bpmn.BpmnSubProcess
 import dev.groknull.bpmner.bpmn.BpmnTerminateEventDefinition
+import dev.groknull.bpmner.bpmn.BpmnTimerEventDefinition
+import dev.groknull.bpmner.bpmn.BpmnTimerKind
 import dev.groknull.bpmner.bpmn.BpmnUserTask
 import dev.groknull.bpmner.bpmn.MultiInstanceLoopCharacteristics
 import dev.groknull.bpmner.bpmn.MultiInstanceMode
@@ -32,6 +37,7 @@ import dev.groknull.bpmner.contract.ActivityModifiers
 import dev.groknull.bpmner.contract.ConditionalBranch
 import dev.groknull.bpmner.contract.ContractActivity
 import dev.groknull.bpmner.contract.ContractActor
+import dev.groknull.bpmner.contract.ContractBoundaryEvent
 import dev.groknull.bpmner.contract.ContractDecision
 import dev.groknull.bpmner.contract.ContractEndState
 import dev.groknull.bpmner.contract.ContractGatewayKind
@@ -401,6 +407,119 @@ class BpmnContractFidelityCheckerTest {
             BpmnEdge("F1", "StartEvent_1", "act-charge"),
             BpmnEdge("F2", "act-charge", "end-done"),
         ),
+    )
+
+    @Test
+    fun `missing boundary event flagged as ACTIVITY_BOUNDARY_EVENT_MISMATCH`() {
+        val report = checker.checkDetailed(boundaryEventContract(timerBoundaryEvent()), boundaryEventDefinition(boundary = null))
+
+        assertTrue(
+            report.issues.any { it.code == BpmnFidelityCode.ACTIVITY_BOUNDARY_EVENT_MISMATCH },
+            "expected ACTIVITY_BOUNDARY_EVENT_MISMATCH for the dropped escape path; got: ${report.issues.map { it.code }}",
+        )
+    }
+
+    @Test
+    fun `boundary event realised with the wrong eventDefinition kind flagged`() {
+        val wrongKind = BpmnBoundaryEvent(
+            id = "Boundary_1",
+            name = "Escalate",
+            attachedToRef = "act-charge",
+            eventDefinition = BpmnErrorEventDefinition(errorRef = "Error_1"),
+        )
+        val report =
+            checker.checkDetailed(
+                boundaryEventContract(timerBoundaryEvent()),
+                boundaryEventDefinition(boundary = wrongKind, boundaryFlow = BpmnEdge("F3", "Boundary_1", "end-timeout")),
+            )
+
+        assertTrue(
+            report.issues.any { it.code == BpmnFidelityCode.ACTIVITY_BOUNDARY_EVENT_MISMATCH },
+            "expected ACTIVITY_BOUNDARY_EVENT_MISMATCH for the kind mismatch; got: ${report.issues.map { it.code }}",
+        )
+    }
+
+    @Test
+    fun `boundary event not routed to nextRef flagged`() {
+        val report =
+            checker.checkDetailed(
+                boundaryEventContract(timerBoundaryEvent()),
+                boundaryEventDefinition(
+                    boundary = timerBoundaryEventNode(),
+                    boundaryFlow = BpmnEdge("F3", "Boundary_1", "end-done"),
+                ),
+            )
+
+        assertTrue(
+            report.issues.any { it.code == BpmnFidelityCode.ACTIVITY_BOUNDARY_EVENT_MISMATCH },
+            "expected ACTIVITY_BOUNDARY_EVENT_MISMATCH for the misrouted escape path; got: ${report.issues.map { it.code }}",
+        )
+    }
+
+    @Test
+    fun `matching boundary event passes`() {
+        val report =
+            checker.checkDetailed(
+                boundaryEventContract(timerBoundaryEvent()),
+                boundaryEventDefinition(
+                    boundary = timerBoundaryEventNode(),
+                    boundaryFlow = BpmnEdge("F3", "Boundary_1", "end-timeout"),
+                ),
+            )
+
+        assertTrue(report.isValid, "expected valid; got ${report.issues}")
+    }
+
+    private fun timerBoundaryEvent(): ContractBoundaryEvent = ContractBoundaryEvent(
+        kind = BoundaryEventKind.TIMER,
+        label = "60s timeout",
+        nextRef = "end-timeout",
+        detail = "PT60S",
+    )
+
+    private fun timerBoundaryEventNode(): BpmnBoundaryEvent = BpmnBoundaryEvent(
+        id = "Boundary_1",
+        name = "60s timeout",
+        attachedToRef = "act-charge",
+        eventDefinition = BpmnTimerEventDefinition(BpmnTimerKind.DURATION, "PT60S"),
+    )
+
+    private fun boundaryEventContract(vararg boundaryEvents: ContractBoundaryEvent): ProcessContract = ProcessContract(
+        id = "c-boundary",
+        processName = "Boundary",
+        summary = "Charge with a timeout escape",
+        start = ContractStart(ContractTrigger.None("order placed")),
+        activities = listOf(
+            ContractActivity.Service(
+                id = "act-charge",
+                name = "Charge card",
+                modifiers = ActivityModifiers(boundaryEvents = boundaryEvents.toList()),
+            ),
+        ),
+        endStates = listOf(
+            ContractEndState.Normal(id = "end-done", name = "Charged"),
+            ContractEndState.Normal(id = "end-timeout", name = "Timed out"),
+        ),
+    )
+
+    private fun boundaryEventDefinition(
+        boundary: BpmnBoundaryEvent?,
+        boundaryFlow: BpmnEdge? = null,
+    ): BpmnDefinition = BpmnDefinition(
+        processId = "P",
+        processName = "Boundary",
+        nodes = buildList {
+            add(BpmnStartEvent("StartEvent_1", "Order placed"))
+            add(BpmnServiceTask("act-charge", "Charge card"))
+            add(BpmnEndEvent("end-done", "Charged"))
+            add(BpmnEndEvent("end-timeout", "Timed out"))
+            if (boundary != null) add(boundary)
+        },
+        sequences = buildList {
+            add(BpmnEdge("F1", "StartEvent_1", "act-charge"))
+            add(BpmnEdge("F2", "act-charge", "end-done"))
+            if (boundaryFlow != null) add(boundaryFlow)
+        },
     )
 
     @Test
