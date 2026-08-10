@@ -113,9 +113,11 @@ class TopologyHandlersTest {
         assertEquals(addNode.node!!.id, addEdge.edge!!.sourceRef)
         assertEquals("Task_1", addEdge.edge!!.targetRef)
         assertEquals(2, replaceEdges.size)
-        replaceEdges.forEach { op ->
+        replaceEdges.zip(listOf("Flow_1", "Flow_2")).forEach { (op, originalId) ->
+            assertEquals(originalId, op.edge!!.id, "incoming edge IDs must be preserved")
             assertEquals(addNode.node!!.id, op.edge!!.targetRef)
         }
+        assertTrue(addEdge.edge!!.id !in listOf("Flow_1", "Flow_2"), "join-to-task edge must have a distinct ID")
     }
 
     @Test

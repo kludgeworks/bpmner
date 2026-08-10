@@ -85,6 +85,7 @@ internal class BpmnLlmRepairApplier(
             repaired = repaired,
             appendedMessages = listOf(UserMessage(feedback), AssistantMessage(repaired.toString())),
             promptText = feedback,
+            modelRepair = true,
         )
     }
 
@@ -115,6 +116,7 @@ internal class BpmnLlmRepairApplier(
             repaired = success.definition,
             appendedMessages = listOf(UserMessage(feedback), AssistantMessage(patch.toString())),
             promptText = feedback,
+            modelRepair = true,
         )
     }
 

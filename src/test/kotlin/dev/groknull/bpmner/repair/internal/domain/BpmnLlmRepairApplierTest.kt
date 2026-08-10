@@ -71,7 +71,15 @@ class BpmnLlmRepairApplierTest {
         `when`(promptFactory.patchFeedback(anyNonNull(), anyNonNull())).thenReturn("feedback")
         `when`(promptFactory.fullRepairFeedback(anyNonNull(), anyNonNull())).thenReturn("feedback")
         `when`(promptFactory.lintRuleDocsPrompt(anyNonNull())).thenReturn(null)
-        `when`(advancer.revalidateAndAdvance(anyNonNull(), anyNonNull(), anyNonNull(), anyNonNull()))
+        `when`(
+            advancer.revalidateAndAdvance(
+                anyNonNull(),
+                anyNonNull(),
+                anyNonNull(),
+                anyNonNull(),
+                ArgumentMatchers.anyBoolean(),
+            ),
+        )
             .thenReturn(mock(BpmnRepairEvaluation::class.java))
     }
 

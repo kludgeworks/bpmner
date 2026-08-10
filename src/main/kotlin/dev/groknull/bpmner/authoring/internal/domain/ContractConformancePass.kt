@@ -90,7 +90,7 @@ internal class ContractConformancePass : BpmnContractConformancePort {
         val artifacts = AnnotationArtifacts(annotationsById, associationsById, corrections)
 
         contract.decisions.forEach { decision ->
-            stampBranches(decision, outboundBySource[decision.id].orEmpty(), edgesById, corrections)
+            stampBranches(decision, outboundBySource[decision.id].orEmpty(), definition, edgesById, corrections)
             stampGatewayKind(decision, nodesById, corrections)
         }
         contract.activities.forEach { activity ->
@@ -120,11 +120,12 @@ internal class ContractConformancePass : BpmnContractConformancePort {
     private fun stampBranches(
         decision: ContractDecision,
         outbound: List<BpmnEdge>,
+        definition: BpmnDefinition,
         edgesById: MutableMap<String, BpmnEdge>,
         corrections: MutableList<ContractCorrection>,
     ) {
         decision.branches.forEach { branch ->
-            val matched = resolveOutboundEdge(branch.nextRef, outbound) ?: return@forEach
+            val matched = resolveOutboundEdge(branch.nextRef, outbound, definition) ?: return@forEach
             var edge = edgesById.getValue(matched.id)
 
             if (branch is DefaultBranch && (!edge.isDefault || !edge.conditionExpression.isNullOrBlank())) {
@@ -152,10 +153,23 @@ internal class ContractConformancePass : BpmnContractConformancePort {
     private fun resolveOutboundEdge(
         nextRef: String?,
         outbound: List<BpmnEdge>,
+        definition: BpmnDefinition,
     ): BpmnEdge? = when {
         nextRef != null -> outbound.singleOrNull { it.targetRef == nextRef }
+            ?: resolveRedirectedBranch(nextRef, outbound, definition)
         outbound.size == 1 -> outbound.single()
         else -> null
+    }
+
+    private fun resolveRedirectedBranch(
+        nextRef: String,
+        outbound: List<BpmnEdge>,
+        definition: BpmnDefinition,
+    ): BpmnEdge? = outbound.singleOrNull { edge ->
+        val joinId = edge.targetRef
+        definition.nodes.any { it.id == joinId && it is BpmnGateway } &&
+            definition.sequences.count { it.targetRef == joinId } > 1 &&
+            definition.sequences.filter { it.sourceRef == joinId }.singleOrNull()?.targetRef == nextRef
     }
 
     // Stamp 7: gateway subtype substitution. Total and lossless only because the four contract
