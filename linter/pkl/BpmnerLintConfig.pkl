@@ -19,8 +19,6 @@ elementTypeWords: List<String> = List("activity", "process", "event")
 
 allowedAcronyms: List<String> = List("BPMN", "ACME", "SLA", "API", "IT")
 
-technicalTokens: List<String> = List("api", "svc", "tbl", "req", "resp", "tmp", "proc", "obj")
-
 discouragedBpmnTypes: List<String> =
   List(
     "bpmn:Choreography",

@@ -24,7 +24,6 @@ internal class ConventionsLoaderTest {
         assertThat(config.discouragedLeadingVerbs).containsExactly("handle", "manage", "process", "perform", "do")
         assertThat(config.elementTypeWords).containsExactly("activity", "process", "event")
         assertThat(config.allowedAcronyms).containsExactly("BPMN", "ACME", "SLA", "API", "IT")
-        assertThat(config.technicalTokens).containsExactly("api", "svc", "tbl", "req", "resp", "tmp", "proc", "obj")
         assertThat(config.discouragedBpmnTypes).contains("bpmn:Transaction")
     }
 
@@ -38,7 +37,6 @@ internal class ConventionsLoaderTest {
             discouragedLeadingVerbs = List("coordinate")
             elementTypeWords = List("step")
             allowedAcronyms = List("VIP")
-            technicalTokens = List("impl")
             discouragedBpmnTypes = List("bpmn:Transaction")
             """.trimIndent(),
         )
@@ -50,7 +48,6 @@ internal class ConventionsLoaderTest {
         assertThat(config.discouragedLeadingVerbs).containsExactly("coordinate")
         assertThat(config.elementTypeWords).containsExactly("step")
         assertThat(config.allowedAcronyms).containsExactly("VIP")
-        assertThat(config.technicalTokens).containsExactly("impl")
         assertThat(config.discouragedBpmnTypes).containsExactly("bpmn:Transaction")
     }
 
@@ -85,7 +82,6 @@ internal class ConventionsLoaderTest {
             discouragedLeadingVerbs = List("coordinate")
             elementTypeWords = List("step")
             allowedAcronyms = List("VIP")
-            technicalTokens = List("impl")
             discouragedBpmnTypes = List("bpmn:Transaction"
             """.trimIndent(),
         )
