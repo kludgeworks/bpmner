@@ -226,6 +226,16 @@ internal class BpmnContractFidelityChecker : BpmnContractFidelityPort {
         issues: MutableList<BpmnFidelityIssue>,
     ) {
         if (outbound.size < decision.branches.size) {
+            // Discriminator: every branch naming a nextRef makes the missing edges fully
+            // determined (name the targets); a branch with no nextRef leaves genuine routing
+            // choice to the model, so the remainder is its responsibility to resolve.
+            val discriminator = if (decision.branches.all { it.nextRef != null }) {
+                "Every branch names a nextRef, so the missing outbound flow(s) are determined — " +
+                    "emit one edge per branch to: ${decision.branches.joinToString { "'${it.nextRef}'" }}."
+            } else {
+                "Not every branch names a nextRef, so the remaining routing is left to you — add " +
+                    "the missing outbound flow(s)."
+            }
             issues +=
                 BpmnFidelityIssue(
                     code = BpmnFidelityCode.GATEWAY_BRANCH_COUNT_INSUFFICIENT,
@@ -233,7 +243,7 @@ internal class BpmnContractFidelityChecker : BpmnContractFidelityPort {
                     message =
                     "Decision '${decision.id}' declares ${decision.branches.size} branches but its " +
                         "gateway has only ${outbound.size} outbound sequence flow(s). The LLM has " +
-                        "likely conflated branches into fewer outbound flows.",
+                        "likely conflated branches into fewer outbound flows. $discriminator",
                     contractElementId = decision.id,
                     bpmnElementId = gateway.id,
                 )
@@ -288,15 +298,15 @@ internal class BpmnContractFidelityChecker : BpmnContractFidelityPort {
                         severity = BpmnFidelitySeverity.ERROR,
                         message =
                         "Branch '${branch.id}' of decision '${decision.id}' has nextRef='$ref' " +
-                            "which does not match any node id in the generated BPMN.",
+                            "which does not match any node id in the generated BPMN. Contract " +
+                            "validation requires '$ref' to be a declared contract element, so the " +
+                            "contract declares it and the BPMN is missing the node — emit it.",
                         contractElementId = branch.id,
                         bpmnElementId = ref,
                     )
                 return@forEach
             }
-            if (gateway != null &&
-                !targetReachableSemantically(gateway, ref, outgoingBySource, nodeById)
-            ) {
+            if (gateway != null && !targetReachableSemantically(gateway, ref, outgoingBySource, nodeById)) {
                 issues +=
                     BpmnFidelityIssue(
                         code = BpmnFidelityCode.BRANCH_FLOW_MISSING,
@@ -304,11 +314,37 @@ internal class BpmnContractFidelityChecker : BpmnContractFidelityPort {
                         message =
                         "Branch '${branch.id}' of decision '${decision.id}' specifies nextRef='$ref' " +
                             "but no sequence flow connects gateway '${gateway.id}' to '$ref' " +
-                            "(directly or via transparent routing nodes).",
+                            "(directly or via transparent routing nodes). " +
+                            branchFlowMissingDiscriminator(gateway, ref, outgoingBySource, nodeById),
                         contractElementId = branch.id,
                         bpmnElementId = ref,
                     )
             }
+        }
+    }
+
+    // Discriminator for BRANCH_FLOW_MISSING: an opaque-tolerant walk (every node treated as
+    // transparent, not just the semantically-transparent ones) over the same frontier the
+    // reachability check already builds. No path at any hop means the model dropped an edge
+    // (underdetermined, patchable); a path through named tasks means the contract's nextRef
+    // skipped real work the routing must still pass through — name it so the fix is unambiguous.
+    private fun branchFlowMissingDiscriminator(
+        gateway: BpmnNode,
+        targetId: String,
+        outgoingBySource: Map<String, List<BpmnEdge>>,
+        nodeById: Map<String, BpmnNode>,
+    ): String {
+        val (opaqueReachable, visited) =
+            walkReachability(gateway, targetId, outgoingBySource, nodeById) { true }
+        if (!opaqueReachable) {
+            return "No path to '$targetId' exists at any hop — the model dropped an edge."
+        }
+        val skipped = visited.mapNotNull { nodeById[it] }.filterIsInstance<BpmnTask>().map { it.id }
+        return if (skipped.isEmpty()) {
+            "A path to '$targetId' exists but only through routing-only nodes — the model dropped an edge."
+        } else {
+            "A path to '$targetId' exists through ${skipped.joinToString()} — the contract's nextRef " +
+                "skipped over real work; route through it instead of around it."
         }
     }
 
@@ -322,29 +358,47 @@ internal class BpmnContractFidelityChecker : BpmnContractFidelityPort {
         targetId: String,
         outgoingBySource: Map<String, List<BpmnEdge>>,
         nodeById: Map<String, BpmnNode>,
-    ): Boolean {
+    ): Boolean = walkReachability(from, targetId, outgoingBySource, nodeById) {
+        it.isSemanticallyTransparent(outgoingBySource)
+    }.first
+
+    /**
+     * Shared bounded BFS behind [targetReachableSemantically] and [branchFlowMissingDiscriminator]:
+     * walks forward from [from] through nodes matching [isTransparent], returning whether
+     * [targetId] was reached plus every intermediate node id visited along the way (useful for a
+     * caller that needs to say *what* stood in the way, not just whether something did).
+     */
+    private fun walkReachability(
+        from: BpmnNode,
+        targetId: String,
+        outgoingBySource: Map<String, List<BpmnEdge>>,
+        nodeById: Map<String, BpmnNode>,
+        isTransparent: (BpmnNode) -> Boolean,
+    ): Pair<Boolean, Set<String>> {
         val direct = outgoingBySource[from.id].orEmpty()
-        if (direct.any { it.targetRef == targetId }) return true
+        if (direct.any { it.targetRef == targetId }) return true to emptySet()
         val seen = mutableSetOf(from.id)
         var frontier = direct.map { it.targetRef }.toSet() - from.id
+        val visited = mutableSetOf<String>()
 
         repeat(MAX_REACHABILITY_HOPS) {
-            if (frontier.isEmpty()) return false
-            if (targetId in frontier) return true
-            // Step the BFS one hop: keep only unseen, semantically-transparent nodes; collect
-            // their outbound edge targets as the next frontier. Chained pipeline keeps the loop
-            // body free of multi-branch jumps (detekt LoopWithTooManyJumpStatements).
+            if (frontier.isEmpty()) return false to visited
+            if (targetId in frontier) return true to visited
+            visited += frontier
+            // Step the BFS one hop: keep only unseen, transparent-per-[isTransparent] nodes;
+            // collect their outbound edge targets as the next frontier. Chained pipeline keeps
+            // the loop body free of multi-branch jumps (detekt LoopWithTooManyJumpStatements).
             frontier =
                 frontier
                     .asSequence()
                     .filter { seen.add(it) }
                     .mapNotNull { nodeById[it] }
-                    .filter { it.isSemanticallyTransparent(outgoingBySource) }
+                    .filter(isTransparent)
                     .flatMap { outgoingBySource[it.id].orEmpty().asSequence() }
                     .map { it.targetRef }
                     .toSet()
         }
-        return false
+        return false to visited
     }
 
     private companion object {
