@@ -8,12 +8,14 @@ package dev.groknull.bpmner.pipeline.internal.adapter.inbound
 import dev.groknull.bpmner.alignment.BpmnAlignmentCheckedEvent
 import dev.groknull.bpmner.authoring.BpmnGeneratedEvent
 import dev.groknull.bpmner.authoring.BpmnGraphComposedEvent
+import dev.groknull.bpmner.authoring.BpmnRunAbortedEvent
 import dev.groknull.bpmner.conformance.BpmnDiagnosticSource
 import dev.groknull.bpmner.conformance.BpmnValidationFailedEvent
 import dev.groknull.bpmner.conformance.BpmnValidationPassedEvent
 import dev.groknull.bpmner.contract.BpmnContractExtractedEvent
 import dev.groknull.bpmner.layout.BpmnLayoutCompletedEvent
 import dev.groknull.bpmner.pipeline.ArtifactState
+import dev.groknull.bpmner.pipeline.RunOutcome
 import dev.groknull.bpmner.pipeline.RunPhase
 import dev.groknull.bpmner.readiness.BpmnReadinessAssessedEvent
 import org.jmolecules.architecture.onion.simplified.InfrastructureRing
@@ -38,6 +40,7 @@ import org.springframework.stereotype.Component
 @Component
 internal class BpmnMilestoneEventListener(
     private val registry: RunUpdateSinkRegistry,
+    private val runUpdateChannel: BpmnRunUpdateChannel,
 ) {
     private val logger = LoggerFactory.getLogger(BpmnMilestoneEventListener::class.java)
 
@@ -59,10 +62,8 @@ internal class BpmnMilestoneEventListener(
             processId = processId,
             phase = RunPhase.CONTRACT,
             artifactState = ArtifactState.NONE,
-            summary = "Extracted the process contract" +
-                (if (event.contract.isValid) "." else " (with issues)."),
+            summary = "Extracted the process contract.",
             detail = mapOf(
-                "valid" to event.contract.isValid.toString(),
                 "issueCount" to event.contract.report.issues.size.toString(),
             ),
         )
@@ -79,6 +80,7 @@ internal class BpmnMilestoneEventListener(
             detail = mapOf(
                 "nodeCount" to event.graph.definition.nodes.size.toString(),
                 "edgeCount" to event.graph.definition.sequences.size.toString(),
+                "conformanceCorrections" to event.corrections.size.toString(),
             ),
         )
     }
@@ -130,6 +132,21 @@ internal class BpmnMilestoneEventListener(
             phase = RunPhase.LAYOUT,
             artifactState = ArtifactState.XML_DRAFT,
             summary = "Applied automatic diagram layout.",
+        )
+    }
+
+    // Backstop for a run that died without reaching any terminal of its own — see
+    // BpmnRunAbortedEvent. Emits the terminal the failed run never produced; the registry drops
+    // it if the run did manage to report one.
+    @EventListener
+    fun onRunAborted(event: BpmnRunAbortedEvent) {
+        runUpdateChannel.clearClarificationState(event.processId)
+        registry.emitTerminal(
+            processId = event.processId,
+            artifactState = ArtifactState.NONE,
+            summary = "BPMN generation stopped unexpectedly.",
+            outcome = RunOutcome.FAILED,
+            detail = mapOf("failureDetail" to event.detail),
         )
     }
 

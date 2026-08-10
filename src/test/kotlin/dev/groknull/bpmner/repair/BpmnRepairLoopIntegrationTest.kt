@@ -42,6 +42,7 @@ import dev.groknull.bpmner.repair.internal.domain.BpmnLlmRepairApplier
 import dev.groknull.bpmner.repair.internal.domain.BpmnLocalFixApplier
 import dev.groknull.bpmner.repair.internal.domain.BpmnRepairAdvancer
 import dev.groknull.bpmner.repair.internal.domain.BpmnRepairEvaluation
+import dev.groknull.bpmner.repair.internal.domain.StuckBlockingDiagnosticsException
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
@@ -205,7 +206,7 @@ class BpmnRepairLoopIntegrationTest : EmbabelMockitoIntegrationTest() {
         val result = AgentPlatformTypedOps(platform).transform(
             request,
             BpmnResult::class.java,
-            ProcessOptions(budget = Budget(actions = 15), ephemeral = false),
+            ProcessOptions(budget = Budget(actions = ACTION_BUDGET), ephemeral = false),
         )
 
         assertEquals(BpmnGenerationStatus.GENERATED, result.status)
@@ -267,7 +268,7 @@ class BpmnRepairLoopIntegrationTest : EmbabelMockitoIntegrationTest() {
         val result = AgentPlatformTypedOps(platform).transform(
             request,
             BpmnResult::class.java,
-            ProcessOptions(budget = Budget(actions = 15), ephemeral = false),
+            ProcessOptions(budget = Budget(actions = ACTION_BUDGET), ephemeral = false),
         )
 
         assertEquals(BpmnGenerationStatus.GENERATED, result.status)
@@ -300,7 +301,7 @@ class BpmnRepairLoopIntegrationTest : EmbabelMockitoIntegrationTest() {
         val result = AgentPlatformTypedOps(platform).transform(
             request,
             BpmnResult::class.java,
-            ProcessOptions(budget = Budget(actions = 15), ephemeral = false),
+            ProcessOptions(budget = Budget(actions = ACTION_BUDGET), ephemeral = false),
         )
 
         // Config maxRepairIterations is 5.
@@ -309,5 +310,41 @@ class BpmnRepairLoopIntegrationTest : EmbabelMockitoIntegrationTest() {
         assertEquals(BpmnGenerationStatus.VALIDATION_FAILED, result.status)
         verify(localFixApplier, times(6)).applyLocalModelFix(anyNonNull())
         assertTrue(result.xml != null)
+    }
+
+    @Test
+    fun `stalled structural repair escalates to full rewrite`() {
+        val request = BpmnRequest(processDescription = "Make toast", mode = GenerationMode.SINGLE_SHOT)
+        val diagnostic = BpmnDiagnostic(
+            source = BpmnDiagnosticSource.LINT,
+            message = "Unnamed diverging gateway flow",
+            severity = BpmnDiagnosticSeverity.ERROR,
+            kind = RepairKind.LLM_MODEL_PATCH,
+            repairScope = BpmnRepairScope.PHASE,
+        )
+
+        `when`(advancer.initialEvaluation(anyNonNull(), anyNonNull(), anyNonNull(), anyNonNull()))
+            .thenReturn(createEvaluation(request, listOf(diagnostic)))
+        `when`(llmRepairApplier.applyLlmStructuralPatch(anyNonNull(), anyNonNull(), anyNonNull()))
+            .thenThrow(StuckBlockingDiagnosticsException("unchanged blocking diagnostics"))
+        `when`(llmRepairApplier.applyFullLlmRewrite(anyNonNull(), anyNonNull(), anyNonNull()))
+            .thenReturn(createEvaluation(request, emptyList()))
+
+        val result = AgentPlatformTypedOps(platform).transform(
+            request,
+            BpmnResult::class.java,
+            ProcessOptions(budget = Budget(actions = ACTION_BUDGET), ephemeral = false),
+        )
+
+        assertEquals(BpmnGenerationStatus.GENERATED, result.status)
+        verify(llmRepairApplier, times(1)).applyLlmStructuralPatch(anyNonNull(), anyNonNull(), anyNonNull())
+        verify(llmRepairApplier, times(1)).applyFullLlmRewrite(anyNonNull(), anyNonNull(), anyNonNull())
+    }
+
+    private companion object {
+        // Headroom over the happy path plus repair rounds, not a budget assertion. Each stage that
+        // can fail returns a sealed ready/failed pair, so its success branch costs one extra action
+        // to unwrap; production runs on a far larger budget.
+        const val ACTION_BUDGET = 25
     }
 }

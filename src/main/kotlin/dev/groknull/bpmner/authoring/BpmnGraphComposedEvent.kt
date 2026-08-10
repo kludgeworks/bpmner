@@ -16,5 +16,6 @@ import org.jmolecules.event.annotation.DomainEvent
 @DomainEvent
 data class BpmnGraphComposedEvent(
     val graph: LaidOutProcessGraph,
+    val corrections: List<ContractCorrection> = emptyList(),
     val processId: String? = null,
 )

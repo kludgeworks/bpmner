@@ -8,7 +8,8 @@ package dev.groknull.bpmner.repair.internal.domain
 import com.embabel.chat.AssistantMessage
 import com.embabel.chat.Message
 import com.embabel.chat.UserMessage
-import dev.groknull.bpmner.authoring.BpmnDefaultFlowPort
+import dev.groknull.bpmner.authoring.BpmnConformance
+import dev.groknull.bpmner.authoring.BpmnContractConformancePort
 import dev.groknull.bpmner.authoring.BpmnProcessGenerator
 import dev.groknull.bpmner.bpmn.BpmnDefinition
 import dev.groknull.bpmner.bpmn.BpmnRequest
@@ -28,7 +29,7 @@ import org.mockito.Mockito.mock
 import org.mockito.Mockito.`when`
 
 class BpmnRepairAdvancerTest {
-    private val defaultFlowAssigner = mock(BpmnDefaultFlowPort::class.java)
+    private val conformancePort = mock(BpmnContractConformancePort::class.java)
     private val contractAwareValidator = mock(BpmnContractAwareValidator::class.java)
     private val attemptRecordFactory = mock(BpmnAttemptRecordFactory::class.java)
     private val promptFactory = mock(BpmnRepairPromptPort::class.java)
@@ -44,7 +45,7 @@ class BpmnRepairAdvancerTest {
     private fun advancer(trimHistory: Boolean): BpmnRepairAdvancer {
         val config = BpmnRepairConfig(trimHistory = trimHistory)
         return BpmnRepairAdvancer(
-            defaultFlowAssigner,
+            conformancePort,
             contractAwareValidator,
             attemptRecordFactory,
             promptFactory,
@@ -63,7 +64,7 @@ class BpmnRepairAdvancerTest {
         val graph = mock(LaidOutProcessGraph::class.java)
         val rendered = mock(RenderedBpmn::class.java)
 
-        `when`(defaultFlowAssigner.assign(anyNonNull(), anyNonNull())).thenReturn(definition)
+        `when`(conformancePort.conform(anyNonNull(), anyNonNull())).thenReturn(BpmnConformance(definition, emptyList()))
         `when`(fingerprints.definitionFingerprint(anyNonNull())).thenReturn("fp-stamped")
         `when`(fingerprints.promptFingerprint(anyNonNull())).thenReturn("fp-prompt")
         `when`(processGenerator.render(anyNonNull())).thenReturn(rendered)
@@ -99,7 +100,7 @@ class BpmnRepairAdvancerTest {
         val graph = mock(LaidOutProcessGraph::class.java)
         val rendered = mock(RenderedBpmn::class.java)
 
-        `when`(defaultFlowAssigner.assign(anyNonNull(), anyNonNull())).thenReturn(definition)
+        `when`(conformancePort.conform(anyNonNull(), anyNonNull())).thenReturn(BpmnConformance(definition, emptyList()))
         `when`(fingerprints.definitionFingerprint(anyNonNull())).thenReturn("fp-stamped")
         `when`(fingerprints.promptFingerprint(anyNonNull())).thenReturn("fp-prompt")
         `when`(fingerprints.serializeDefinition(anyNonNull())).thenReturn("compact-serialized")

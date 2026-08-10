@@ -3,19 +3,19 @@
  * SPDX-License-Identifier: MIT
  */
 
-@file:Suppress("TooManyFunctions")
-
 package dev.groknull.bpmner.prompts
 
 import com.embabel.common.textio.template.JinjavaTemplateRenderer
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import dev.groknull.bpmner.alignment.BpmnDefinitionSummary
 import dev.groknull.bpmner.alignment.BpmnSummaryElement
 import dev.groknull.bpmner.alignment.BpmnSummaryFlow
 import dev.groknull.bpmner.bpmn.BpmnRequest
+import dev.groknull.bpmner.bpmn.StandardLoopCharacteristics
 import dev.groknull.bpmner.contract.ContractActivity
 import dev.groknull.bpmner.contract.ContractEndState
 import dev.groknull.bpmner.contract.ProcessContract
-import dev.groknull.bpmner.contract.ProcessContractMarkdownRenderer
+import dev.groknull.bpmner.llm.PromptJsonRenderer
 import kotlin.test.Test
 import kotlin.test.assertTrue
 
@@ -26,7 +26,7 @@ import kotlin.test.assertTrue
  */
 class CheckAlignmentTemplateTest {
     private val renderer = JinjavaTemplateRenderer()
-    private val contractRenderer = ProcessContractMarkdownRenderer()
+    private val jsonRenderer = PromptJsonRenderer(jacksonObjectMapper())
 
     @Test
     fun `template includes system instructions and the misaligned worked example`() {
@@ -42,38 +42,29 @@ class CheckAlignmentTemplateTest {
     }
 
     @Test
-    fun `template renders process contract markdown and bpmn summary`() {
+    fun `template renders process contract and bpmn summary as JSON`() {
         val prompt = render(sampleSummary())
 
-        assertTrue(prompt.contains("## Process Contract"))
-        assertTrue(prompt.contains("## Generated BPMN Summary"))
-        assertTrue(prompt.contains("Process ID: Process_1"))
-        assertTrue(prompt.contains("Process Name: Make Toast"))
-        assertTrue(prompt.contains("### Semantic Elements"))
-        assertTrue(prompt.contains("### Sequence Flows"))
+        assertTrue(prompt.contains("## Process Contract (JSON)"))
+        assertTrue(prompt.contains("## Generated BPMN Summary (JSON)"))
+        assertTrue(prompt.contains("\"processId\":\"Process_1\""))
+        assertTrue(prompt.contains("\"processName\":\"Make Toast\""))
     }
 
     @Test
-    fun `template formats elements with id, type, and name fallback`() {
+    fun `template carries element and flow data through the serialised summary`() {
         val prompt = render(
             sampleSummary().copy(
                 elements = listOf(
                     BpmnSummaryElement(id = "task1", type = "USER_TASK", name = "Toast bread"),
-                    BpmnSummaryElement(id = "gw1", type = "EXCLUSIVE_GATEWAY", name = null),
+                    BpmnSummaryElement(
+                        id = "task2",
+                        type = "SERVICE_TASK",
+                        name = "Retry toast",
+                        standardLoop = StandardLoopCharacteristics(testBefore = false, loopCondition = "burnt"),
+                    ),
                 ),
-            ),
-        )
-
-        assertTrue(prompt.contains("- [task1] USER_TASK: Toast bread"))
-        assertTrue(prompt.contains("- [gw1] EXCLUSIVE_GATEWAY: (unnamed)"))
-    }
-
-    @Test
-    fun `template formats flows with optional condition and name suffixes`() {
-        val prompt = render(
-            sampleSummary().copy(
                 flows = listOf(
-                    BpmnSummaryFlow(id = "f1", sourceRef = "start", targetRef = "task1"),
                     BpmnSummaryFlow(
                         id = "f2",
                         sourceRef = "gw1",
@@ -82,26 +73,14 @@ class CheckAlignmentTemplateTest {
                         name = "go",
                     ),
                 ),
+                unreachableElementIds = listOf("orphan1"),
             ),
         )
 
-        assertTrue(prompt.contains("- [f1] start → task1"))
-        assertTrue(prompt.contains("- [f2] gw1 → task2 [if ready == true] (go)"))
-    }
-
-    @Test
-    fun `template includes unreachable elements section when present`() {
-        val prompt = render(sampleSummary().copy(unreachableElementIds = listOf("orphan1", "orphan2")))
-
-        assertTrue(prompt.contains("### Unreachable Elements"))
-        assertTrue(prompt.contains("- orphan1"))
-        assertTrue(prompt.contains("- orphan2"))
-    }
-
-    @Test
-    fun `template omits unreachable section when none present`() {
-        val prompt = render(sampleSummary())
-        assertTrue(!prompt.contains("### Unreachable Elements"))
+        assertTrue(prompt.contains("\"id\":\"task1\"") && prompt.contains("\"type\":\"USER_TASK\""))
+        assertTrue(prompt.contains("\"testBefore\":false") && prompt.contains("\"loopCondition\":\"burnt\""))
+        assertTrue(prompt.contains("\"sourceRef\":\"gw1\"") && prompt.contains("\"conditionExpression\":\"ready == true\""))
+        assertTrue(prompt.contains("\"unreachableElementIds\":[\"orphan1\"]"))
     }
 
     @Test
@@ -112,16 +91,16 @@ class CheckAlignmentTemplateTest {
     }
 
     @Test
-    fun `contractMarkdown contains SERVICE and NORMAL markers for default kind discriminators`() {
+    fun `contractJson contains SERVICE and NORMAL kind discriminators for default activity and end-state kinds`() {
         val prompt = render(sampleSummary())
 
         assertTrue(
-            prompt.contains("[SERVICE]"),
-            "Service activity must appear as [SERVICE] in contractMarkdown; got:\n$prompt",
+            prompt.contains("\"kind\":\"SERVICE\""),
+            "Service activity must carry the SERVICE kind discriminator; got:\n$prompt",
         )
         assertTrue(
-            prompt.contains("[NORMAL]"),
-            "Normal end state must appear as [NORMAL] in contractMarkdown; got:\n$prompt",
+            prompt.contains("\"kind\":\"NORMAL\""),
+            "Normal end state must carry the NORMAL kind discriminator; got:\n$prompt",
         )
     }
 
@@ -145,18 +124,8 @@ class CheckAlignmentTemplateTest {
     ): String = renderer.renderLoadedTemplate("bpmner/check_alignment", model(summary, request))
 
     private fun model(summary: BpmnDefinitionSummary, request: BpmnRequest): Map<String, Any> = mapOf(
-        "contractMarkdown" to contractRenderer.render(sampleContract()).trim(),
-        "processId" to summary.processId,
-        "processName" to summary.processName,
-        "elementLines" to summary.elements.map { element ->
-            "[${element.id}] ${element.type}: ${element.name ?: "(unnamed)"}"
-        },
-        "flowLines" to summary.flows.map { flow ->
-            val condition = flow.conditionExpression?.let { " [if $it]" } ?: ""
-            val name = flow.name?.let { " ($it)" } ?: ""
-            "[${flow.id}] ${flow.sourceRef} → ${flow.targetRef}$condition$name"
-        },
-        "unreachableElementIds" to summary.unreachableElementIds,
+        "contractJson" to jsonRenderer.render(sampleContract()),
+        "bpmnSummaryJson" to jsonRenderer.render(summary),
         "processDescription" to request.processDescription,
     )
 

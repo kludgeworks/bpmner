@@ -24,8 +24,8 @@ import dev.groknull.bpmner.bpmn.BpmnRequest
 import dev.groknull.bpmner.bpmn.styleGuideContribution
 import dev.groknull.bpmner.conformance.FinalValidatedBpmnXml
 import dev.groknull.bpmner.contract.ProcessContract
-import dev.groknull.bpmner.contract.ProcessContractMarkdownRenderer
 import dev.groknull.bpmner.contract.ValidatedProcessContract
+import dev.groknull.bpmner.llm.PromptJsonRenderer
 import dev.groknull.bpmner.llm.publishOnInvalidLlmReturn
 import dev.groknull.bpmner.readiness.ReadyBpmnContext
 import org.jmolecules.architecture.onion.simplified.InfrastructureRing
@@ -38,7 +38,7 @@ internal class LlmBpmnAligner(
     private val config: BpmnAlignmentConfig,
     private val summarizer: BpmnSummarizer,
     private val postChecker: BpmnAlignmentPostChecker,
-    private val contractRenderer: ProcessContractMarkdownRenderer,
+    private val jsonRenderer: PromptJsonRenderer,
     private val eventPublisher: ApplicationEventPublisher,
 ) : BpmnAligner {
     override fun align(
@@ -107,18 +107,8 @@ internal class LlmBpmnAligner(
         contract: ProcessContract,
         summary: BpmnDefinitionSummary,
     ): Map<String, Any> = mapOf(
-        "contractMarkdown" to contractRenderer.render(contract).trim(),
-        "processId" to summary.processId,
-        "processName" to summary.processName,
-        "elementLines" to summary.elements.map { element ->
-            "[${element.id}] ${element.type}: ${element.name ?: "(unnamed)"}"
-        },
-        "flowLines" to summary.flows.map { flow ->
-            val condition = flow.conditionExpression?.let { " [if $it]" } ?: ""
-            val name = flow.name?.let { " ($it)" } ?: ""
-            "[${flow.id}] ${flow.sourceRef} → ${flow.targetRef}$condition$name"
-        },
-        "unreachableElementIds" to summary.unreachableElementIds,
+        "contractJson" to jsonRenderer.render(contract),
+        "bpmnSummaryJson" to jsonRenderer.render(summary),
         "processDescription" to request.processDescription,
     )
 }

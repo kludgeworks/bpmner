@@ -178,7 +178,10 @@ class BpmnGenerationPipelineTest : EmbabelMockitoIntegrationTest() {
         )
         return platform.createAgentProcessFrom(
             goalAgent,
-            ProcessOptions(budget = Budget(actions = 15), ephemeral = true),
+            // Headroom over the happy path, not a budget assertion. Each stage that can fail
+            // returns a sealed ready/failed pair, so its success branch costs one extra action to
+            // unwrap; production runs on a far larger budget.
+            ProcessOptions(budget = Budget(actions = 25), ephemeral = true),
             PromptFixtures.canonicalRequest,
         ).run()
     }

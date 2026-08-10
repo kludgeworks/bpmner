@@ -25,6 +25,9 @@
     <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
     <springProperty scope="context" name="LOG_DIR" source="bpmner.logging.dir" defaultValue="logs"/>
     <springProperty scope="context" name="LOG_FILE_OVERRIDE" source="bpmner.logging.file"/>
+    <!-- Stdout threshold only — never the file appender's, and never a per-logger level.
+         See bpmner.logging.console-level in application.yaml for the operational rationale. -->
+    <springProperty scope="context" name="CONSOLE_LOG_LEVEL" source="bpmner.logging.console-level" defaultValue="INFO"/>
     <timestamp key="RUN_TS" datePattern="yyyyMMdd-HHmmss-SSS" timeReference="contextBirth"/>
 
     <property name="CONSOLE_PATTERN"
@@ -36,7 +39,7 @@
 
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
         <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
-            <level>INFO</level>
+            <level>${CONSOLE_LOG_LEVEL}</level>
         </filter>
         <encoder>
             <pattern>${CONSOLE_PATTERN}</pattern>
@@ -60,6 +63,12 @@
 
     <logger name="dev.groknull.bpmner" level="DEBUG" additivity="true"/>
     <logger name="Embabel" level="DEBUG" additivity="true"/>
+
+    <!-- The live SSE progress stream (epic #605): each RunUpdate is logged at DEBUG in the exact
+         flat wire shape the browser receives (seq/phase/artifactState/outcome?/summary/detail).
+         Kept explicit so it can be raised to INFO to trace a run's ordered stream without the rest
+         of the DEBUG firehose. Grep the log for "RunUpdate[" to isolate one run's sequence. -->
+    <logger name="dev.groknull.bpmner.pipeline.internal.adapter.inbound.RunUpdateSinkRegistry" level="DEBUG" additivity="true"/>
 
     <root level="INFO">
         <appender-ref ref="CONSOLE"/>

@@ -13,24 +13,24 @@
 			"reason": "regenerated 2026-07-31"
 		},
 		"generationPrompt": {
-			"chars": 15338,
-			"updatedBy": "auto",
-			"reason": "regenerated 2026-07-11"
+			"chars": 16052,
+			"updatedBy": "690",
+			"reason": "JSON contract transport (Stage C, epic #685)"
 		},
 		"generationFullPayload": {
-			"chars": 35403,
-			"updatedBy": "auto",
-			"reason": "regenerated 2026-07-31"
+			"chars": 36117,
+			"updatedBy": "690",
+			"reason": "JSON contract transport (Stage C, epic #685)"
 		},
 		"alignmentPrompt": {
-			"chars": 2512,
-			"updatedBy": "auto",
-			"reason": "regenerated 2026-07-11"
+			"chars": 3952,
+			"updatedBy": "690",
+			"reason": "JSON contract + BPMN-summary transport (Stage C, epic #685)"
 		},
 		"alignmentFullPayload": {
-			"chars": 4525,
-			"updatedBy": "auto",
-			"reason": "regenerated 2026-07-31"
+			"chars": 5965,
+			"updatedBy": "690",
+			"reason": "JSON contract + BPMN-summary transport (Stage C, epic #685)"
 		},
 		"readinessPrompt": {
 			"chars": 4976,

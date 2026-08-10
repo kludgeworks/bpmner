@@ -50,8 +50,12 @@ enum class ContractValidationCode {
     DUPLICATE_CONTRACT_ELEMENT_ID,
     INVALID_CONTRACT_ITEM,
 
-    /** An activity's dataInputIds/dataOutputIds references an id not present in the contract's artifacts. */
-    DATA_REF_NOT_IN_ARTIFACTS,
+    /**
+     * A [dev.groknull.bpmner.contract.ContractBranch.nextRef] or
+     * [dev.groknull.bpmner.contract.ContractBoundaryEvent.nextRef] does not resolve to any
+     * activity, decision, end state, or intermediate throw declared in the contract.
+     */
+    NEXT_REF_NOT_FOUND,
 
     /** A subprocess declares no member activities. An embedded subprocess must contain at least one. */
     SUBPROCESS_EMPTY,
@@ -103,11 +107,18 @@ data class ContractValidationReport(
     val isValid: Boolean = issues.none { it.severity == ContractIssueSeverity.ERROR }
 }
 
-data class ValidatedProcessContract(
+@ConsistentCopyVisibility
+data class ValidatedProcessContract private constructor(
     val contract: ProcessContract,
     val report: ContractValidationReport,
 ) {
-    val isValid: Boolean = report.isValid
+    companion object {
+        /** Returns `null` when [report] carries an ERROR-severity issue. */
+        fun of(
+            contract: ProcessContract,
+            report: ContractValidationReport,
+        ): ValidatedProcessContract? = if (report.isValid) ValidatedProcessContract(contract, report) else null
+    }
 }
 
 fun ContractValidationIssue.format(): String = buildString {

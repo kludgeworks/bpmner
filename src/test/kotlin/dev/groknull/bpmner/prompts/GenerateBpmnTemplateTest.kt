@@ -8,16 +8,23 @@
 package dev.groknull.bpmner.prompts
 
 import com.embabel.common.textio.template.JinjavaTemplateRenderer
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import dev.groknull.bpmner.bpmn.BoundaryEventKind
 import dev.groknull.bpmner.bpmn.BpmnRequest
+import dev.groknull.bpmner.bpmn.MultiInstanceMode
+import dev.groknull.bpmner.contract.ActivityModifiers
 import dev.groknull.bpmner.contract.ConditionalBranch
 import dev.groknull.bpmner.contract.ContractActivity
 import dev.groknull.bpmner.contract.ContractActor
 import dev.groknull.bpmner.contract.ContractAssumption
+import dev.groknull.bpmner.contract.ContractBoundaryEvent
 import dev.groknull.bpmner.contract.ContractDecision
 import dev.groknull.bpmner.contract.ContractEndState
+import dev.groknull.bpmner.contract.ContractIteration
+import dev.groknull.bpmner.contract.ContractLoop
 import dev.groknull.bpmner.contract.DefaultBranch
 import dev.groknull.bpmner.contract.ProcessContract
-import dev.groknull.bpmner.contract.ProcessContractMarkdownRenderer
+import dev.groknull.bpmner.llm.PromptJsonRenderer
 import dev.groknull.bpmner.ruleset.BpmnNamingShapeAdvice
 import kotlin.test.Test
 import kotlin.test.assertTrue
@@ -28,7 +35,7 @@ import kotlin.test.assertTrue
  */
 class GenerateBpmnTemplateTest {
     private val renderer = JinjavaTemplateRenderer()
-    private val contractRenderer = ProcessContractMarkdownRenderer()
+    private val jsonRenderer = PromptJsonRenderer(jacksonObjectMapper())
 
     @Test
     fun `template renders a contract-first BPMN generation prompt with traceability context`() {
@@ -43,18 +50,22 @@ class GenerateBpmnTemplateTest {
         assertTrue(prompt.contains("validated ProcessContract is the primary and authoritative generation input"))
         assertTrue(prompt.contains("Original input for traceability only:"))
         assertTrue(
-            prompt.indexOf("Primary validated ProcessContract:") <
+            prompt.indexOf("Primary validated ProcessContract (JSON):") <
                 prompt.indexOf("Original input for traceability only:"),
         )
-        assertTrue(prompt.contains("Trigger: Claim is submitted"))
-        assertTrue(prompt.contains("- a-review: Claims team reviews claim (actor: actor-claims)"))
-        assertTrue(prompt.contains("- a-rework: Request corrected claim details"))
-        assertTrue(prompt.contains("- d-complete: Is the claim complete?"))
-        assertTrue(prompt.contains("- b-complete"))
-        assertTrue(prompt.contains("- b-rework"))
-        assertTrue(prompt.contains("- end-approved: Claim approved"))
-        assertTrue(prompt.contains("- end-rejected: Claim rejected"))
-        assertTrue(prompt.contains("- assume-cutoff: Claims after cutoff move to next business day"))
+        assertTrue(prompt.contains("\"description\":\"Claim is submitted\""))
+        assertTrue(prompt.contains("\"id\":\"a-review\""))
+        assertTrue(prompt.contains("Claims team reviews claim"))
+        assertTrue(prompt.contains("\"actorId\":\"actor-claims\""))
+        assertTrue(prompt.contains("Request corrected claim details"))
+        assertTrue(prompt.contains("Is the claim complete?"))
+        assertTrue(prompt.contains("\"id\":\"b-complete\""))
+        assertTrue(prompt.contains("\"id\":\"b-rework\""))
+        assertTrue(prompt.contains("\"id\":\"end-approved\""))
+        assertTrue(prompt.contains("Claim approved"))
+        assertTrue(prompt.contains("\"id\":\"end-rejected\""))
+        assertTrue(prompt.contains("Claim rejected"))
+        assertTrue(prompt.contains("Claims after cutoff move to next business day"))
         assertTrue(prompt.contains("Use sentence case task names."))
         assertTrue(prompt.contains("Do not add unsupported tasks, decisions, branches, actors, or end states."))
         assertTrue(prompt.contains("infer sequence flows and routing-only converging gateways"))
@@ -103,8 +114,8 @@ class GenerateBpmnTemplateTest {
             "schema-covered kind->edge mapping should not be restated in the template",
         )
         assertTrue(
-            prompt.contains("- b-manual → \"Manual review\" [default]"),
-            "rendered decision branches should mark the default with [default]; got:\n$prompt",
+            prompt.contains("\"kind\":\"DEFAULT\"") && prompt.contains("\"label\":\"Manual review\""),
+            "rendered decision branches should carry the DEFAULT kind discriminator; got:\n$prompt",
         )
     }
 
@@ -117,27 +128,49 @@ class GenerateBpmnTemplateTest {
 
         assertTrue(prompt.contains("Embedded-subprocess topology:"))
         assertTrue(prompt.contains("parentRef"))
-        // The markdown renderer surfaces the membership so the LLM knows what the subprocess groups.
+        // The serialised contract surfaces the membership so the LLM knows what the subprocess groups.
         assertTrue(
-            prompt.contains("[SUB_PROCESS contains=\"a-validate,a-estimate\"]"),
+            prompt.contains("\"containedActivityIds\":[\"a-validate\",\"a-estimate\"]"),
             "rendered subprocess should list its member ids; got:\n$prompt",
         )
     }
 
     @Test
-    fun `contractMarkdown contains SERVICE and NORMAL markers for default kind discriminators`() {
+    fun `contractJson contains SERVICE and NORMAL kind discriminators for default activity and end-state kinds`() {
         val prompt = render(
             request = BpmnRequest(processDescription = "Handle a claim."),
             contract = claimContract(),
         )
 
         assertTrue(
-            prompt.contains("[SERVICE]"),
-            "Service activity must appear as [SERVICE] in contractMarkdown to prevent ACTIVITY_TASK_KIND_MISMATCH; got:\n$prompt",
+            prompt.contains("\"kind\":\"SERVICE\""),
+            "Service activity must carry the SERVICE kind discriminator to prevent ACTIVITY_TASK_KIND_MISMATCH; got:\n$prompt",
         )
         assertTrue(
-            prompt.contains("[NORMAL]"),
-            "Normal end state must appear as [NORMAL] in contractMarkdown for lossless prompt projection; got:\n$prompt",
+            prompt.contains("\"kind\":\"NORMAL\""),
+            "Normal end state must carry the NORMAL kind discriminator for lossless prompt projection; got:\n$prompt",
+        )
+    }
+
+    @Test
+    fun `template carries the loop, iteration, and boundaryEvents modifier values into the rendered prompt`() {
+        val prompt = render(
+            request = BpmnRequest(processDescription = "Handle a claim with retries and escalation."),
+            contract = modifierContract(),
+        )
+
+        assertTrue(
+            prompt.contains("\"testBefore\":false") && prompt.contains("\"loopCondition\":\"payment declined\""),
+            "loop modifier fields should reach the rendered prompt; got:\n$prompt",
+        )
+        assertTrue(
+            prompt.contains("\"mode\":\"PARALLEL\"") &&
+                prompt.contains("\"collectionDescription\":\"each line item\""),
+            "iteration modifier fields should reach the rendered prompt; got:\n$prompt",
+        )
+        assertTrue(
+            prompt.contains("\"boundaryEvents\":[") && prompt.contains("\"detail\":\"PT24H\""),
+            "boundaryEvents modifier fields should reach the rendered prompt; got:\n$prompt",
         )
     }
 
@@ -169,7 +202,7 @@ class GenerateBpmnTemplateTest {
     }
 
     private fun model(request: BpmnRequest, contract: ProcessContract): Map<String, Any> = mapOf(
-        "contractMarkdown" to contractRenderer.render(contract).trim(),
+        "contractJson" to jsonRenderer.render(contract),
         "processDescription" to request.processDescription,
         "styleGuide" to (request.styleGuide ?: ""),
         "namingShapeAdvice" to BpmnNamingShapeAdvice.allAdvice().map { advice ->
@@ -205,6 +238,50 @@ class GenerateBpmnTemplateTest {
                 ),
             ),
             endStates = listOf(ContractEndState(id = "end-offer", name = "Offer generated", sourceIds = sources)),
+        )
+    }
+
+    private fun modifierContract(): ProcessContract {
+        val sources = listOf("ev1")
+        return ProcessContract(
+            id = "contract-modifiers",
+            processName = "Handle claim with retries",
+            summary = "Retries a declined charge and escalates unresolved line items.",
+            trigger = "Claim is submitted",
+            triggerSourceIds = sources,
+            activities = listOf(
+                ContractActivity.Service(
+                    id = "a-charge",
+                    name = "Charge the customer",
+                    sourceIds = sources,
+                    modifiers = ActivityModifiers(
+                        loop = ContractLoop(testBefore = false, loopCondition = "payment declined", loopMaximum = 3),
+                    ),
+                ),
+                ContractActivity.Service(
+                    id = "a-review-items",
+                    name = "Review line items",
+                    sourceIds = sources,
+                    modifiers = ActivityModifiers(
+                        iteration = ContractIteration(
+                            mode = MultiInstanceMode.PARALLEL,
+                            collectionDescription = "each line item",
+                        ),
+                        boundaryEvents = listOf(
+                            ContractBoundaryEvent(
+                                kind = BoundaryEventKind.TIMER,
+                                label = "24h escalation",
+                                nextRef = "end-escalated",
+                                detail = "PT24H",
+                            ),
+                        ),
+                    ),
+                ),
+            ),
+            endStates = listOf(
+                ContractEndState(id = "end-resolved", name = "Claim resolved", sourceIds = sources),
+                ContractEndState(id = "end-escalated", name = "Claim escalated", sourceIds = sources),
+            ),
         )
     }
 

@@ -17,6 +17,8 @@ import dev.groknull.bpmner.bpmn.styleGuideContribution
 import dev.groknull.bpmner.contract.BpmnContractExtractedEvent
 import dev.groknull.bpmner.contract.BpmnContractExtractionException
 import dev.groknull.bpmner.contract.ContractIssueSeverity
+import dev.groknull.bpmner.contract.ContractValidationReport
+import dev.groknull.bpmner.contract.ProcessContract
 import dev.groknull.bpmner.contract.ProcessContractExtractor
 import dev.groknull.bpmner.contract.ProcessContractMarkdownRenderer
 import dev.groknull.bpmner.contract.ValidatedProcessContract
@@ -24,6 +26,7 @@ import dev.groknull.bpmner.contract.format
 import dev.groknull.bpmner.contract.internal.BpmnContractConfig
 import dev.groknull.bpmner.contract.internal.BpmnContractThresholdsConfig
 import dev.groknull.bpmner.contract.internal.domain.BpmnContractValidator
+import dev.groknull.bpmner.contract.internal.domain.ContractConservation
 import dev.groknull.bpmner.llm.publishOnInvalidLlmReturn
 import dev.groknull.bpmner.readiness.ProcessInputAssessment
 import dev.groknull.bpmner.readiness.ReadyBpmnContext
@@ -54,29 +57,101 @@ internal class LlmProcessContractExtractor(
                 .promptRunner(context)
                 .withPromptContributor(PromptContributor.fixed(request.styleGuideContribution()))
 
-        val flat = requestFlatContract(promptRunner, request, assessment)
-        val contract = try {
-            flat.toSealed()
-        } catch (e: IllegalArgumentException) {
-            throw RetryableBpmnGenerationException(
-                "LLM generated a structurally incomplete ProcessContract: ${e.message}",
-                e,
-            )
-        }
+        var previousIssues: String? = null
+        // R5 (ADR-685-26): the diagnostic behind the *previous* attempt's feedback and the
+        // contract it produced, so a conserving retry can be told what it dropped without being
+        // asked to.
+        var previousContract: ProcessContract? = null
+        var previousReport: ContractValidationReport? = null
+        for (attempt in 1..thresholds.maxExtractionAttempts) {
+            val flat = requestFlatContract(promptRunner, request, assessment, previousIssues)
+            val contract = try {
+                flat.toSealed()
+            } catch (e: IllegalArgumentException) {
+                throw RetryableBpmnGenerationException(
+                    "LLM generated a structurally incomplete ProcessContract: ${e.message}",
+                    e,
+                )
+            }
 
-        logger.info("Contract extracted:\n{}", markdownRenderer.render(contract))
-        val report = validator.validate(contract)
-        if (!report.isValid) {
-            val errorCount = report.issues.count { it.severity == ContractIssueSeverity.ERROR }
-            logger.warn(
-                "Contract validation found {} error(s): {}",
-                errorCount,
-                report.issues.joinToString { it.format() },
-            )
+            logger.info("Contract extracted:\n{}", markdownRenderer.render(contract))
+            val report = validator.validate(contract)
+            val validated = ValidatedProcessContract.of(contract, report)
+            val drops = detectConservationDrops(contract, previousContract, previousReport)
+            if (validated != null && drops.isEmpty()) {
+                eventPublisher.publishEvent(
+                    BpmnContractExtractedEvent(validated, processId = AgentProcess.get()?.id),
+                )
+                return validated
+            }
+
+            val validationFeedback = if (validated == null) {
+                val errorCount = report.issues.count { it.severity == ContractIssueSeverity.ERROR }
+                logger.warn(
+                    "Contract extraction attempt {}/{} found {} error(s): {}",
+                    attempt,
+                    thresholds.maxExtractionAttempts,
+                    errorCount,
+                    report.issues.joinToString { it.format() },
+                )
+                report.issues.joinToString(System.lineSeparator()) { "- ${it.format()}" }
+            } else {
+                null
+            }
+            val dropFeedback = if (drops.isNotEmpty()) conservationDropFeedback(attempt, drops) else null
+            previousIssues = listOfNotNull(validationFeedback, dropFeedback).joinToString(System.lineSeparator())
+
+            // R5: an attempt that drops previously-present content must never become the
+            // conservation baseline — valid or not. Otherwise the *next* attempt is only ever
+            // compared against the already-diminished content, and the drop this attempt made
+            // silently escapes detection forever (verified against both an invalid intermediate
+            // attempt and a valid-but-dropping one — the same bug in either branch).
+            if (drops.isEmpty()) {
+                previousContract = contract
+                previousReport = report
+            }
         }
-        val validated = ValidatedProcessContract(contract = contract, report = report)
-        eventPublisher.publishEvent(BpmnContractExtractedEvent(validated, processId = AgentProcess.get()?.id))
-        return validated
+        // Exhausted the corrective budget without a valid contract. Returning `lastValidated`
+        // here would hand a contract with isValid == false to the next stage, which treats that
+        // same condition as fatal — so fail here, where the diagnostic is still actionable,
+        // rather than one stage later where retrying cannot fix it.
+        throw BpmnContractExtractionException(
+            "Process contract failed validation after ${thresholds.maxExtractionAttempts} " +
+                "corrective attempt(s):${System.lineSeparator()}$previousIssues",
+        )
+    }
+
+    // R5 (ADR-685-26): drops relative to the previous attempt, scoped to ids the driving
+    // diagnostic did not name. Empty on attempt 1 (no previous attempt to compare against).
+    private fun detectConservationDrops(
+        contract: ProcessContract,
+        previousContract: ProcessContract?,
+        previousReport: ContractValidationReport?,
+    ): List<String> = previousContract?.let { prior ->
+        ContractConservation.detectDrops(
+            named = previousReport?.issues.orEmpty().mapNotNull { it.targetId }.toSet(),
+            previous = prior,
+            next = contract,
+        )
+    }.orEmpty()
+
+    private fun conservationDropFeedback(
+        attempt: Int,
+        drops: List<String>,
+    ): String {
+        logger.warn(
+            "Contract extraction attempt {}/{} passed validation but dropped {} previously-present" +
+                " element(s)/field(s) the corrective feedback did not name: {}",
+            attempt,
+            thresholds.maxExtractionAttempts,
+            drops.size,
+            drops.joinToString(),
+        )
+        return buildString {
+            append("Attempt $attempt dropped the following, which the previous feedback did not")
+            append(" ask you to change — restore them:")
+            drops.forEach { append(System.lineSeparator()).append("- ").append(it) }
+        }
     }
 
     /**
@@ -90,6 +165,7 @@ internal class LlmProcessContractExtractor(
         promptRunner: PromptRunner,
         request: BpmnRequest,
         assessment: ProcessInputAssessment,
+        previousIssues: String?,
     ): FlatProcessContract = try {
         eventPublisher.publishOnInvalidLlmReturn("contract") {
             promptRunner
@@ -112,7 +188,7 @@ internal class LlmProcessContractExtractor(
                     ContractExtractionExamples.businessRuleTaskExample,
                 )
                 .withExample(ContractExtractionExamples.SUB_PROCESS_LABEL, ContractExtractionExamples.subProcessExample)
-                .fromTemplate("bpmner/extract_contract", templateModel(request, assessment))
+                .fromTemplate("bpmner/extract_contract", templateModel(request, assessment, previousIssues))
         }
     } catch (e: InvalidLlmReturnFormatException) {
         throw BpmnContractExtractionException(
@@ -129,8 +205,10 @@ internal class LlmProcessContractExtractor(
     private fun templateModel(
         request: BpmnRequest,
         assessment: ProcessInputAssessment,
+        previousIssues: String?,
     ): Map<String, Any> = mapOf(
         "maxAssumptions" to thresholds.maxAssumptions,
+        "previousIssues" to (previousIssues ?: ""),
         "rationale" to assessment.rationale,
         "missingAreas" to assessment.missingAreas.map { it.name },
         "evidence" to assessment.evidence.map {

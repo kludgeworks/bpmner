@@ -5,25 +5,11 @@ Contract or Generated BPMN Summary; do not invent new ones.
 Return an empty issues array when the BPMN fully aligns with the contract — that is
 the expected output for an aligned diagram.
 
-## Process Contract
-{{ contractMarkdown }}
+## Process Contract (JSON)
+{{ contractJson }}
 
-## Generated BPMN Summary
-Process ID: {{ processId }}
-Process Name: {{ processName }}
-
-### Semantic Elements
-{% for line in elementLines %}- {{ line }}
-{% endfor %}
-
-### Sequence Flows
-{% for line in flowLines %}- {{ line }}
-{% endfor %}
-{% if unreachableElementIds %}
-
-### Unreachable Elements
-{% for id in unreachableElementIds %}- {{ id }}
-{% endfor %}{% endif %}
+## Generated BPMN Summary (JSON)
+{{ bpmnSummaryJson }}
 
 ## Alignment Task
 List only misalignments. If every generated element is supported by the contract AND

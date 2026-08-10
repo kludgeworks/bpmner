@@ -13,16 +13,25 @@ import dev.groknull.bpmner.alignment.BpmnDefinitionSummary
 import dev.groknull.bpmner.alignment.BpmnSummaryElement
 import dev.groknull.bpmner.alignment.BpmnSummaryFlow
 import dev.groknull.bpmner.authoring.internal.adapter.outbound.FlatBpmnDefinition
+import dev.groknull.bpmner.bpmn.BoundaryEventKind
 import dev.groknull.bpmner.bpmn.BpmnRequest
+import dev.groknull.bpmner.bpmn.BpmnTimerEventDefinition
+import dev.groknull.bpmner.bpmn.BpmnTimerKind
+import dev.groknull.bpmner.bpmn.MultiInstanceMode
+import dev.groknull.bpmner.bpmn.StandardLoopCharacteristics
 import dev.groknull.bpmner.bpmn.styleGuideContribution
+import dev.groknull.bpmner.contract.ActivityModifiers
 import dev.groknull.bpmner.contract.ConditionalBranch
 import dev.groknull.bpmner.contract.ContractActivity
+import dev.groknull.bpmner.contract.ContractBoundaryEvent
 import dev.groknull.bpmner.contract.ContractDecision
 import dev.groknull.bpmner.contract.ContractEndState
+import dev.groknull.bpmner.contract.ContractIteration
+import dev.groknull.bpmner.contract.ContractLoop
 import dev.groknull.bpmner.contract.FlatContractTestFixtures
 import dev.groknull.bpmner.contract.ProcessContract
-import dev.groknull.bpmner.contract.ProcessContractMarkdownRenderer
 import dev.groknull.bpmner.contract.internal.BpmnContractThresholdsConfig
+import dev.groknull.bpmner.llm.PromptJsonRenderer
 import dev.groknull.bpmner.readiness.BpmnReadinessThresholdsConfig
 import dev.groknull.bpmner.readiness.EvidenceSourceType
 import dev.groknull.bpmner.readiness.ProcessInputAssessment
@@ -41,7 +50,7 @@ internal object PromptFixtures {
     private val objectMapper = jacksonObjectMapper()
     private val contractThresholds = BpmnContractThresholdsConfig()
     private val readinessThresholds = BpmnReadinessThresholdsConfig()
-    private val markdownRenderer = ProcessContractMarkdownRenderer()
+    private val jsonRenderer = PromptJsonRenderer(objectMapper)
 
     val canonicalRequest =
         BpmnRequest(
@@ -83,8 +92,33 @@ internal object PromptFixtures {
             triggerSourceIds = listOf("ev1"),
             activities =
             listOf(
-                ContractActivity(id = "act-score", name = "Run credit check", sourceIds = listOf("ev1")),
-                ContractActivity(id = "act-review", name = "Review credit application", sourceIds = listOf("ev2")),
+                ContractActivity.Service(
+                    id = "act-score",
+                    name = "Run credit check",
+                    sourceIds = listOf("ev1"),
+                    modifiers = ActivityModifiers(
+                        loop = ContractLoop(testBefore = true, loopCondition = "score not yet computed", loopMaximum = 3),
+                    ),
+                ),
+                ContractActivity.Service(
+                    id = "act-review",
+                    name = "Review credit application",
+                    sourceIds = listOf("ev2"),
+                    modifiers = ActivityModifiers(
+                        iteration = ContractIteration(
+                            mode = MultiInstanceMode.SEQUENTIAL,
+                            collectionDescription = "each flagged application field",
+                        ),
+                        boundaryEvents = listOf(
+                            ContractBoundaryEvent(
+                                kind = BoundaryEventKind.TIMER,
+                                label = "24h review timeout",
+                                nextRef = "end-reviewed",
+                                detail = "PT24H",
+                            ),
+                        ),
+                    ),
+                ),
             ),
             decisions =
             listOf(
@@ -113,9 +147,25 @@ internal object PromptFixtures {
             elements =
             listOf(
                 BpmnSummaryElement(id = "StartEvent_1", type = "START_EVENT", name = "Application submitted"),
-                BpmnSummaryElement(id = "act-score", type = "SERVICE_TASK", name = "Run credit check"),
+                BpmnSummaryElement(
+                    id = "act-score",
+                    type = "SERVICE_TASK",
+                    name = "Run credit check",
+                    standardLoop = StandardLoopCharacteristics(
+                        testBefore = true,
+                        loopCondition = "score not yet computed",
+                        loopMaximum = 3,
+                    ),
+                ),
                 BpmnSummaryElement(id = "Gateway_1", type = "EXCLUSIVE_GATEWAY", name = "Score >= 700?"),
                 BpmnSummaryElement(id = "act-review", type = "USER_TASK", name = "Review credit application"),
+                BpmnSummaryElement(
+                    id = "Boundary_review_timeout",
+                    type = "BOUNDARY_EVENT",
+                    name = "24h review timeout",
+                    attachedToRef = "act-review",
+                    eventDefinition = BpmnTimerEventDefinition(timerKind = BpmnTimerKind.DURATION, expression = "PT24H"),
+                ),
                 BpmnSummaryElement(id = "EndEvent_approved", type = "END_EVENT", name = "Approved"),
                 BpmnSummaryElement(id = "EndEvent_reviewed", type = "END_EVENT", name = "Reviewed"),
             ),
@@ -136,6 +186,7 @@ internal object PromptFixtures {
                     conditionExpression = "score < 700",
                 ),
                 BpmnSummaryFlow(id = "Flow_5", sourceRef = "act-review", targetRef = "EndEvent_reviewed"),
+                BpmnSummaryFlow(id = "Flow_6", sourceRef = "Boundary_review_timeout", targetRef = "EndEvent_reviewed"),
             ),
         )
 
@@ -194,7 +245,7 @@ internal object PromptFixtures {
     )
 
     private fun bpmnGenerationModel(): Map<String, Any> = mapOf(
-        "contractMarkdown" to markdownRenderer.render(canonicalContract).trim(),
+        "contractJson" to jsonRenderer.render(canonicalContract),
         "processDescription" to canonicalRequest.processDescription,
         "styleGuide" to (canonicalRequest.styleGuide ?: ""),
         "namingShapeAdvice" to BpmnNamingShapeAdvice.allAdvice().map { advice ->
@@ -205,18 +256,8 @@ internal object PromptFixtures {
     )
 
     private fun alignmentModel(): Map<String, Any> = mapOf(
-        "contractMarkdown" to markdownRenderer.render(canonicalContract).trim(),
-        "processId" to canonicalBpmnSummary.processId,
-        "processName" to canonicalBpmnSummary.processName,
-        "elementLines" to canonicalBpmnSummary.elements.map { element ->
-            "[${element.id}] ${element.type}: ${element.name ?: "(unnamed)"}"
-        },
-        "flowLines" to canonicalBpmnSummary.flows.map { flow ->
-            val condition = flow.conditionExpression?.let { " [if $it]" } ?: ""
-            val name = flow.name?.let { " ($it)" } ?: ""
-            "[${flow.id}] ${flow.sourceRef} → ${flow.targetRef}$condition$name"
-        },
-        "unreachableElementIds" to canonicalBpmnSummary.unreachableElementIds,
+        "contractJson" to jsonRenderer.render(canonicalContract),
+        "bpmnSummaryJson" to jsonRenderer.render(canonicalBpmnSummary),
         "processDescription" to canonicalRequest.processDescription,
     )
 

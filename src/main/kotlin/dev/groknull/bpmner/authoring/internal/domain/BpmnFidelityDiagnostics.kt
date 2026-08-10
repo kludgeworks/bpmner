@@ -74,6 +74,16 @@ enum class BpmnFidelityCode {
     ACTIVITY_STANDARD_LOOP_MISMATCH,
 
     /**
+     * A ContractActivity's `boundaryEvents` disagree with the `BpmnBoundaryEvent` nodes attached
+     * to the BPMN task realising it: an entry is missing, present-but-undeclared, realised with
+     * the wrong `eventDefinition` kind, or not routed by exactly one outbound flow to its
+     * `nextRef`. Catches the failure mode where the generator drops a boundary timeout or error
+     * catch — previously unchecked (R2, ADR-685-16/17, epic #685); passable only once the
+     * generation prompt carries the contract's `boundaryEvents` as JSON.
+     */
+    ACTIVITY_BOUNDARY_EVENT_MISMATCH,
+
+    /**
      * A [dev.groknull.bpmner.contract.ContractDecision] has a
      * [dev.groknull.bpmner.contract.DefaultBranch] but no outbound edge from the corresponding
      * gateway has `isDefault = true`. The BPMN spec requires the gateway's `default` attribute

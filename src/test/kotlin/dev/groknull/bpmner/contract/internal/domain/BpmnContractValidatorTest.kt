@@ -5,9 +5,12 @@
 
 package dev.groknull.bpmner.contract.internal.domain
 
+import dev.groknull.bpmner.bpmn.BoundaryEventKind
+import dev.groknull.bpmner.contract.ActivityModifiers
 import dev.groknull.bpmner.contract.ConditionalBranch
 import dev.groknull.bpmner.contract.ContractActivity
 import dev.groknull.bpmner.contract.ContractAssumption
+import dev.groknull.bpmner.contract.ContractBoundaryEvent
 import dev.groknull.bpmner.contract.ContractDecision
 import dev.groknull.bpmner.contract.ContractEndState
 import dev.groknull.bpmner.contract.ContractGatewayKind
@@ -557,6 +560,80 @@ class BpmnContractValidatorTest {
 
         val codes = validator.validate(contract).issues.map { it.code }
         assertFalse(codes.contains(ContractValidationCode.SUBPROCESS_MEMBER_SHARED))
+    }
+
+    @Test
+    fun `a branch nextRef pointing at a hallucinated id fails with NEXT_REF_NOT_FOUND`() {
+        val branching = branchingContract()
+        val decision = branching.decisions.single()
+        val contract = branching.copy(
+            decisions = listOf(
+                decision.copy(
+                    branches = decision.branches.map {
+                        val branch = it as ConditionalBranch
+                        if (branch.id == "branch-yes") branch.copy(nextRef = "act-hallucinated") else branch
+                    },
+                ),
+            ),
+        )
+        val report = validator.validate(contract)
+        val issue = report.issues.single { it.code == ContractValidationCode.NEXT_REF_NOT_FOUND }
+        assertEquals("branch-yes", issue.targetId)
+    }
+
+    @Test
+    fun `a boundary event nextRef pointing at a hallucinated id fails with NEXT_REF_NOT_FOUND`() {
+        val linear = linearContract()
+        val activity = linear.activities.first()
+        val contract = linear.copy(
+            activities = listOf(
+                (activity as ContractActivity.Service).copy(
+                    modifiers = ActivityModifiers(
+                        boundaryEvents = listOf(
+                            ContractBoundaryEvent(
+                                kind = BoundaryEventKind.TIMER,
+                                label = "24h timeout",
+                                nextRef = "act-hallucinated",
+                            ),
+                        ),
+                    ),
+                ),
+                linear.activities[1],
+            ),
+        )
+        val report = validator.validate(contract)
+        val issue = report.issues.single { it.code == ContractValidationCode.NEXT_REF_NOT_FOUND }
+        assertEquals(activity.id, issue.targetId)
+    }
+
+    @Test
+    fun `a contract whose every nextRef resolves stays valid`() {
+        val branching = branchingContract()
+        val decision = branching.decisions.single()
+        val contract = branching.copy(
+            decisions = listOf(
+                decision.copy(
+                    branches = decision.branches.mapIndexed { index, branch ->
+                        (branch as ConditionalBranch).copy(
+                            nextRef = if (index == 0) "end-approved" else "activity-review",
+                        )
+                    },
+                ),
+            ),
+        )
+        val report = validator.validate(contract)
+        assertFalse(
+            report.issues.any { it.code == ContractValidationCode.NEXT_REF_NOT_FOUND },
+            "got: ${report.issues}",
+        )
+    }
+
+    @Test
+    fun `a null branch nextRef is not an error`() {
+        // Routing left to the model is legal — GATEWAY_BRANCH_COUNT_INSUFFICIENT's discriminator
+        // depends on being able to tell the difference between "not resolved" and "not stated".
+        val report = validator.validate(branchingContract())
+        assertFalse(report.issues.any { it.code == ContractValidationCode.NEXT_REF_NOT_FOUND })
     }
 
     private fun linearContract(): ProcessContract = ProcessContract(

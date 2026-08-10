@@ -5,14 +5,19 @@
 
 package dev.groknull.bpmner.alignment.internal.domain
 
+import dev.groknull.bpmner.bpmn.BpmnBoundaryEvent
 import dev.groknull.bpmner.bpmn.BpmnDefinition
 import dev.groknull.bpmner.bpmn.BpmnEdge
 import dev.groknull.bpmner.bpmn.BpmnEndEvent
 import dev.groknull.bpmner.bpmn.BpmnExclusiveGateway
 import dev.groknull.bpmner.bpmn.BpmnStartEvent
 import dev.groknull.bpmner.bpmn.BpmnSubProcess
+import dev.groknull.bpmner.bpmn.BpmnTimerEventDefinition
+import dev.groknull.bpmner.bpmn.BpmnTimerKind
 import dev.groknull.bpmner.bpmn.BpmnUserTask
+import dev.groknull.bpmner.bpmn.StandardLoopCharacteristics
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
@@ -207,6 +212,55 @@ class BpmnSummarizerTest {
             summary.unreachableElementIds.isEmpty(),
             "subprocess children are reachable via the inner start; got: ${summary.unreachableElementIds}",
         )
+    }
+
+    @Test
+    fun `a looping task and its boundary event summarise with the modifier fields populated`() {
+        // R2 (ADR-685-16, epic #685): alignment's BPMN-side view must carry the fields
+        // generation can drop, or the safety net can't see what was dropped. This pins the
+        // summarizer's contribution to that fix.
+        val definition =
+            BpmnDefinition(
+                processId = "Process_1",
+                processName = "Loop Process",
+                nodes =
+                listOf(
+                    BpmnStartEvent("Start_1", "Start"),
+                    BpmnUserTask(
+                        "Task_loop",
+                        "Retry until success",
+                        standardLoop = StandardLoopCharacteristics(testBefore = false, loopCondition = "not yet done"),
+                    ),
+                    BpmnBoundaryEvent(
+                        "Boundary_1",
+                        "Timeout",
+                        attachedToRef = "Task_loop",
+                        eventDefinition = BpmnTimerEventDefinition(BpmnTimerKind.DURATION, "PT60S"),
+                    ),
+                    BpmnEndEvent("End_timeout", "Timed out"),
+                    BpmnEndEvent("End_1", "Done"),
+                ),
+                sequences =
+                listOf(
+                    BpmnEdge("Flow_1", "Start_1", "Task_loop"),
+                    BpmnEdge("Flow_2", "Task_loop", "End_1"),
+                    BpmnEdge("Flow_boundary", "Boundary_1", "End_timeout"),
+                ),
+            )
+
+        val summary = summarizer.summarize(definition)
+
+        val loopTask = summary.elements.find { it.id == "Task_loop" }!!
+        assertEquals(false, loopTask.standardLoop?.testBefore)
+        assertEquals("not yet done", loopTask.standardLoop?.loopCondition)
+        assertNull(loopTask.multiInstance)
+
+        val boundaryEvent = summary.elements.find { it.id == "Boundary_1" }!!
+        assertEquals("Task_loop", boundaryEvent.attachedToRef)
+        assertEquals(BpmnTimerEventDefinition(BpmnTimerKind.DURATION, "PT60S"), boundaryEvent.eventDefinition)
+
+        val startEvent = summary.elements.find { it.id == "Start_1" }!!
+        assertNull(startEvent.attachedToRef)
     }
 
     @Test

@@ -12,6 +12,7 @@ import dev.groknull.bpmner.alignment.BpmnDefinitionSummary
 import dev.groknull.bpmner.alignment.BpmnSummaryElement
 import dev.groknull.bpmner.authoring.BpmnGeneratedEvent
 import dev.groknull.bpmner.authoring.BpmnGraphComposedEvent
+import dev.groknull.bpmner.authoring.BpmnRunAbortedEvent
 import dev.groknull.bpmner.bpmn.BpmnDefinition
 import dev.groknull.bpmner.bpmn.BpmnEdge
 import dev.groknull.bpmner.bpmn.BpmnEndEvent
@@ -31,7 +32,9 @@ import dev.groknull.bpmner.contract.ProcessContract
 import dev.groknull.bpmner.contract.ValidatedProcessContract
 import dev.groknull.bpmner.layout.BpmnLayoutCompletedEvent
 import dev.groknull.bpmner.pipeline.ArtifactState
+import dev.groknull.bpmner.pipeline.RunOutcome
 import dev.groknull.bpmner.pipeline.RunPhase
+import dev.groknull.bpmner.pipeline.RunUpdate
 import dev.groknull.bpmner.readiness.BpmnReadinessAssessedEvent
 import dev.groknull.bpmner.readiness.ProcessInputAssessment
 import dev.groknull.bpmner.readiness.ReadinessDimension
@@ -40,6 +43,7 @@ import dev.groknull.bpmner.readiness.ReadinessVerdict
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito.mock
+import org.mockito.Mockito.verify
 import java.time.Duration
 
 /**
@@ -50,7 +54,8 @@ import java.time.Duration
  */
 class BpmnMilestoneEventListenerTest {
     private val registry = RunUpdateSinkRegistry()
-    private val listener = BpmnMilestoneEventListener(registry)
+    private val runUpdateChannel = mock(BpmnRunUpdateChannel::class.java)
+    private val listener = BpmnMilestoneEventListener(registry, runUpdateChannel)
 
     // Every event carries processId (producer-captured); listeners never call AgentProcess.get().
     @Test
@@ -89,7 +94,7 @@ class BpmnMilestoneEventListenerTest {
         val update = registry.subscribe("proc-contract").take(1).collectList().block(TIMEOUT)!!.single()
         assertEquals(RunPhase.CONTRACT, update.phase)
         assertEquals(ArtifactState.NONE, update.artifactState)
-        assertEquals("true", update.detail["valid"])
+        assertEquals("Extracted the process contract.", update.summary)
         assertEquals("0", update.detail["issueCount"])
     }
 
@@ -207,10 +212,10 @@ class BpmnMilestoneEventListenerTest {
         rationale = "Fully aligned.",
     )
 
-    private fun validContract(): ValidatedProcessContract = ValidatedProcessContract(
+    private fun validContract(): ValidatedProcessContract = ValidatedProcessContract.of(
         contract = mock(ProcessContract::class.java),
         report = ContractValidationReport(issues = emptyList()),
-    )
+    )!!
 
     private fun minimalGraph(): LaidOutProcessGraph = LaidOutProcessGraph(
         ownedGraph = mock(OwnedElementGraph::class.java),
@@ -224,6 +229,28 @@ class BpmnMilestoneEventListenerTest {
             sequences = listOf(BpmnEdge("Flow_1", "StartEvent_1", "EndEvent_1")),
         ),
     )
+
+    @Test
+    fun `a run that dies outside the plan still ends with a terminal update`() {
+        // An exception raised by an action escapes the process run loop before a terminal status
+        // is set, so no lifecycle event is emitted. Without this backstop the run goes silent.
+        listener.onRunAborted(BpmnRunAbortedEvent(processId = "proc-abort", detail = "boom"))
+
+        val terminal = registry.subscribe("proc-abort").collectList().block(TIMEOUT)!!.single()
+            as RunUpdate.Terminal
+        assertEquals(RunOutcome.FAILED, terminal.outcome)
+        assertEquals("boom", terminal.detail["failureDetail"])
+    }
+
+    @Test
+    fun `a run that aborts while awaiting clarification clears its clarification-round state`() {
+        // The abort backstop bypasses BpmnRunUpdateChannel's own onFailed/onStuck/onFinished
+        // handlers entirely, so without this call a process that aborts mid-clarification would
+        // leak its entry in that channel's clarificationRounds map forever.
+        listener.onRunAborted(BpmnRunAbortedEvent(processId = "proc-abort-clarifying", detail = "boom"))
+
+        verify(runUpdateChannel).clearClarificationState("proc-abort-clarifying")
+    }
 
     private fun readyAssessment(): ProcessInputAssessment = ProcessInputAssessment(
         verdict = ReadinessVerdict.READY,

@@ -84,6 +84,58 @@ class LiveLlmFullPipelineSmokeTest {
         assertEquals(xml, outputFile.readText())
     }
 
+    /**
+     * Acceptance harness for R2 (ADR-685-16/17, epic #685): reproduces the run that motivated
+     * the epic's rescoping. Before Stage C, this contract's two timer boundary events —
+     * extracted correctly, then discarded by the hand-written markdown projection — burned the
+     * full `createOutline` corrective budget and terminated `OUTLINE_FAILED`. Offline gates
+     * cannot decide this; only a live run can.
+     */
+    @Test
+    fun `pipeline clears outline generation on the first attempt with both timer boundary events from payment-processing prose`(
+        @TempDir tempDir: Path,
+    ) {
+        val prose = loadSample("payment-processing.prose.md")
+        val outputFile = tempDir.resolve("payment-processing.bpmn")
+
+        val result = try {
+            AgentPlatformTypedOps(agentPlatform)
+                .transform(
+                    BpmnRequest(
+                        processDescription = prose,
+                        outputFile = outputFile.toString(),
+                    ),
+                    BpmnResult::class.java,
+                    ProcessOptions(
+                        budget = Budget(actions = 100),
+                        ephemeral = true,
+                        listeners = listOf(SuiteCostCapturer),
+                    ),
+                )
+        } catch (failure: Exception) {
+            Assumptions.assumeFalse(
+                isLiveProviderQuotaOrSizeLimit(failure),
+                "Live LLM provider quota or request-size limit hit; skipping. Cause: ${failure.message}",
+            )
+            throw failure
+        }
+
+        assertEquals(
+            BpmnGenerationStatus.GENERATED,
+            result.status,
+            "Expected createOutline to clear on the first attempt; detail: ${result.failureDetail}",
+        )
+        val xml = requireNotNull(result.xml) { "Expected BPMN XML for GENERATED status" }
+        val timerBoundaryEventCount = Regex("<bpmn:boundaryEvent\\b[\\s\\S]*?bpmn:timerEventDefinition").findAll(xml).count()
+        assertTrue(
+            timerBoundaryEventCount >= 2,
+            "Expected both contract timer boundary events (60s decline timeout, 30d lost-cart) in the " +
+                "generated BPMN; found $timerBoundaryEventCount. xml:\n$xml",
+        )
+        val unreachable = result.alignmentReport?.bpmnSummary?.unreachableElementIds.orEmpty()
+        assertTrue(unreachable.isEmpty(), "Expected no orphaned activities; unreachable: $unreachable")
+    }
+
     private fun loadSample(name: String): String {
         val testSrcDir = System.getenv("TEST_SRCDIR")
         val testWorkspace = System.getenv("TEST_WORKSPACE")
@@ -107,8 +159,13 @@ class LiveLlmFullPipelineSmokeTest {
                 "tokens_limit_reached" in message ||
                 "context_length_exceeded" in normalized ||
                 "credit balance" in normalized ||
-                "400" in message &&
-                "invalid_request_error" in normalized
+                // A generic 400 invalid_request_error is deliberately NOT treated as skippable —
+                // a malformed request or a genuine prompt/schema regression surfaces the same
+                // code, and this smoke test is the harness that must catch exactly that (#690).
+                // Only the two explicit, non-quota-adjacent request-size phrasings some providers
+                // use for "your request was too big" are recognized here.
+                "request too large" in normalized ||
+                "maximum context length" in normalized
         }
     }
 }

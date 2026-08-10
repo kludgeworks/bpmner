@@ -5,6 +5,7 @@
 
 package dev.groknull.bpmner.readiness
 
+import com.embabel.agent.core.NonRetryable
 import com.fasterxml.jackson.annotation.JsonClassDescription
 import com.fasterxml.jackson.annotation.JsonPropertyDescription
 import dev.groknull.bpmner.readiness.ReadinessDimension
@@ -82,5 +83,12 @@ data class ClarificationQuestion(
  * Signals that the readiness assessor's structured-output call failed on Embabel's stable
  * `InvalidLlmReturn*` surface — malformed or invalid model output, not a legitimate
  * `NEEDS_CLARIFICATION` verdict.
+ *
+ * [NonRetryable] because the framework treats an unmarked exception as retryable, and each retry
+ * would re-run the whole readiness sub-process — several model calls to repeat a request that has
+ * already failed to produce a parseable assessment. The run ends here and is reported by the
+ * run-aborted backstop.
  */
-class BpmnReadinessAssessmentException(message: String, cause: Throwable? = null) : RuntimeException(message, cause)
+class BpmnReadinessAssessmentException(message: String, cause: Throwable? = null) :
+    RuntimeException(message, cause),
+    NonRetryable

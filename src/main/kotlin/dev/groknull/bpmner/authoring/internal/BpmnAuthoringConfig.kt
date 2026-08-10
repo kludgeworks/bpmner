@@ -22,6 +22,11 @@ import org.springframework.validation.annotation.Validated
 @ConfigurationProperties("bpmner")
 internal data class BpmnAuthoringConfig(
     val generator: Actor<Persona> = DEFAULT_GENERATOR,
+    // Bounds createOutline's corrective retry on a fidelity failure. Each attempt after the
+    // first states the previous attempt's fidelity diagnostic in the prompt, so the budget buys
+    // corrective feedback rather than identical re-rolls.
+    @field:Min(1)
+    val maxOutlineAttempts: Int = 3,
 ) {
     companion object {
         val DEFAULT_GENERATOR =

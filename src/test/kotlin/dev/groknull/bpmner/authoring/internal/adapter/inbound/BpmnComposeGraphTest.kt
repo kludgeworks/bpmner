@@ -8,8 +8,8 @@ package dev.groknull.bpmner.authoring.internal.adapter.inbound
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import dev.groknull.bpmner.authoring.BpmnAgentInvoker
+import dev.groknull.bpmner.authoring.BpmnContractConformancePort
 import dev.groknull.bpmner.authoring.BpmnContractFidelityPort
-import dev.groknull.bpmner.authoring.BpmnDefaultFlowPort
 import dev.groknull.bpmner.authoring.BpmnRenderer
 import dev.groknull.bpmner.authoring.ValidatedOutline
 import dev.groknull.bpmner.authoring.internal.BpmnAuthoringConfig
@@ -18,7 +18,7 @@ import dev.groknull.bpmner.authoring.internal.adapter.outbound.toSealed
 import dev.groknull.bpmner.authoring.internal.domain.ProcessOutline
 import dev.groknull.bpmner.bpmn.BpmnRequest
 import dev.groknull.bpmner.conformance.BpmnLoggingConfig
-import dev.groknull.bpmner.contract.ProcessContractMarkdownRenderer
+import dev.groknull.bpmner.llm.PromptJsonRenderer
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -40,8 +40,8 @@ class BpmnComposeGraphTest {
         logging = BpmnLoggingConfig(),
         metricsCalculator = Mockito.mock(BpmnGeneratorMetrics::class.java),
         fidelityChecker = Mockito.mock(BpmnContractFidelityPort::class.java),
-        defaultFlowAssigner = Mockito.mock(BpmnDefaultFlowPort::class.java),
-        contractRenderer = Mockito.mock(ProcessContractMarkdownRenderer::class.java),
+        conformancePort = Mockito.mock(BpmnContractConformancePort::class.java),
+        jsonRenderer = Mockito.mock(PromptJsonRenderer::class.java),
         renderer = Mockito.mock(BpmnRenderer::class.java),
         agentInvoker = Mockito.mock(BpmnAgentInvoker::class.java),
         eventPublisher = Mockito.mock(ApplicationEventPublisher::class.java),
