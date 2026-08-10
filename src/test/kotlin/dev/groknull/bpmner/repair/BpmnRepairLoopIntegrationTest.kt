@@ -38,8 +38,8 @@ import dev.groknull.bpmner.layout.BpmnLayoutPort
 import dev.groknull.bpmner.readiness.BpmnReadinessInvoker
 import dev.groknull.bpmner.readiness.ProcessInputAssessment
 import dev.groknull.bpmner.readiness.ReadinessVerdict
+import dev.groknull.bpmner.repair.internal.domain.BpmnDeterministicNormalizer
 import dev.groknull.bpmner.repair.internal.domain.BpmnLlmRepairApplier
-import dev.groknull.bpmner.repair.internal.domain.BpmnLocalFixApplier
 import dev.groknull.bpmner.repair.internal.domain.BpmnRepairAdvancer
 import dev.groknull.bpmner.repair.internal.domain.BpmnRepairEvaluation
 import dev.groknull.bpmner.repair.internal.domain.StuckBlockingDiagnosticsException
@@ -91,7 +91,7 @@ class BpmnRepairLoopIntegrationTest : EmbabelMockitoIntegrationTest() {
     private lateinit var aligner: BpmnAligner
 
     @MockitoBean
-    private lateinit var localFixApplier: BpmnLocalFixApplier
+    private lateinit var deterministicNormalizer: BpmnDeterministicNormalizer
 
     @MockitoBean
     private lateinit var llmRepairApplier: BpmnLlmRepairApplier
@@ -182,7 +182,8 @@ class BpmnRepairLoopIntegrationTest : EmbabelMockitoIntegrationTest() {
         `when`(aligner.align(anyNonNull(), anyNonNull(), anyNonNull(), anyNonNull())).thenReturn(
             mock(BpmnAlignmentReport::class.java),
         )
-        org.mockito.Mockito.clearInvocations(localFixApplier, llmRepairApplier, advancer)
+        `when`(deterministicNormalizer.normalize(anyNonNull())).thenAnswer { invocation -> invocation.arguments[0] }
+        org.mockito.Mockito.clearInvocations(deterministicNormalizer, llmRepairApplier, advancer)
     }
 
     @Test
@@ -200,7 +201,7 @@ class BpmnRepairLoopIntegrationTest : EmbabelMockitoIntegrationTest() {
         `when`(advancer.initialEvaluation(anyNonNull(), anyNonNull(), anyNonNull(), anyNonNull()))
             .thenReturn(createEvaluation(request, listOf(diagLocal)))
 
-        `when`(localFixApplier.applyLocalModelFix(anyNonNull()))
+        `when`(deterministicNormalizer.normalize(anyNonNull()))
             .thenReturn(createEvaluation(request, emptyList()))
 
         val result = AgentPlatformTypedOps(platform).transform(
@@ -210,7 +211,7 @@ class BpmnRepairLoopIntegrationTest : EmbabelMockitoIntegrationTest() {
         )
 
         assertEquals(BpmnGenerationStatus.GENERATED, result.status)
-        verify(localFixApplier, times(1)).applyLocalModelFix(anyNonNull())
+        verify(deterministicNormalizer, times(2)).normalize(anyNonNull())
         verify(llmRepairApplier, times(0)).applyLlmLabelPatch(anyNonNull(), anyNonNull(), anyNonNull())
     }
 
@@ -253,8 +254,14 @@ class BpmnRepairLoopIntegrationTest : EmbabelMockitoIntegrationTest() {
         `when`(advancer.initialEvaluation(anyNonNull(), anyNonNull(), anyNonNull(), anyNonNull()))
             .thenReturn(createEvaluation(request, listOf(diagLocal)))
 
-        `when`(localFixApplier.applyLocalModelFix(anyNonNull()))
-            .thenReturn(createEvaluation(request, listOf(diagLabel)))
+        `when`(deterministicNormalizer.normalize(anyNonNull())).thenReturn(
+            createEvaluation(request, listOf(diagLabel)),
+            createEvaluation(request, listOf(diagStructural)),
+            createEvaluation(request, listOf(diagStructural)),
+            createEvaluation(request, listOf(diagRewrite)),
+            createEvaluation(request, listOf(diagRewrite)),
+            createEvaluation(request, emptyList()),
+        )
 
         `when`(llmRepairApplier.applyLlmLabelPatch(anyNonNull(), anyNonNull(), anyNonNull()))
             .thenReturn(createEvaluation(request, listOf(diagStructural)))
@@ -272,7 +279,7 @@ class BpmnRepairLoopIntegrationTest : EmbabelMockitoIntegrationTest() {
         )
 
         assertEquals(BpmnGenerationStatus.GENERATED, result.status)
-        verify(localFixApplier, times(1)).applyLocalModelFix(anyNonNull())
+        verify(deterministicNormalizer, times(7)).normalize(anyNonNull())
         verify(llmRepairApplier, times(1)).applyLlmLabelPatch(anyNonNull(), anyNonNull(), anyNonNull())
         verify(llmRepairApplier, times(1)).applyLlmStructuralPatch(anyNonNull(), anyNonNull(), anyNonNull())
         verify(llmRepairApplier, times(1)).applyFullLlmRewrite(anyNonNull(), anyNonNull(), anyNonNull())
@@ -308,7 +315,7 @@ class BpmnRepairLoopIntegrationTest : EmbabelMockitoIntegrationTest() {
         )
 
         assertEquals(BpmnGenerationStatus.GENERATED, result.status)
-        verify(localFixApplier, times(0)).applyLocalModelFix(anyNonNull())
+        verify(deterministicNormalizer, times(3)).normalize(anyNonNull())
         verify(llmRepairApplier, times(1)).applyLlmStructuralPatch(anyNonNull(), anyNonNull(), anyNonNull())
     }
 
@@ -329,7 +336,7 @@ class BpmnRepairLoopIntegrationTest : EmbabelMockitoIntegrationTest() {
         `when`(advancer.initialEvaluation(anyNonNull(), anyNonNull(), anyNonNull(), anyNonNull()))
             .thenReturn(initialEval)
 
-        `when`(localFixApplier.applyLocalModelFix(anyNonNull()))
+        `when`(deterministicNormalizer.normalize(anyNonNull()))
             .thenThrow(ReplanRequestedException("No progress"))
 
         val result = AgentPlatformTypedOps(platform).transform(
@@ -342,7 +349,7 @@ class BpmnRepairLoopIntegrationTest : EmbabelMockitoIntegrationTest() {
         // It runs 5 iterations of the loop plus a final output-binding invocation (6 times total),
         // then exits the loop returning the initial dirty evaluation.
         assertEquals(BpmnGenerationStatus.VALIDATION_FAILED, result.status)
-        verify(localFixApplier, times(6)).applyLocalModelFix(anyNonNull())
+        verify(deterministicNormalizer, times(6)).normalize(anyNonNull())
         assertTrue(result.xml != null)
     }
 

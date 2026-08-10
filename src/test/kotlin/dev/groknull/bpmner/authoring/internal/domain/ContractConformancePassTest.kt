@@ -179,6 +179,75 @@ class ContractConformancePassTest {
     }
 
     @Test
+    fun `stamps branch edge redirected through a unique converging join`() {
+        val redirected = creditTierDefinition().copy(
+            nodes = creditTierDefinition().nodes + BpmnExclusiveGateway("Join_manual", null),
+            sequences = creditTierDefinition().sequences.map {
+                if (it.id == "Flow_manual") it.copy(targetRef = "Join_manual") else it
+            } + listOf(
+                BpmnEdge("Flow_aux_manual", "StartEvent_1", "Join_manual"),
+                BpmnEdge("Flow_join_manual", "Join_manual", "Task_manual"),
+            ),
+        )
+
+        val conformance = pass.conform(creditTierContract(), redirected)
+        val branchEdge = conformance.definition.sequences.single { it.id == "Flow_manual" }
+
+        assertTrue(branchEdge.isDefault)
+        assertEquals("Manual review", branchEdge.name)
+        assertEquals("Task_manual", conformance.definition.sequences.single { it.id == "Flow_join_manual" }.targetRef)
+        assertEquals(conformance.definition, pass.conform(creditTierContract(), conformance.definition).definition)
+    }
+
+    @Test
+    fun `does not infer an ambiguous or non-converging redirected branch`() {
+        val ambiguous = creditTierDefinition().copy(
+            nodes = creditTierDefinition().nodes +
+                BpmnExclusiveGateway("Join_1", null) +
+                BpmnExclusiveGateway("Join_2", null),
+            sequences = creditTierDefinition().sequences.map {
+                if (it.id == "Flow_manual" || it.id == "Flow_fast") {
+                    it.copy(targetRef = if (it.id == "Flow_manual") "Join_1" else "Join_2")
+                } else {
+                    it
+                }
+            } + listOf(
+                BpmnEdge("Flow_join_1", "Join_1", "Task_manual"),
+                BpmnEdge("Flow_join_2", "Join_2", "Task_manual"),
+            ),
+        )
+        val nonConverging = ambiguous.copy(
+            sequences = ambiguous.sequences.filterNot { it.id == "Flow_1" },
+        )
+
+        val ambiguousEdge = pass.conform(creditTierContract(), ambiguous).definition.sequences.single { it.id == "Flow_manual" }
+        val nonConvergingEdge = pass.conform(creditTierContract(), nonConverging).definition.sequences.single {
+            it.id == "Flow_manual"
+        }
+        assertFalse(ambiguousEdge.isDefault)
+        assertFalse(nonConvergingEdge.isDefault)
+    }
+
+    @Test
+    fun `does not use a redirected edge when direct branch matches are ambiguous`() {
+        val ambiguous = creditTierDefinition().copy(
+            nodes = creditTierDefinition().nodes + BpmnExclusiveGateway("Join_manual", null),
+            sequences = creditTierDefinition().sequences.map {
+                if (it.id == "Flow_fast") it.copy(targetRef = "Join_manual") else it
+            } + listOf(
+                BpmnEdge("Flow_duplicate_manual", "Gateway_1", "Task_manual"),
+                BpmnEdge("Flow_aux_manual", "StartEvent_1", "Join_manual"),
+                BpmnEdge("Flow_join_manual", "Join_manual", "Task_manual"),
+            ),
+        )
+
+        val result = pass.conform(creditTierContract(), ambiguous).definition
+
+        assertFalse(result.sequences.single { it.id == "Flow_fast" }.isDefault)
+        assertEquals("Fast-track", result.sequences.single { it.id == "Flow_fast" }.name)
+    }
+
+    @Test
     fun `stamps a contract determined standard loop annotation and association`() {
         val activity = ContractActivity.Service(
             id = "Task_retry",
