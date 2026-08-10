@@ -11,10 +11,14 @@ import dev.groknull.bpmner.bpmn.BpmnEndEvent
 import dev.groknull.bpmner.bpmn.BpmnExclusiveGateway
 import dev.groknull.bpmner.bpmn.BpmnStartEvent
 import dev.groknull.bpmner.bpmn.BpmnUserTask
+import dev.groknull.bpmner.bpmn.MultiInstanceMode
+import dev.groknull.bpmner.contract.ActivityModifiers
 import dev.groknull.bpmner.contract.ConditionalBranch
 import dev.groknull.bpmner.contract.ContractActivity
 import dev.groknull.bpmner.contract.ContractDecision
 import dev.groknull.bpmner.contract.ContractEndState
+import dev.groknull.bpmner.contract.ContractIteration
+import dev.groknull.bpmner.contract.ContractLoop
 import dev.groknull.bpmner.contract.DefaultBranch
 import dev.groknull.bpmner.contract.ProcessContract
 import kotlin.test.Test
@@ -173,6 +177,59 @@ class ContractConformancePassTest {
         assertTrue(conformance.corrections.isEmpty(), "a second pass over stamped output must be a no-op")
         assertEquals(alreadyConforming, conformance.definition)
     }
+
+    @Test
+    fun `stamps a contract determined standard loop annotation and association`() {
+        val activity = ContractActivity.Service(
+            id = "Task_retry",
+            name = "Retry charge",
+            modifiers = ActivityModifiers(loop = ContractLoop(testBefore = false, loopCondition = "charge succeeds")),
+        )
+        val conformance = pass.conform(
+            creditTierContract().copy(activities = listOf(activity)),
+            definitionWithTask(activity.id),
+        )
+
+        assertEquals("Loop until charge succeeds", conformance.definition.annotations.single().text)
+        assertEquals("TextAnnotation_Task_retry_standardLoop", conformance.definition.annotations.single().id)
+        assertEquals("Task_retry", conformance.definition.associations.single().sourceRef)
+        assertEquals("TextAnnotation_Task_retry_standardLoop", conformance.definition.associations.single().targetRef)
+        assertIdempotent(activity, conformance.definition)
+    }
+
+    @Test
+    fun `stamps a contract determined multi instance annotation and association`() {
+        val activity = ContractActivity.Service(
+            id = "Task_review",
+            name = "Review applications",
+            modifiers = ActivityModifiers(
+                iteration = ContractIteration(MultiInstanceMode.PARALLEL, "applications"),
+            ),
+        )
+        val conformance = pass.conform(
+            creditTierContract().copy(activities = listOf(activity)),
+            definitionWithTask(activity.id),
+        )
+
+        assertEquals("For each applications", conformance.definition.annotations.single().text)
+        assertEquals("TextAnnotation_Task_review_multiInstance", conformance.definition.annotations.single().id)
+        assertEquals("Task_review", conformance.definition.associations.single().sourceRef)
+        assertEquals("TextAnnotation_Task_review_multiInstance", conformance.definition.associations.single().targetRef)
+        assertIdempotent(activity, conformance.definition)
+    }
+
+    private fun assertIdempotent(activity: ContractActivity, definition: BpmnDefinition) {
+        val result = pass.conform(creditTierContract().copy(activities = listOf(activity)), definition)
+        assertEquals(definition, result.definition)
+        assertTrue(result.corrections.isEmpty())
+    }
+
+    private fun definitionWithTask(taskId: String) = BpmnDefinition(
+        processId = "P",
+        processName = "Loop process",
+        nodes = listOf(BpmnUserTask(taskId, "Task")),
+        sequences = emptyList(),
+    )
 
     private fun creditTierContract() = ProcessContract(
         id = "c-credit",

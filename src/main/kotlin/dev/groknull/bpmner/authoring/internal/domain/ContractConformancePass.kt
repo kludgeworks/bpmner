@@ -8,6 +8,7 @@ package dev.groknull.bpmner.authoring.internal.domain
 import dev.groknull.bpmner.authoring.BpmnConformance
 import dev.groknull.bpmner.authoring.BpmnContractConformancePort
 import dev.groknull.bpmner.authoring.ContractCorrection
+import dev.groknull.bpmner.bpmn.BpmnAssociation
 import dev.groknull.bpmner.bpmn.BpmnBusinessRuleTask
 import dev.groknull.bpmner.bpmn.BpmnDefinition
 import dev.groknull.bpmner.bpmn.BpmnEdge
@@ -30,6 +31,7 @@ import dev.groknull.bpmner.bpmn.BpmnSendTask
 import dev.groknull.bpmner.bpmn.BpmnServiceTask
 import dev.groknull.bpmner.bpmn.BpmnTask
 import dev.groknull.bpmner.bpmn.BpmnTerminateEventDefinition
+import dev.groknull.bpmner.bpmn.BpmnTextAnnotation
 import dev.groknull.bpmner.bpmn.BpmnUserTask
 import dev.groknull.bpmner.bpmn.MultiInstanceLoopCharacteristics
 import dev.groknull.bpmner.bpmn.StandardLoopCharacteristics
@@ -81,14 +83,19 @@ internal class ContractConformancePass : BpmnContractConformancePort {
     ): BpmnConformance {
         val nodesById = definition.nodes.associateBy { it.id }.toMutableMap()
         val edgesById = definition.sequences.associateBy { it.id }.toMutableMap()
+        val annotationsById = definition.annotations.associateBy { it.id }.toMutableMap()
+        val associationsById = definition.associations.associateBy { it.id }.toMutableMap()
         val outboundBySource = definition.sequences.groupBy { it.sourceRef }
         val corrections = mutableListOf<ContractCorrection>()
+        val artifacts = AnnotationArtifacts(annotationsById, associationsById, corrections)
 
         contract.decisions.forEach { decision ->
             stampBranches(decision, outboundBySource[decision.id].orEmpty(), edgesById, corrections)
             stampGatewayKind(decision, nodesById, corrections)
         }
-        contract.activities.forEach { activity -> stampActivityModifiers(activity, nodesById, corrections) }
+        contract.activities.forEach { activity ->
+            stampActivityModifiers(activity, nodesById, artifacts, corrections)
+        }
         contract.endStates.forEach { endState -> stampEndState(endState, definition, nodesById, corrections) }
         contract.intermediateThrows.forEach { throwEvent ->
             stampIntermediateThrow(throwEvent, definition, nodesById, corrections)
@@ -100,6 +107,8 @@ internal class ContractConformancePass : BpmnContractConformancePort {
         val corrected = definition.copy(
             nodes = definition.nodes.map { nodesById.getValue(it.id) },
             sequences = definition.sequences.map { edgesById.getValue(it.id) },
+            annotations = mergeAnnotations(definition.annotations, artifacts.annotationsById),
+            associations = mergeAssociations(definition.associations, artifacts.associationsById),
         )
         return BpmnConformance(corrected, corrections.toList())
     }
@@ -187,6 +196,7 @@ internal class ContractConformancePass : BpmnContractConformancePort {
     private fun stampActivityModifiers(
         activity: ContractActivity,
         nodesById: MutableMap<String, BpmnNode>,
+        artifacts: AnnotationArtifacts,
         corrections: MutableList<ContractCorrection>,
     ) {
         val task = nodesById[activity.id] as? BpmnTask ?: return
@@ -213,7 +223,76 @@ internal class ContractConformancePass : BpmnContractConformancePort {
             updated = updated.withStandardLoop(expectedStandardLoop)
         }
         if (updated !== task) nodesById[activity.id] = updated
+        activity.loop?.let { loop ->
+            ensureAnnotation(
+                activity.id,
+                "standardLoop",
+                loop.annotationText(),
+                artifacts,
+            )
+        }
+        activity.iteration?.let { iteration ->
+            ensureAnnotation(
+                activity.id,
+                "multiInstance",
+                "For each ${iteration.collectionDescription}",
+                artifacts,
+            )
+        }
     }
+
+    private fun ContractLoop.annotationText(): String {
+        val keyword = if (testBefore) "while" else "until"
+        return loopCondition?.takeIf(String::isNotBlank)?.let { "Loop $keyword $it" } ?: "Loop $keyword"
+    }
+
+    private fun ensureAnnotation(
+        activityId: String,
+        purpose: String,
+        text: String,
+        artifacts: AnnotationArtifacts,
+    ) {
+        val annotationId = "TextAnnotation_${activityId}_$purpose"
+        val associationId = "Association_${activityId}_$purpose"
+        val expectedAnnotation = BpmnTextAnnotation(annotationId, text)
+        if (artifacts.annotationsById[annotationId] != expectedAnnotation) {
+            artifacts.corrections += ContractCorrection(
+                elementId = activityId,
+                field = "annotation:$purpose",
+                modelValue = artifacts.annotationsById[annotationId]?.text,
+                contractValue = text,
+            )
+            artifacts.annotationsById[annotationId] = expectedAnnotation
+        }
+        val expectedAssociation = BpmnAssociation(associationId, activityId, annotationId)
+        if (artifacts.associationsById[associationId] != expectedAssociation) {
+            artifacts.corrections += ContractCorrection(
+                elementId = activityId,
+                field = "association:$purpose",
+                modelValue = artifacts.associationsById[associationId]?.toString(),
+                contractValue = expectedAssociation.toString(),
+            )
+            artifacts.associationsById[associationId] = expectedAssociation
+        }
+    }
+
+    private data class AnnotationArtifacts(
+        val annotationsById: MutableMap<String, BpmnTextAnnotation>,
+        val associationsById: MutableMap<String, BpmnAssociation>,
+        val corrections: MutableList<ContractCorrection>,
+    )
+
+    private fun mergeAnnotations(
+        original: List<BpmnTextAnnotation>,
+        replacements: Map<String, BpmnTextAnnotation>,
+    ): List<BpmnTextAnnotation> = original.map { replacements.getValue(it.id) } +
+        replacements.values.filter { replacement -> original.none { it.id == replacement.id } }
+
+    private fun mergeAssociations(
+        original: List<BpmnAssociation>,
+        replacements: Map<String, BpmnAssociation>,
+    ): List<BpmnAssociation> = original.map { replacements.getValue(it.id) } +
+        replacements.values.filter { replacement -> original.none { it.id == replacement.id } }
 
     private fun ContractIteration.toCharacteristics() = MultiInstanceLoopCharacteristics(
         mode = mode,
