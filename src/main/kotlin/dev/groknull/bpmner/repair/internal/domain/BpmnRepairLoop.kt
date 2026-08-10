@@ -80,10 +80,8 @@ internal class BpmnRepairLoop(
      */
     private fun selectAndApply(prior: BpmnRepairEvaluation, context: ActionContext): BpmnRepairEvaluation {
         return try {
-            when {
-                prior.hasLocalFixable ->
-                    localFixApplier.applyLocalModelFix(prior)
-
+            val localResult = if (prior.hasLocalFixable) localFixApplier.applyLocalModelFix(prior) else null
+            localResult ?: when {
                 prior.hasLlmLabelEligible ->
                     llmRepairApplier.applyLlmLabelPatch(prior, context, labelCandidates(prior))
 
@@ -133,11 +131,13 @@ internal class BpmnRepairLoop(
     }
 
     private fun labelCandidates(eval: BpmnRepairEvaluation): List<BpmnDiagnostic> {
-        return eval.diagnostics.filter { it.kind != RepairKind.UNFIXABLE && it.repairScope == BpmnRepairScope.LABEL }
+        return eval.evaluation.blockingDiagnostics.filter {
+            it.kind != RepairKind.UNFIXABLE && it.repairScope == BpmnRepairScope.LABEL
+        }
     }
 
     private fun structuralCandidates(eval: BpmnRepairEvaluation): List<BpmnDiagnostic> {
-        return eval.diagnostics.filter { d ->
+        return eval.evaluation.blockingDiagnostics.filter { d ->
             d.kind != RepairKind.UNFIXABLE &&
                 (d.repairScope == BpmnRepairScope.OUTLINE || d.repairScope == BpmnRepairScope.PHASE)
         }
@@ -149,7 +149,7 @@ internal class BpmnRepairLoop(
      * would give the LLM an impossible goal and distort the rewrite prompt (plan §2.5).
      */
     private fun rewriteCandidates(eval: BpmnRepairEvaluation): List<BpmnDiagnostic> {
-        return eval.diagnostics.filter { it.kind != RepairKind.UNFIXABLE }
+        return eval.evaluation.blockingDiagnostics.filter { it.kind != RepairKind.UNFIXABLE }
     }
 
     private companion object {

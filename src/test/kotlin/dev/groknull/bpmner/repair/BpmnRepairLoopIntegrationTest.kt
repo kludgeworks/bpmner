@@ -279,6 +279,40 @@ class BpmnRepairLoopIntegrationTest : EmbabelMockitoIntegrationTest() {
     }
 
     @Test
+    fun `advisory local repair does not starve blocking structural repair`() {
+        val request = BpmnRequest(processDescription = "Make toast", mode = GenerationMode.SINGLE_SHOT)
+        val advisoryLocal = BpmnDiagnostic(
+            source = BpmnDiagnosticSource.LINT,
+            message = "Advisory local issue",
+            severity = BpmnDiagnosticSeverity.WARNING,
+            kind = RepairKind.LOCAL_MODEL_FIX,
+            repairScope = BpmnRepairScope.LABEL,
+        )
+        val blockingStructural = BpmnDiagnostic(
+            source = BpmnDiagnosticSource.LINT,
+            message = "Blocking structural issue",
+            severity = BpmnDiagnosticSeverity.ERROR,
+            kind = RepairKind.LLM_MODEL_PATCH,
+            repairScope = BpmnRepairScope.PHASE,
+        )
+
+        `when`(advancer.initialEvaluation(anyNonNull(), anyNonNull(), anyNonNull(), anyNonNull()))
+            .thenReturn(createEvaluation(request, listOf(advisoryLocal, blockingStructural)))
+        `when`(llmRepairApplier.applyLlmStructuralPatch(anyNonNull(), anyNonNull(), anyNonNull()))
+            .thenReturn(createEvaluation(request, emptyList()))
+
+        val result = AgentPlatformTypedOps(platform).transform(
+            request,
+            BpmnResult::class.java,
+            ProcessOptions(budget = Budget(actions = ACTION_BUDGET), ephemeral = false),
+        )
+
+        assertEquals(BpmnGenerationStatus.GENERATED, result.status)
+        verify(localFixApplier, times(0)).applyLocalModelFix(anyNonNull())
+        verify(llmRepairApplier, times(1)).applyLlmStructuralPatch(anyNonNull(), anyNonNull(), anyNonNull())
+    }
+
+    @Test
     fun `no progress termination is preserved`() {
         val request = BpmnRequest(processDescription = "Make toast", mode = GenerationMode.SINGLE_SHOT)
 

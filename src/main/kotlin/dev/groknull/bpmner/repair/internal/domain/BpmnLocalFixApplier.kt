@@ -23,10 +23,9 @@ internal class BpmnLocalFixApplier(
 ) {
     private val logger = LoggerFactory.getLogger(BpmnLocalFixApplier::class.java)
 
-    fun applyLocalModelFix(repairEval: BpmnRepairEvaluation): BpmnRepairEvaluation {
+    fun applyLocalModelFix(repairEval: BpmnRepairEvaluation): BpmnRepairEvaluation? {
         val attempt = repairEval.toAttempt()
-        val applied = applyLocalModelFix(attempt)
-            ?: throw RepairReplans.signal("no LOCAL_MODEL_FIX produced a candidate")
+        val applied = applyLocalModelFix(attempt) ?: return null
         logger.info("Local model fix applied on repair attempt {}", repairEval.repairAttempts + 1)
         return advancer.revalidateAndAdvance(
             prior = repairEval,
@@ -36,7 +35,7 @@ internal class BpmnLocalFixApplier(
         )
     }
 
-    private fun applyLocalModelFix(attempt: BpmnRepairAttempt): LocalFixApplied? = attempt.diagnostics
+    private fun applyLocalModelFix(attempt: BpmnRepairAttempt): LocalFixApplied? = attempt.evaluation.blockingDiagnostics
         .asSequence()
         .mapNotNull { buildLocalFixCandidate(attempt.definition, it) }
         .firstNotNullOfOrNull { tryApplyLocalFix(attempt.definition, it) }
