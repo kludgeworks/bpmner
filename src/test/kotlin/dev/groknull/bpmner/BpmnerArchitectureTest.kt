@@ -79,6 +79,20 @@ class BpmnerArchitectureTest {
     }
 
     @Test
+    fun `ProcessContractMarkdownRenderer is used only for the operator-facing log line`() {
+        // Prose past extraction is a hand-maintained projection LLM prompts must not carry
+        // (R2, ADR-685-16) — the renderer's only sanctioned caller is its own package, where
+        // LlmProcessContractExtractor logs it for operator visibility.
+        noClasses()
+            .that()
+            .resideOutsideOfPackages("..bpmner.contract..")
+            .should()
+            .dependOnClassesThat()
+            .haveFullyQualifiedName("dev.groknull.bpmner.contract.ProcessContractMarkdownRenderer")
+            .check(classes)
+    }
+
+    @Test
     fun `bpmn kernel is free of framework, IO, and cross-module dependencies`() {
         val rule =
             noClasses()

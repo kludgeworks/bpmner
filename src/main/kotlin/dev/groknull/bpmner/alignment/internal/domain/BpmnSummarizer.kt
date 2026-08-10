@@ -8,12 +8,15 @@ package dev.groknull.bpmner.alignment.internal.domain
 import dev.groknull.bpmner.alignment.BpmnDefinitionSummary
 import dev.groknull.bpmner.alignment.BpmnSummaryElement
 import dev.groknull.bpmner.alignment.BpmnSummaryFlow
+import dev.groknull.bpmner.bpmn.BpmnBoundaryEvent
 import dev.groknull.bpmner.bpmn.BpmnDefinition
 import dev.groknull.bpmner.bpmn.BpmnEdge
+import dev.groknull.bpmner.bpmn.BpmnEvent
 import dev.groknull.bpmner.bpmn.BpmnGateway
 import dev.groknull.bpmner.bpmn.BpmnNode
 import dev.groknull.bpmner.bpmn.BpmnNodeNamingPolicy
 import dev.groknull.bpmner.bpmn.BpmnStartEvent
+import dev.groknull.bpmner.bpmn.BpmnTask
 import dev.groknull.bpmner.bpmn.typeName
 import org.springframework.stereotype.Component
 import java.util.LinkedList
@@ -185,7 +188,15 @@ class BpmnSummarizer {
         val orderedFlows = mutableListOf<BpmnEdge>()
     }
 
-    private fun BpmnNode.toSummary() = BpmnSummaryElement(id = id, type = typeName, name = name)
+    private fun BpmnNode.toSummary() = BpmnSummaryElement(
+        id = id,
+        type = typeName,
+        name = name,
+        multiInstance = (this as? BpmnTask)?.multiInstance,
+        standardLoop = (this as? BpmnTask)?.standardLoop,
+        attachedToRef = (this as? BpmnBoundaryEvent)?.attachedToRef,
+        eventDefinition = (this as? BpmnEvent)?.eventDefinition,
+    )
 
     private fun BpmnEdge.toSummary() = BpmnSummaryFlow(
         id = id,

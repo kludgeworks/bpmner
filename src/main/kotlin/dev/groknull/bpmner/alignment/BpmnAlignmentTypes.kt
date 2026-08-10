@@ -8,6 +8,9 @@ package dev.groknull.bpmner.alignment
 import com.fasterxml.jackson.annotation.JsonClassDescription
 import com.fasterxml.jackson.annotation.JsonPropertyDescription
 import dev.groknull.bpmner.alignment.AlignmentClassification
+import dev.groknull.bpmner.bpmn.BpmnEventDefinition
+import dev.groknull.bpmner.bpmn.MultiInstanceLoopCharacteristics
+import dev.groknull.bpmner.bpmn.StandardLoopCharacteristics
 import jakarta.validation.Valid
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.NotEmpty
@@ -48,6 +51,14 @@ data class BpmnSummaryElement(
     val type: String,
     @get:JsonPropertyDescription("Optional BPMN element name")
     val name: String? = null,
+    @get:JsonPropertyDescription("Multi-instance loop characteristics, present on a task that runs once per item")
+    val multiInstance: MultiInstanceLoopCharacteristics? = null,
+    @get:JsonPropertyDescription("Standard-loop characteristics, present on a task that repeats until a condition is met")
+    val standardLoop: StandardLoopCharacteristics? = null,
+    @get:JsonPropertyDescription("Id of the activity this boundary event is attached to, present on boundary events only")
+    val attachedToRef: String? = null,
+    @get:JsonPropertyDescription("Nested BPMN event definition, present on events only")
+    val eventDefinition: BpmnEventDefinition? = null,
 )
 
 @JsonClassDescription("Summary of a single generated BPMN sequence flow")
