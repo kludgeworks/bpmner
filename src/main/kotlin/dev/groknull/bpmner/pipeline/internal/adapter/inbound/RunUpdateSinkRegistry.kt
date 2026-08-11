@@ -15,6 +15,7 @@ import org.springframework.stereotype.Component
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Sinks
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.atomic.AtomicLong
 
 /**
@@ -43,8 +44,12 @@ internal class RunUpdateSinkRegistry {
     /** Last-known phase/artifact per process, so a bare narration ([emitNarration]) can be placed in context. */
     private val lastKnown = ConcurrentHashMap<String, Pair<RunPhase, ArtifactState>>()
 
-    /** Processes that have already emitted their terminal — see [emitTerminal]. */
+    /**
+     * Processes that have already emitted their terminal. This is bounded independently of
+     * [sinks]: a late duplicate after the process sink was evicted must still be dropped.
+     */
     private val terminated = ConcurrentHashMap.newKeySet<String>()
+    private val terminatedOrder = ConcurrentLinkedQueue<String>()
 
     /** Publishes an ordered, non-terminal [RunUpdate.Progress] for [processId]. */
     fun emit(
@@ -97,6 +102,8 @@ internal class RunUpdateSinkRegistry {
             logger.debug("Terminal already emitted for {}; dropping duplicate ({})", processId, summary)
             return
         }
+        terminatedOrder.add(processId)
+        evictOldestTerminatedIfFull()
         lastKnown.remove(processId)
         val processSink = sinkFor(processId)
         val update = RunUpdate.Terminal(
@@ -148,10 +155,13 @@ internal class RunUpdateSinkRegistry {
         val victim = sinks.entries.filter { it.value.sink.currentSubscriberCount() == 0 }
             .minByOrNull { it.value.createdAt }
             ?: sinks.entries.minByOrNull { it.value.createdAt }
-        victim?.let {
-            sinks.remove(it.key)
-            // Bounded with the sinks it guards, or it would grow for the lifetime of the process.
-            terminated.remove(it.key)
+        victim?.let { sinks.remove(it.key) }
+    }
+
+    private fun evictOldestTerminatedIfFull() {
+        while (terminated.size > MAX_TERMINATED) {
+            val oldest = terminatedOrder.poll() ?: break
+            terminated.remove(oldest)
         }
     }
 
@@ -159,5 +169,6 @@ internal class RunUpdateSinkRegistry {
         private val logger = LoggerFactory.getLogger(RunUpdateSinkRegistry::class.java)
         private const val REPLAY_LIMIT = 100
         private const val MAX_PROCESS_BUFFERS = 1000
+        private const val MAX_TERMINATED = MAX_PROCESS_BUFFERS * 5
     }
 }
