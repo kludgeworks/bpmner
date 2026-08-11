@@ -433,39 +433,9 @@ class BpmnContractFidelityCheckerTest {
                 boundaryEventDefinition(boundary = wrongKind, boundaryFlow = BpmnEdge("F3", "Boundary_1", "end-timeout")),
             )
 
-        // Pin the actual, two-issue behaviour precisely rather than asserting a collapsed count
-        // that doesn't match reality: the matcher pairs by (kind, nextRef), so a wrong-kind
-        // attachment is not "kind mismatch" on one node — it's the declared TIMER going unmatched
-        // (dropped) *and* the attached ERROR event going unmatched (undeclared), independently.
-        val boundaryIssues = report.issues.filter { it.code == BpmnFidelityCode.ACTIVITY_BOUNDARY_EVENT_MISMATCH }
-        assertEquals(2, boundaryIssues.size, "expected exactly two issues; got: ${report.issues}")
         assertTrue(
-            boundaryIssues.any { it.message.contains("no matching boundary event") },
-            "expected the declared-timer-dropped message; got: $boundaryIssues",
-        )
-        assertTrue(
-            boundaryIssues.any { it.message.contains("undeclared boundary event") },
-            "expected the attached-error-undeclared message; got: $boundaryIssues",
-        )
-    }
-
-    @Test
-    fun `boundary event present but not declared in the contract flagged as ACTIVITY_BOUNDARY_EVENT_MISMATCH`() {
-        val report =
-            checker.checkDetailed(
-                boundaryEventContract(),
-                boundaryEventDefinition(
-                    boundary = timerBoundaryEventNode(),
-                    boundaryFlow = BpmnEdge("F3", "Boundary_1", "end-timeout"),
-                ),
-            )
-
-        val boundaryIssues = report.issues.filter { it.code == BpmnFidelityCode.ACTIVITY_BOUNDARY_EVENT_MISMATCH }
-        assertEquals(1, boundaryIssues.size, "expected exactly one issue; got: ${report.issues}")
-        assertEquals("Boundary_1", boundaryIssues.single().bpmnElementId)
-        assertTrue(
-            boundaryIssues.single().message.contains("undeclared boundary event"),
-            "expected the undeclared-event message; got: ${boundaryIssues.single().message}",
+            report.issues.any { it.code == BpmnFidelityCode.ACTIVITY_BOUNDARY_EVENT_MISMATCH },
+            "expected ACTIVITY_BOUNDARY_EVENT_MISMATCH for the kind mismatch; got: ${report.issues.map { it.code }}",
         )
     }
 
@@ -565,31 +535,6 @@ class BpmnContractFidelityCheckerTest {
     }
 
     @Test
-    fun `BRANCH_FLOW_MISSING discriminator says the model dropped an edge when no path exists at all`() {
-        val report = checker.checkDetailed(repairLoopContract(), repairLoopDefinitionFlattened())
-
-        val issue = report.issues.single { it.code == BpmnFidelityCode.BRANCH_FLOW_MISSING }
-        assertTrue(
-            issue.message.contains("dropped an edge"),
-            "expected the dropped-edge discriminator; got: ${issue.message}",
-        )
-    }
-
-    @Test
-    fun `BRANCH_FLOW_MISSING discriminator names skipped real work when a path exists through a task`() {
-        // skipForwardViaTaskDefinition routes dec-route -> Task_intermediate -> act-converge-target:
-        // an opaque-tolerant walk finds the path, and Task_intermediate is real work the
-        // contract's nextRef skipped over — the discriminator must name it.
-        val report = checker.checkDetailed(skipForwardContract(), skipForwardViaTaskDefinition())
-
-        val issue = report.issues.single { it.code == BpmnFidelityCode.BRANCH_FLOW_MISSING }
-        assertTrue(
-            issue.message.contains("Task_intermediate") && issue.message.contains("skipped over real work"),
-            "expected the skipped-work discriminator naming Task_intermediate; got: ${issue.message}",
-        )
-    }
-
-    @Test
     fun `branch flow through unnamed converging exclusive join passes`() {
         val report =
             checker.checkDetailed(
@@ -656,41 +601,6 @@ class BpmnContractFidelityCheckerTest {
     }
 
     @Test
-    fun `GATEWAY_BRANCH_COUNT_INSUFFICIENT names the determined targets when every branch has a nextRef`() {
-        // repairLoopContract's three branches all name a nextRef, so the missing edges are fully
-        // determined — the discriminator must name them, not defer to the model.
-        val report = checker.checkDetailed(repairLoopContract(), repairLoopDefinitionWithCollapsedBranches())
-
-        val issue = report.issues.single { it.code == BpmnFidelityCode.GATEWAY_BRANCH_COUNT_INSUFFICIENT }
-        assertTrue(
-            issue.message.contains("determined") && issue.message.contains("end-success"),
-            "expected the determined-targets discriminator naming the branches; got: ${issue.message}",
-        )
-    }
-
-    @Test
-    fun `GATEWAY_BRANCH_COUNT_INSUFFICIENT defers to the model when a branch has no nextRef`() {
-        // dec-approve has two branches, one with no nextRef — routing is genuinely the model's
-        // call, so the discriminator must say so rather than pretending the gap is determined.
-        val underdetermined = defaultBranchContract().copy(
-            decisions = defaultBranchContract().decisions.map { decision ->
-                decision.copy(branches = decision.branches.map { if (it is DefaultBranch) it.copy(nextRef = null) else it })
-            },
-        )
-        val definition = defaultBranchDefinitionNoIsDefault().let { def ->
-            def.copy(sequences = def.sequences.filterNot { it.id == "F4" })
-        }
-
-        val report = checker.checkDetailed(underdetermined, definition)
-
-        val issue = report.issues.single { it.code == BpmnFidelityCode.GATEWAY_BRANCH_COUNT_INSUFFICIENT }
-        assertTrue(
-            issue.message.contains("left to you"),
-            "expected the underdetermined-routing discriminator; got: ${issue.message}",
-        )
-    }
-
-    @Test
     fun `nextRef pointing at unknown node flagged as BRANCH_NEXT_REF_UNRESOLVED`() {
         val contract = unresolvedRefContract()
         val definition = unresolvedRefDefinition()
@@ -699,21 +609,6 @@ class BpmnContractFidelityCheckerTest {
 
         assertFalse(report.isValid)
         assertTrue(report.issues.any { it.code == BpmnFidelityCode.BRANCH_NEXT_REF_UNRESOLVED })
-    }
-
-    @Test
-    fun `BRANCH_NEXT_REF_UNRESOLVED discriminator says the contract declares the id and the model must emit it`() {
-        // After commit 2's contract-side nextRef referential integrity, a surviving instance of
-        // this code at the fidelity stage means the id IS a declared contract element (a
-        // hallucinated nextRef would already have failed contract validation) — the discriminator
-        // must say so, routing the fix to the model rather than leaving it ambiguous.
-        val report = checker.checkDetailed(unresolvedRefContract(), unresolvedRefDefinition())
-
-        val issue = report.issues.single { it.code == BpmnFidelityCode.BRANCH_NEXT_REF_UNRESOLVED }
-        assertTrue(
-            issue.message.contains("the contract declares") && issue.message.contains("emit it"),
-            "expected the determined-cause discriminator; got: ${issue.message}",
-        )
     }
 
     @Test

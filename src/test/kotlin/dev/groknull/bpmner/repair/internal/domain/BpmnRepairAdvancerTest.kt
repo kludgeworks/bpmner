@@ -26,6 +26,8 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.mockito.ArgumentMatchers
 import org.mockito.Mockito.mock
+import org.mockito.Mockito.never
+import org.mockito.Mockito.verify
 import org.mockito.Mockito.`when`
 
 class BpmnRepairAdvancerTest {
@@ -65,7 +67,7 @@ class BpmnRepairAdvancerTest {
         val rendered = mock(RenderedBpmn::class.java)
 
         `when`(conformancePort.conform(anyNonNull(), anyNonNull())).thenReturn(BpmnConformance(definition, emptyList()))
-        `when`(fingerprints.definitionFingerprint(anyNonNull())).thenReturn("fp-stamped")
+        `when`(fingerprints.definitionFingerprint(anyNonNull())).thenReturn("fp-stamped", "fp-prior")
         `when`(fingerprints.promptFingerprint(anyNonNull())).thenReturn("fp-prompt")
         `when`(processGenerator.render(anyNonNull())).thenReturn(rendered)
         `when`(
@@ -82,13 +84,16 @@ class BpmnRepairAdvancerTest {
             .thenReturn(mock(BpmnAttemptRecord::class.java))
 
         val appended = listOf<Message>(UserMessage("Feedback"), AssistantMessage("Def2"))
-        val next = adv.revalidateAndAdvance(priorEval, definition, appended, "prompt")
+        val next = adv.revalidateAndAdvance(priorEval, definition, appended, "prompt", modelRepair = false)
 
         assertEquals(4, next.messages.size)
         assertEquals(priorMessages[0], next.messages[0])
         assertEquals(priorMessages[1], next.messages[1])
         assertEquals(appended[0], next.messages[2])
         assertEquals(appended[1], next.messages[3])
+        assertEquals(0, next.repairAttempts)
+        assertEquals(1, next.history.size)
+        verify(attemptRecordFactory, never()).toRecord(anyNonNull(), ArgumentMatchers.any())
     }
 
     @Test
@@ -101,7 +106,7 @@ class BpmnRepairAdvancerTest {
         val rendered = mock(RenderedBpmn::class.java)
 
         `when`(conformancePort.conform(anyNonNull(), anyNonNull())).thenReturn(BpmnConformance(definition, emptyList()))
-        `when`(fingerprints.definitionFingerprint(anyNonNull())).thenReturn("fp-stamped")
+        `when`(fingerprints.definitionFingerprint(anyNonNull())).thenReturn("fp-stamped", "fp-prior")
         `when`(fingerprints.promptFingerprint(anyNonNull())).thenReturn("fp-prompt")
         `when`(fingerprints.serializeDefinition(anyNonNull())).thenReturn("compact-serialized")
         `when`(processGenerator.render(anyNonNull())).thenReturn(rendered)
@@ -119,7 +124,7 @@ class BpmnRepairAdvancerTest {
             .thenReturn(mock(BpmnAttemptRecord::class.java))
 
         val appended = listOf<Message>(UserMessage("Feedback"), AssistantMessage("Def2"))
-        val next = adv.revalidateAndAdvance(priorEval, definition, appended, "prompt")
+        val next = adv.revalidateAndAdvance(priorEval, definition, appended, "prompt", modelRepair = true)
 
         assertEquals(2, next.messages.size)
         assertEquals(priorMessages[0], next.messages[0])

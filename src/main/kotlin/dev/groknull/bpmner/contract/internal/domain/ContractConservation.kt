@@ -80,13 +80,8 @@ internal object ContractConservation {
                 if (previousActivity.modifiers.iteration != null && nextActivity.modifiers.iteration == null) {
                     add("activity '$id' lost its iteration modifier")
                 }
-                // Compared per-event (not just presence/absence of the whole list), so a retry
-                // that keeps one of two boundary events and silently drops the other is caught —
-                // ContractBoundaryEvent has no id of its own, so equality is the identity here.
-                val droppedBoundaryEvents =
-                    previousActivity.modifiers.boundaryEvents - nextActivity.modifiers.boundaryEvents.toSet()
-                droppedBoundaryEvents.forEach {
-                    add("activity '$id' lost its ${it.kind} boundary event routed to '${it.nextRef}'")
+                if (previousActivity.modifiers.boundaryEvents.isNotEmpty() && nextActivity.modifiers.boundaryEvents.isEmpty()) {
+                    add("activity '$id' lost its boundary events")
                 }
                 if (previousActivity.modifiers.loop != null && nextActivity.modifiers.loop == null) {
                     add("activity '$id' lost its loop modifier")

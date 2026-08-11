@@ -19,8 +19,8 @@ import org.springframework.stereotype.Component
 
 /**
  * Encapsulates the [RepeatUntilAcceptable] loop that drives cost-aware repair:
- * deterministic local fixes first, then LLM label patches, then structural patches, then
- * full rewrites.  The loop exits clean (score = 1.0) or exhausts [maxIterations] and
+ * deterministic normalization before each model tier, then LLM label patches, structural patches,
+ * then full rewrites. The loop exits clean (score = 1.0) or exhausts [maxIterations] and
  * returns the best evaluation reached so far.
  *
  * This is **wiring only** — the repair handlers, advancer, appliers, and validator are all
@@ -28,7 +28,7 @@ import org.springframework.stereotype.Component
  */
 @Component
 internal class BpmnRepairLoop(
-    private val localFixApplier: BpmnLocalFixApplier,
+    private val deterministicNormalizer: BpmnDeterministicNormalizer,
     private val llmRepairApplier: BpmnLlmRepairApplier,
     private val config: BpmnRepairBudgetConfig,
 ) {
@@ -79,46 +79,28 @@ internal class BpmnRepairLoop(
      * return [prior] unchanged so the evaluator advances towards the iteration bound.
      */
     private fun selectAndApply(prior: BpmnRepairEvaluation, context: ActionContext): BpmnRepairEvaluation {
+        var normalized = prior
         return try {
-            when {
-                prior.hasLocalFixable ->
-                    localFixApplier.applyLocalModelFix(prior)
+            normalized = deterministicNormalizer.normalize(prior)
+            if (normalized.diagnosticsResolved) return normalized
+            val repaired = when {
+                normalized.hasLlmLabelEligible ->
+                    llmRepairApplier.applyLlmLabelPatch(normalized, context, labelCandidates(normalized))
 
-                prior.hasLlmLabelEligible ->
-                    llmRepairApplier.applyLlmLabelPatch(prior, context, labelCandidates(prior))
+                normalized.hasLlmStructuralEligible ->
+                    applyStructuralPatchOrRewrite(normalized, context)
 
-                prior.hasLlmStructuralEligible ->
-                    applyStructuralPatchOrRewrite(prior, context)
+                normalized.hasLlmEligible ->
+                    llmRepairApplier.applyFullLlmRewrite(normalized, context, rewriteCandidates(normalized))
 
-                prior.hasLlmEligible ->
-                    llmRepairApplier.applyFullLlmRewrite(prior, context, rewriteCandidates(prior))
-
-                else -> prior // nothing applicable; evaluator rejects, loop ends
+                else -> normalized // nothing applicable; evaluator rejects, loop ends
             }
+            deterministicNormalizer.normalize(repaired)
         } catch (e: ReplanRequestedException) {
             // No-progress or malformed-LLM guard fired. Return prior unchanged so the evaluator
             // scores it non-accepting and the iteration bound terminates the loop.
             logger.debug("Repair loop: replan signal caught — returning prior to advance iteration bound. Reason: {}", e.message)
-            prior
-        } catch (e: StuckBlockingDiagnosticsException) {
-            // Not a ReplanRequestedException (that framework class is final) — caught separately
-            // here so a stall during a label patch or a direct full rewrite (neither routed
-            // through applyStructuralPatchOrRewrite's own escalation catch) advances the
-            // iteration bound instead of propagating uncaught out of the repair loop.
-            logger.debug(
-                "Repair loop: stuck-blocking signal caught — returning prior to advance iteration bound. Reason: {}",
-                e.message,
-            )
-            prior
-        } catch (e: NoEffectiveProgressException) {
-            // Same rationale as the StuckBlockingDiagnosticsException catch above, for the
-            // label-patch and direct-full-rewrite tiers that don't get the structural tier's own
-            // escalation-to-rewrite handling below.
-            logger.debug(
-                "Repair loop: no-effective-progress signal caught — returning prior to advance iteration bound. Reason: {}",
-                e.message,
-            )
-            prior
+            normalized
         }
     }
 
@@ -130,13 +112,6 @@ internal class BpmnRepairLoop(
             llmRepairApplier.applyLlmStructuralPatch(prior, context, structuralCandidates(prior))
         } catch (e: StuckBlockingDiagnosticsException) {
             logger.debug("Repair loop: structural patch stalled — escalating to full rewrite. Reason: {}", e.message)
-            llmRepairApplier.applyFullLlmRewrite(prior, context, rewriteCandidates(prior))
-        } catch (e: NoEffectiveProgressException) {
-            logger.debug(
-                "Repair loop: structural patch had no effective progress after conformance —" +
-                    " escalating to full rewrite. Reason: {}",
-                e.message,
-            )
             llmRepairApplier.applyFullLlmRewrite(prior, context, rewriteCandidates(prior))
         }
 
@@ -159,11 +134,13 @@ internal class BpmnRepairLoop(
     }
 
     private fun labelCandidates(eval: BpmnRepairEvaluation): List<BpmnDiagnostic> {
-        return eval.diagnostics.filter { it.kind != RepairKind.UNFIXABLE && it.repairScope == BpmnRepairScope.LABEL }
+        return eval.evaluation.blockingDiagnostics.filter {
+            it.kind != RepairKind.UNFIXABLE && it.repairScope == BpmnRepairScope.LABEL
+        }
     }
 
     private fun structuralCandidates(eval: BpmnRepairEvaluation): List<BpmnDiagnostic> {
-        return eval.diagnostics.filter { d ->
+        return eval.evaluation.blockingDiagnostics.filter { d ->
             d.kind != RepairKind.UNFIXABLE &&
                 (d.repairScope == BpmnRepairScope.OUTLINE || d.repairScope == BpmnRepairScope.PHASE)
         }
@@ -175,7 +152,7 @@ internal class BpmnRepairLoop(
      * would give the LLM an impossible goal and distort the rewrite prompt (plan §2.5).
      */
     private fun rewriteCandidates(eval: BpmnRepairEvaluation): List<BpmnDiagnostic> {
-        return eval.diagnostics.filter { it.kind != RepairKind.UNFIXABLE }
+        return eval.evaluation.blockingDiagnostics.filter { it.kind != RepairKind.UNFIXABLE }
     }
 
     private companion object {

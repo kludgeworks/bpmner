@@ -43,7 +43,6 @@ import dev.groknull.bpmner.readiness.ReadinessVerdict
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito.mock
-import org.mockito.Mockito.verify
 import java.time.Duration
 
 /**
@@ -54,8 +53,7 @@ import java.time.Duration
  */
 class BpmnMilestoneEventListenerTest {
     private val registry = RunUpdateSinkRegistry()
-    private val runUpdateChannel = mock(BpmnRunUpdateChannel::class.java)
-    private val listener = BpmnMilestoneEventListener(registry, runUpdateChannel)
+    private val listener = BpmnMilestoneEventListener(registry)
 
     // Every event carries processId (producer-captured); listeners never call AgentProcess.get().
     @Test
@@ -240,16 +238,6 @@ class BpmnMilestoneEventListenerTest {
             as RunUpdate.Terminal
         assertEquals(RunOutcome.FAILED, terminal.outcome)
         assertEquals("boom", terminal.detail["failureDetail"])
-    }
-
-    @Test
-    fun `a run that aborts while awaiting clarification clears its clarification-round state`() {
-        // The abort backstop bypasses BpmnRunUpdateChannel's own onFailed/onStuck/onFinished
-        // handlers entirely, so without this call a process that aborts mid-clarification would
-        // leak its entry in that channel's clarificationRounds map forever.
-        listener.onRunAborted(BpmnRunAbortedEvent(processId = "proc-abort-clarifying", detail = "boom"))
-
-        verify(runUpdateChannel).clearClarificationState("proc-abort-clarifying")
     }
 
     private fun readyAssessment(): ProcessInputAssessment = ProcessInputAssessment(

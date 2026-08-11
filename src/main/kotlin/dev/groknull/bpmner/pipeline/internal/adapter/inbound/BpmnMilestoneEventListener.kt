@@ -40,7 +40,6 @@ import org.springframework.stereotype.Component
 @Component
 internal class BpmnMilestoneEventListener(
     private val registry: RunUpdateSinkRegistry,
-    private val runUpdateChannel: BpmnRunUpdateChannel,
 ) {
     private val logger = LoggerFactory.getLogger(BpmnMilestoneEventListener::class.java)
 
@@ -140,7 +139,6 @@ internal class BpmnMilestoneEventListener(
     // it if the run did manage to report one.
     @EventListener
     fun onRunAborted(event: BpmnRunAbortedEvent) {
-        runUpdateChannel.clearClarificationState(event.processId)
         registry.emitTerminal(
             processId = event.processId,
             artifactState = ArtifactState.NONE,

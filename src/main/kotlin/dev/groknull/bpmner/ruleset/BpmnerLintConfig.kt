@@ -15,8 +15,7 @@ package dev.groknull.bpmner.ruleset
  * [dev.groknull.bpmner.ruleset.RuleProfile] at startup.
  *
  * The convention lists ([discouragedLeadingVerbs], [elementTypeWords], [allowedAcronyms],
- * [technicalTokens], [discouragedBpmnTypes]) drive Kotlin-authored rule beans and deterministic
- * repair handlers.
+ * [discouragedBpmnTypes]) drive Kotlin-authored rule beans and deterministic repair handlers.
  */
 data class BpmnerLintConfig(
     val profile: String = "recommended",
@@ -24,7 +23,6 @@ data class BpmnerLintConfig(
     val discouragedLeadingVerbs: List<String> = listOf("handle", "manage", "process", "perform", "do"),
     val elementTypeWords: List<String> = listOf("activity", "process", "event"),
     val allowedAcronyms: List<String> = listOf("BPMN", "ACME", "SLA", "API", "IT"),
-    val technicalTokens: List<String> = listOf("api", "svc", "tbl", "req", "resp", "tmp", "proc", "obj"),
     val discouragedBpmnTypes: List<String> = listOf(
         "bpmn:Choreography",
         "bpmn:ChoreographyTask",

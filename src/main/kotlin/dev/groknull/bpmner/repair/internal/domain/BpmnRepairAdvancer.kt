@@ -98,14 +98,14 @@ internal class BpmnRepairAdvancer(
         repaired: BpmnDefinition,
         appendedMessages: List<com.embabel.chat.Message>,
         promptText: String,
+        modelRepair: Boolean,
     ): BpmnRepairEvaluation {
         val conformance = conformancePort.conform(prior.contract, repaired)
         val stamped = conformance.definition
-        logRepairPatchCorrections(prior.repairAttempts + 1, conformance.corrections)
+        val nextRepairAttempts = prior.repairAttempts + if (modelRepair) 1 else 0
+        logRepairPatchCorrections(nextRepairAttempts, conformance.corrections)
         val stampedFingerprint = fingerprints.definitionFingerprint(stamped)
-        val priorRecord = prior.history.last
-            ?: error("revalidateAndAdvance called with empty history — initialEvaluation must run first")
-        guardAgainstNoProgress(stampedFingerprint, prior, priorRecord, conformance.corrections.isNotEmpty())
+        if (modelRepair) guardAgainstNoProgress(stampedFingerprint, prior)
 
         val nextGraph = prior.graph.withUpdatedDefinition(stamped)
         var renderFailureMessage: String? = null
@@ -125,7 +125,7 @@ internal class BpmnRepairAdvancer(
             rendered = nextRendered,
             contract = prior.contract,
             renderFailureMessage = renderFailureMessage,
-            repairAttempts = prior.repairAttempts + 1,
+            repairAttempts = nextRepairAttempts,
         )
 
         val nextMessages = if (config.trimHistory && prior.messages.isNotEmpty()) {
@@ -138,17 +138,16 @@ internal class BpmnRepairAdvancer(
         }
         val nextAttempt = BpmnRepairAttempt(
             attemptNumber = prior.history.size + 1,
-            repairAttempts = prior.repairAttempts + 1,
+            repairAttempts = nextRepairAttempts,
             graph = nextGraph,
             evaluation = nextEvaluation,
             messages = nextMessages,
         )
-        val nextRecord: BpmnAttemptRecord = attemptRecordFactory.toRecord(
-            attempt = nextAttempt,
-            repairPromptFingerprint = fingerprints.promptFingerprint(promptText),
-        )
+        val nextRecord = modelRepairRecord(nextAttempt, promptText, modelRepair)
 
-        guardAgainstStuckBlocking(nextEvaluation, nextRecord, priorRecord, nextAttempt.repairAttempts)
+        if (nextRecord != null) {
+            guardAgainstStuckBlocking(nextEvaluation, nextRecord, prior, nextAttempt.repairAttempts)
+        }
 
         return BpmnRepairEvaluation(
             request = prior.request,
@@ -156,11 +155,21 @@ internal class BpmnRepairAdvancer(
             rendered = nextRendered,
             evaluation = nextEvaluation,
             messages = nextMessages,
-            history = prior.history.append(nextRecord),
+            history = nextRecord?.let(prior.history::append) ?: prior.history,
             contract = prior.contract,
-            repairAttempts = prior.repairAttempts + 1,
+            repairAttempts = nextRepairAttempts,
             renderFailureMessage = renderFailureMessage,
         )
+    }
+
+    private fun modelRepairRecord(
+        attempt: BpmnRepairAttempt,
+        promptText: String,
+        modelRepair: Boolean,
+    ): BpmnAttemptRecord? = if (modelRepair) {
+        attemptRecordFactory.toRecord(attempt, fingerprints.promptFingerprint(promptText))
+    } else {
+        null
     }
 
     // A correction here means the repair patch clobbered a field the contract already
@@ -184,39 +193,27 @@ internal class BpmnRepairAdvancer(
     private fun guardAgainstNoProgress(
         stampedFingerprint: String,
         prior: BpmnRepairEvaluation,
-        priorRecord: BpmnAttemptRecord,
-        conformanceStampedSomething: Boolean,
     ) {
-        val signal = when {
-            // The LLM's patch changed something, but the conformance pass stamped the result
-            // straight back to the prior state — the edit never survived far enough to be
-            // judged. Distinct from a genuinely stuck LLM (the branch below) so the structural
-            // tier can escalate to a full rewrite instead of silently burning an iteration on a
-            // patch that can never register.
-            stampedFingerprint == priorRecord.definitionFingerprint && conformanceStampedSomething ->
-                NoEffectiveProgressException(
-                    "patch on repair attempt ${priorRecord.attemptNumber} was fully re-corrected by conformance",
-                )
-
-            stampedFingerprint == priorRecord.definitionFingerprint ->
-                RepairReplans.signal("unchanged patch on repair attempt ${priorRecord.attemptNumber}")
+        val reason = when {
+            stampedFingerprint == fingerprints.definitionFingerprint(prior.definition) ->
+                "unchanged patch on repair attempt ${prior.repairAttempts}"
 
             prior.history.containsDefinitionFingerprint(stampedFingerprint) ->
-                RepairReplans.signal("repeated invalid output on repair attempt ${priorRecord.attemptNumber}")
+                "repeated invalid output on repair attempt ${prior.repairAttempts}"
 
             else -> return
         }
-        throw signal
+        throw RepairReplans.signal(reason)
     }
 
     private fun guardAgainstStuckBlocking(
         nextEvaluation: dev.groknull.bpmner.conformance.BpmnEvaluation,
         nextRecord: BpmnAttemptRecord,
-        priorRecord: BpmnAttemptRecord,
+        prior: BpmnRepairEvaluation,
         repairAttempts: Int,
     ) {
         if (nextEvaluation.blockingDiagnostics.isNotEmpty() &&
-            nextRecord.blockingDiagnosticFingerprint == priorRecord.blockingDiagnosticFingerprint
+            nextRecord.blockingDiagnosticFingerprint == fingerprints.blockingDiagnosticFingerprint(prior.evaluation.diagnostics)
         ) {
             throw StuckBlockingDiagnosticsException(
                 "unchanged blocking diagnostics after repair attempt $repairAttempts",

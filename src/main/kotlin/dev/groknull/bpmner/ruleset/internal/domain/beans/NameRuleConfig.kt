@@ -43,32 +43,6 @@ internal class NameRuleConfig {
     }
 
     @Bean
-    fun nameBusinessMeaningfulLabel(nlp: BpmnNlp, lintConfig: BpmnerLintConfig): BpmnRule = primitiveRule(
-        name = "Business Meaningful Label",
-        category = RuleCategory.Name,
-        intent = "Encourage business-readable labels over technical identifiers.",
-        forModellers = "Choose names that are meaningful to business stakeholders and avoid technical shorthand, code names, and implementation identifiers.",
-        forAI = "Detect labels containing technical patterns such as underscores, slash paths, alphanumeric codes, or configured technical tokens.",
-        targetElements = NAMED_ELEMENTS,
-        errorMessages = mapOf(
-            "default" to "Label appears technical/cryptic; prefer business-meaningful wording",
-        ),
-        check = PropertyPatternCheckConfig(
-            property = "name",
-            pattern = "^(?!.*[_/])(?!.*[a-z][A-Z])(?!.*\\d).+$",
-            patternDescription = "labels should be business-readable (no underscores, slash paths, camelCase, or digits)",
-            forbiddenVocabulary = lintConfig.technicalTokens,
-        ),
-        nlp = nlp,
-        severity = RuleSeverity.WARNING,
-        repair = RepairMetadata(
-            kind = RepairKind.LOCAL_MODEL_FIX,
-            safety = RepairSafety.SAFE_AUTOMATIC,
-            handler = "expandAbbreviations",
-        ),
-    )
-
-    @Bean
     fun nameNoElementTypeWords(nlp: BpmnNlp, lintConfig: BpmnerLintConfig): BpmnRule = primitiveRule(
         name = "No Element Type Words",
         category = RuleCategory.Name,

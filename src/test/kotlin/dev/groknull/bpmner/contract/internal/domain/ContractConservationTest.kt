@@ -74,50 +74,6 @@ class ContractConservationTest {
     }
 
     @Test
-    fun `a partial boundary-event removal is caught even though the list stays non-empty`() {
-        // act-show-retry-prompt keeps its TIMER boundary event but drops a second, ERROR one —
-        // the list stays non-empty on both sides, so a whole-list presence check would miss this.
-        val previous = regressionContract()
-        val withTwoBoundaryEvents = previous.copy(
-            activities = previous.activities.map { activity ->
-                if (activity.id == "act-show-retry-prompt") {
-                    (activity as ContractActivity.Service).copy(
-                        modifiers = activity.modifiers.copy(
-                            boundaryEvents = activity.modifiers.boundaryEvents + ContractBoundaryEvent(
-                                kind = BoundaryEventKind.ERROR,
-                                label = "Payment gateway error",
-                                nextRef = "end-abandoned",
-                            ),
-                        ),
-                    )
-                } else {
-                    activity
-                }
-            },
-        )
-        val next = withTwoBoundaryEvents.copy(
-            activities = withTwoBoundaryEvents.activities.map { activity ->
-                if (activity.id == "act-show-retry-prompt") {
-                    (activity as ContractActivity.Service).copy(
-                        modifiers = activity.modifiers.copy(
-                            boundaryEvents = activity.modifiers.boundaryEvents.filter { it.kind == BoundaryEventKind.TIMER },
-                        ),
-                    )
-                } else {
-                    activity
-                }
-            },
-        )
-
-        val drops = ContractConservation.detectDrops(named = setOf("dec-timeout"), previous = withTwoBoundaryEvents, next = next)
-
-        assertTrue(
-            drops.any { it.contains("act-show-retry-prompt") && it.contains("ERROR") },
-            "got: $drops",
-        )
-    }
-
-    @Test
     fun `attempt 1 is a no-op`() {
         val contract = regressionContract()
         val drops = ContractConservation.detectDrops(named = emptySet(), previous = contract, next = contract)

@@ -62,10 +62,10 @@ internal data class BpmnRepairEvaluation(
         get() = diagnostics.isEmpty()
 
     val hasLocalFixable: Boolean
-        get() = diagnostics.any { it.kind == RepairKind.LOCAL_MODEL_FIX }
+        get() = evaluation.blockingDiagnostics.any { it.kind == RepairKind.LOCAL_MODEL_FIX }
 
     val hasLlmEligible: Boolean
-        get() = diagnostics.any { it.kind != RepairKind.UNFIXABLE }
+        get() = evaluation.blockingDiagnostics.any { it.kind != RepairKind.UNFIXABLE }
 
     /**
      * Phase 4 review G1: scope-specific eligibility splits so the planner distinguishes
@@ -74,10 +74,12 @@ internal data class BpmnRepairEvaluation(
      * `ReplanRequestedException`, and burns a budget action per iteration.
      */
     val hasLlmLabelEligible: Boolean
-        get() = diagnostics.any { it.kind != RepairKind.UNFIXABLE && it.repairScope == BpmnRepairScope.LABEL }
+        get() = evaluation.blockingDiagnostics.any {
+            it.kind != RepairKind.UNFIXABLE && it.repairScope == BpmnRepairScope.LABEL
+        }
 
     val hasLlmStructuralEligible: Boolean
-        get() = diagnostics.any { d ->
+        get() = evaluation.blockingDiagnostics.any { d ->
             d.kind != RepairKind.UNFIXABLE &&
                 (d.repairScope == BpmnRepairScope.OUTLINE || d.repairScope == BpmnRepairScope.PHASE)
         }
