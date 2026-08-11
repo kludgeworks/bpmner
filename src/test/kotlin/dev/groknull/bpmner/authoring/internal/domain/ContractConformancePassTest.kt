@@ -9,6 +9,9 @@ import dev.groknull.bpmner.bpmn.BpmnDefinition
 import dev.groknull.bpmner.bpmn.BpmnEdge
 import dev.groknull.bpmner.bpmn.BpmnEndEvent
 import dev.groknull.bpmner.bpmn.BpmnExclusiveGateway
+import dev.groknull.bpmner.bpmn.BpmnNoneEventDefinition
+import dev.groknull.bpmner.bpmn.BpmnSignalEventDefinition
+import dev.groknull.bpmner.bpmn.BpmnSignalRef
 import dev.groknull.bpmner.bpmn.BpmnStartEvent
 import dev.groknull.bpmner.bpmn.BpmnUserTask
 import dev.groknull.bpmner.bpmn.MultiInstanceMode
@@ -298,6 +301,85 @@ class ContractConformancePassTest {
         processName = "Loop process",
         nodes = listOf(BpmnUserTask(taskId, "Task")),
         sequences = emptyList(),
+    )
+
+    // Regression for the defect #696's spike found: a signal end event the model got RIGHT was
+    // stamped back to BpmnNoneEventDefinition, because the contract could only say NORMAL and
+    // Normal resolves unconditionally. Nothing in the suite caught it — the run stayed green and
+    // the signal semantics simply vanished.
+    @Test
+    fun `leaves a correctly-signalled end event untouched`() {
+        val result = pass.conform(signalContract(), signalDefinition())
+
+        val end = result.definition.nodes.filterIsInstance<BpmnEndEvent>().single()
+        assertEquals(
+            BpmnSignalEventDefinition("Signal_1"),
+            end.eventDefinition,
+            "a contract-declared signal end event must survive conformance unchanged",
+        )
+        assertTrue(
+            result.corrections.none { it.elementId == "end-broadcast" },
+            "no correction may be reported for an end event that already matches the contract",
+        )
+    }
+
+    @Test
+    fun `stamps a signal end event the model left as a plain end`() {
+        val definition = signalDefinition(endEventDefinition = BpmnNoneEventDefinition)
+
+        val result = pass.conform(signalContract(), definition)
+
+        val end = result.definition.nodes.filterIsInstance<BpmnEndEvent>().single()
+        assertEquals(BpmnSignalEventDefinition("Signal_1"), end.eventDefinition)
+        assertTrue(result.corrections.any { it.elementId == "end-broadcast" })
+    }
+
+    // Mirrors the ERROR/MESSAGE rule (ADR-685-21): resolution needs a catalogue entry and this
+    // pass never invents one, so an absent catalogue means no stamp rather than a fabricated ref.
+    @Test
+    fun `does not stamp a signal end event when the signal catalogue is empty`() {
+        val definition = signalDefinition(endEventDefinition = BpmnNoneEventDefinition, signals = emptyList())
+
+        val result = pass.conform(signalContract(), definition)
+
+        val end = result.definition.nodes.filterIsInstance<BpmnEndEvent>().single()
+        assertEquals(BpmnNoneEventDefinition, end.eventDefinition)
+        assertTrue(result.corrections.none { it.elementId == "end-broadcast" })
+    }
+
+    private fun signalContract() = ProcessContract(
+        id = "c-signal",
+        processName = "Settlement broadcast",
+        summary = "Broadcasts settlement completion",
+        trigger = "settlement completes",
+        triggerSourceIds = listOf("S1"),
+        activities = listOf(ContractActivity.Service(id = "act-settle", name = "Settle trade", sourceIds = listOf("S1"))),
+        endStates = listOf(
+            ContractEndState.Signal(
+                id = "end-broadcast",
+                name = "Settlement broadcast",
+                signalName = "settlement complete",
+                sourceIds = listOf("S1"),
+            ),
+        ),
+    )
+
+    private fun signalDefinition(
+        endEventDefinition: dev.groknull.bpmner.bpmn.BpmnEventDefinition = BpmnSignalEventDefinition("Signal_1"),
+        signals: List<BpmnSignalRef> = listOf(BpmnSignalRef("Signal_1", "settlement complete")),
+    ): BpmnDefinition = BpmnDefinition(
+        processId = "P",
+        processName = "Settlement broadcast",
+        nodes = listOf(
+            BpmnStartEvent("StartEvent_1", "Settlement completes"),
+            BpmnUserTask("act-settle", "Settle trade"),
+            BpmnEndEvent("end-broadcast", "Settlement broadcast", eventDefinition = endEventDefinition),
+        ),
+        sequences = listOf(
+            BpmnEdge("Flow_1", "StartEvent_1", "act-settle"),
+            BpmnEdge("Flow_2", "act-settle", "end-broadcast"),
+        ),
+        signals = signals,
     )
 
     private fun creditTierContract() = ProcessContract(

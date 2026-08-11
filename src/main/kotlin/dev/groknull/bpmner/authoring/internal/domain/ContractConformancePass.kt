@@ -14,6 +14,7 @@ import dev.groknull.bpmner.bpmn.BpmnDefinition
 import dev.groknull.bpmner.bpmn.BpmnEdge
 import dev.groknull.bpmner.bpmn.BpmnEndEvent
 import dev.groknull.bpmner.bpmn.BpmnErrorEventDefinition
+import dev.groknull.bpmner.bpmn.BpmnEscalationEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnEventBasedGateway
 import dev.groknull.bpmner.bpmn.BpmnEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnExclusiveGateway
@@ -29,6 +30,7 @@ import dev.groknull.bpmner.bpmn.BpmnReceiveTask
 import dev.groknull.bpmner.bpmn.BpmnScriptTask
 import dev.groknull.bpmner.bpmn.BpmnSendTask
 import dev.groknull.bpmner.bpmn.BpmnServiceTask
+import dev.groknull.bpmner.bpmn.BpmnSignalEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnTask
 import dev.groknull.bpmner.bpmn.BpmnTerminateEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnTextAnnotation
@@ -354,8 +356,8 @@ internal class ContractConformancePass : BpmnContractConformancePort {
     }
 
     // Stamp 5. Best-effort: NORMAL/TERMINATE need no catalogue lookup and are always stampable;
-    // ERROR/MESSAGE can only be stamped when a matching BpmnErrorRef/BpmnMessageRef already
-    // exists in the definition's catalogue — this pass never invents one (ADR-685-21 non-goal).
+    // ERROR/MESSAGE/SIGNAL/ESCALATION can only be stamped when a matching catalogue entry already
+    // exists in the definition — this pass never invents one (ADR-685-21 non-goal).
     private fun stampEndState(
         endState: ContractEndState,
         definition: BpmnDefinition,
@@ -381,8 +383,12 @@ internal class ContractConformancePass : BpmnContractConformancePort {
             definition.errors.firstOrNull { it.code == errorCode }?.let { BpmnErrorEventDefinition(it.id) }
         is ContractEndState.Message ->
             definition.messages.firstOrNull { it.name == messageName }?.let { BpmnMessageEventDefinition(it.id) }
-        is ContractEndState.Signal -> null
-        is ContractEndState.Escalation -> null
+        is ContractEndState.Signal ->
+            definition.signals.firstOrNull { it.name == signalName }?.let { BpmnSignalEventDefinition(it.id) }
+        is ContractEndState.Escalation ->
+            definition.escalations
+                .firstOrNull { it.escalationCode == escalationCode }
+                ?.let { BpmnEscalationEventDefinition(it.id) }
     }
 
     // Stamp 6, mirroring stamp 5's catalogue-resolution limit.
@@ -407,7 +413,11 @@ internal class ContractConformancePass : BpmnContractConformancePort {
     private fun ContractIntermediateThrow.resolveEventDefinition(definition: BpmnDefinition): BpmnEventDefinition? = when (this) {
         is ContractIntermediateThrow.Message ->
             definition.messages.firstOrNull { it.name == messageName }?.let { BpmnMessageEventDefinition(it.id) }
-        is ContractIntermediateThrow.Signal -> null
-        is ContractIntermediateThrow.Escalation -> null
+        is ContractIntermediateThrow.Signal ->
+            definition.signals.firstOrNull { it.name == signalName }?.let { BpmnSignalEventDefinition(it.id) }
+        is ContractIntermediateThrow.Escalation ->
+            definition.escalations
+                .firstOrNull { it.escalationCode == escalationCode }
+                ?.let { BpmnEscalationEventDefinition(it.id) }
     }
 }
