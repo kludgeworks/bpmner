@@ -35,7 +35,10 @@ internal fun FlatContractBoundaryEvent.toSealed(): ContractBoundaryEvent = Contr
     kind = kind,
     label = requireField(label, kind, "label", "boundaryEvent"),
     nextRef = requireField(nextRef, kind, "nextRef", "boundaryEvent"),
-    detail = if (kind == BoundaryEventKind.TIMER) requireField(detail, kind, "detail", "boundaryEvent") else detail,
+    // TIMER needs its ISO-8601 duration and ESCALATION its escalation code; both are unusable
+    // without one. ERROR's code is deliberately left optional here — see the note on the sealed
+    // ContractBoundaryEvent.detail field.
+    detail = if (kind == BoundaryEventKind.ERROR) detail else requireField(detail, kind, "detail", "boundaryEvent"),
 )
 
 internal fun FlatContractLoop.toSealed(): ContractLoop = ContractLoop(

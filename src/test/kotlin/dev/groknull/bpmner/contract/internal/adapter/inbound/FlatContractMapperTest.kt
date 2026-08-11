@@ -226,6 +226,20 @@ class FlatContractMapperTest {
                 ContractEndState.Error("e-err", "End", errorCode = "CREDIT_REJECTED", sourceIds = sourceIds),
             flatEnd(FlatEndStateKind.MESSAGE, "e-msg", payload = "shipped") to
                 ContractEndState.Message("e-msg", "End", messageName = "shipped", sourceIds = sourceIds),
+            flatEnd(FlatEndStateKind.SIGNAL, "e-sig", payload = "settlement complete") to
+                ContractEndState.Signal("e-sig", "End", signalName = "settlement complete", sourceIds = sourceIds),
+            flatEnd(FlatEndStateKind.ESCALATION, "e-esc", payload = "APPROVAL_OVERDUE") to
+                ContractEndState.Escalation(
+                    "e-esc",
+                    "End",
+                    escalationCode = "APPROVAL_OVERDUE",
+                    sourceIds = sourceIds,
+                ),
+        )
+        assertEquals(
+            FlatEndStateKind.entries.size,
+            cases.size,
+            "every FlatEndStateKind needs a case here — a new kind must not slip through untested",
         )
 
         cases.forEach { (flat, expected) -> assertEquals(expected, flat.toSealed()) }
@@ -280,6 +294,25 @@ class FlatContractMapperTest {
                     messageName = "invoice ready",
                     sourceIds = sourceIds,
                 ),
+            flatThrow(FlatIntermediateThrowKind.SIGNAL, "throw-sig", payload = "batch closed") to
+                ContractIntermediateThrow.Signal(
+                    "throw-sig",
+                    "Throw",
+                    signalName = "batch closed",
+                    sourceIds = sourceIds,
+                ),
+            flatThrow(FlatIntermediateThrowKind.ESCALATION, "throw-esc", payload = "SLA_BREACHED") to
+                ContractIntermediateThrow.Escalation(
+                    "throw-esc",
+                    "Throw",
+                    escalationCode = "SLA_BREACHED",
+                    sourceIds = sourceIds,
+                ),
+        )
+        assertEquals(
+            FlatIntermediateThrowKind.entries.size,
+            cases.size,
+            "every FlatIntermediateThrowKind needs a case here",
         )
 
         cases.forEach { (flat, expected) -> assertEquals(expected, flat.toSealed()) }
@@ -291,6 +324,45 @@ class FlatContractMapperTest {
         val messageEx = assertFailsWith<IllegalArgumentException> { message.toSealed() }
         assertTrue("throw-msg" in messageEx.message.orEmpty())
         assertTrue("messageName" in messageEx.message.orEmpty())
+    }
+
+    @Test
+    fun `SIGNAL trigger round-trips and requires its signal name`() {
+        assertEquals(
+            ContractTrigger.Signal(signalName = "market opened", description = "market opens"),
+            FlatContractTrigger(
+                type = FlatTriggerKind.SIGNAL,
+                description = "market opens",
+                signalName = "market opened",
+            ).toSealed(),
+        )
+
+        val missing = FlatContractTrigger(type = FlatTriggerKind.SIGNAL, description = "market opens")
+        val ex = assertFailsWith<IllegalArgumentException> { missing.toSealed() }
+        assertTrue("signalName" in ex.message.orEmpty())
+    }
+
+    // An ESCALATION boundary event carries its escalation code in `detail`, exactly as a TIMER
+    // carries its duration there; without one the generated escalation has nothing to reference.
+    @Test
+    fun `ESCALATION boundary event requires its escalation code`() {
+        val ex = assertFailsWith<IllegalArgumentException> {
+            FlatContractBoundaryEvent(
+                kind = BoundaryEventKind.ESCALATION,
+                label = "approval overdue",
+                nextRef = "act-chase",
+                detail = null,
+            ).toSealed()
+        }
+        assertTrue("detail" in ex.message.orEmpty())
+
+        val valid = FlatContractBoundaryEvent(
+            kind = BoundaryEventKind.ESCALATION,
+            label = "approval overdue",
+            nextRef = "act-chase",
+            detail = "APPROVAL_OVERDUE",
+        ).toSealed()
+        assertEquals("APPROVAL_OVERDUE", valid.detail)
     }
 
     @Test
@@ -474,6 +546,8 @@ class FlatContractMapperTest {
         sourceIds = listOf("ev1"),
         errorCode = payload.takeIf { kind == FlatEndStateKind.ERROR },
         messageName = payload.takeIf { kind == FlatEndStateKind.MESSAGE },
+        signalName = payload.takeIf { kind == FlatEndStateKind.SIGNAL },
+        escalationCode = payload.takeIf { kind == FlatEndStateKind.ESCALATION },
     )
 
     private fun flatThrow(
@@ -486,6 +560,8 @@ class FlatContractMapperTest {
         kind = kind,
         sourceIds = listOf("ev1"),
         messageName = payload.takeIf { kind == FlatIntermediateThrowKind.MESSAGE },
+        signalName = payload.takeIf { kind == FlatIntermediateThrowKind.SIGNAL },
+        escalationCode = payload.takeIf { kind == FlatIntermediateThrowKind.ESCALATION },
     )
 
     // Site 15: toPayloadActivity called with non-payload kind throws RetryableBpmnGenerationException.

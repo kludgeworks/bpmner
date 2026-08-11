@@ -8,7 +8,10 @@ package dev.groknull.bpmner.authoring.internal.domain
 import dev.groknull.bpmner.bpmn.BpmnDefinition
 import dev.groknull.bpmner.bpmn.BpmnEdge
 import dev.groknull.bpmner.bpmn.BpmnEndEvent
+import dev.groknull.bpmner.bpmn.BpmnEscalationEventDefinition
+import dev.groknull.bpmner.bpmn.BpmnEscalationRef
 import dev.groknull.bpmner.bpmn.BpmnExclusiveGateway
+import dev.groknull.bpmner.bpmn.BpmnIntermediateThrowEvent
 import dev.groknull.bpmner.bpmn.BpmnNoneEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnSignalEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnSignalRef
@@ -20,6 +23,7 @@ import dev.groknull.bpmner.contract.ConditionalBranch
 import dev.groknull.bpmner.contract.ContractActivity
 import dev.groknull.bpmner.contract.ContractDecision
 import dev.groknull.bpmner.contract.ContractEndState
+import dev.groknull.bpmner.contract.ContractIntermediateThrow
 import dev.groknull.bpmner.contract.ContractIteration
 import dev.groknull.bpmner.contract.ContractLoop
 import dev.groknull.bpmner.contract.DefaultBranch
@@ -345,6 +349,50 @@ class ContractConformancePassTest {
         val end = result.definition.nodes.filterIsInstance<BpmnEndEvent>().single()
         assertEquals(BpmnNoneEventDefinition, end.eventDefinition)
         assertTrue(result.corrections.none { it.elementId == "end-broadcast" })
+    }
+
+    @Test
+    fun `stamps an escalation intermediate throw from the escalation catalogue`() {
+        val contract = ProcessContract(
+            id = "c-esc",
+            processName = "Approval chase",
+            summary = "Escalates an overdue approval",
+            trigger = "approval overdue",
+            triggerSourceIds = listOf("S1"),
+            activities = listOf(
+                ContractActivity.Service(id = "act-chase", name = "Chase approver", sourceIds = listOf("S1")),
+            ),
+            intermediateThrows = listOf(
+                ContractIntermediateThrow.Escalation(
+                    id = "throw-esc",
+                    name = "Raise escalation",
+                    escalationCode = "APPROVAL_OVERDUE",
+                    sourceIds = listOf("S1"),
+                ),
+            ),
+            endStates = listOf(ContractEndState.Normal("end-done", "Done", sourceIds = listOf("S1"))),
+        )
+        val definition = BpmnDefinition(
+            processId = "P",
+            processName = "Approval chase",
+            nodes = listOf(
+                BpmnStartEvent("StartEvent_1", "Approval overdue"),
+                BpmnIntermediateThrowEvent("throw-esc", "Raise escalation", BpmnNoneEventDefinition),
+                BpmnUserTask("act-chase", "Chase approver"),
+                BpmnEndEvent("end-done", "Done"),
+            ),
+            sequences = listOf(
+                BpmnEdge("Flow_1", "StartEvent_1", "throw-esc"),
+                BpmnEdge("Flow_2", "throw-esc", "act-chase"),
+                BpmnEdge("Flow_3", "act-chase", "end-done"),
+            ),
+            escalations = listOf(BpmnEscalationRef("Escalation_1", "APPROVAL_OVERDUE")),
+        )
+
+        val result = pass.conform(contract, definition)
+
+        val thrown = result.definition.nodes.filterIsInstance<BpmnIntermediateThrowEvent>().single()
+        assertEquals(BpmnEscalationEventDefinition("Escalation_1"), thrown.eventDefinition)
     }
 
     private fun signalContract() = ProcessContract(
