@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.5.0](https://github.com/kludgeworks/bpmner/compare/bpmner-v0.4.1...bpmner-v0.5.0) (2026-08-10)
+
+
+### Features
+
+* complete structural definition lint ([#679](https://github.com/kludgeworks/bpmner/issues/679)) ([93044f9](https://github.com/kludgeworks/bpmner/commit/93044f939e3604d016daf48017b5947f54815522))
+* cut repair-loop prompt payload: compact serialization and conditional XML ([#673](https://github.com/kludgeworks/bpmner/issues/673)) ([c4d2055](https://github.com/kludgeworks/bpmner/commit/c4d20557806ee1fb3700feb75620d6079b223313))
+* **pipeline:** emit CONTRACT and OUTLINE/GRAPH_DRAFT run updates ([#678](https://github.com/kludgeworks/bpmner/issues/678)) ([2244706](https://github.com/kludgeworks/bpmner/commit/2244706b75924cecd62f4f13c186fd614d3c75cd))
+* **pipeline:** replace generation progress eventing with RunUpdate stream ([#664](https://github.com/kludgeworks/bpmner/issues/664)) ([c155c6a](https://github.com/kludgeworks/bpmner/commit/c155c6a60c2ee5ef54903d42cb7959c3dbae42e2))
+* reliable BPMN generation — converge repair outcomes, contract determinism, and corrective-retry conservation (epic [#685](https://github.com/kludgeworks/bpmner/issues/685)) ([#693](https://github.com/kludgeworks/bpmner/issues/693)) ([a7aeba2](https://github.com/kludgeworks/bpmner/commit/a7aeba2bd0c587a603a0af254f4673dbf6fa7067))
+
+
+### Bug Fixes
+
+* **web:** move release version display to header to prevent diagram overlap ([#666](https://github.com/kludgeworks/bpmner/issues/666)) ([c55ed14](https://github.com/kludgeworks/bpmner/commit/c55ed146a9945d28842e9ee26a09e4d48f96a204)), closes [#665](https://github.com/kludgeworks/bpmner/issues/665)
+
 ## [0.4.1](https://github.com/kludgeworks/bpmner/compare/bpmner-v0.4.0...bpmner-v0.4.1) (2026-07-29)
 
 

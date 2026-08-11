@@ -120,10 +120,33 @@ class RunUpdateSinkRegistryTest {
         subscriptions.forEach { it.dispose() }
     }
 
-    private fun registrySize(): Int {
+    @Test
+    fun `a late duplicate terminal is still dropped after this process's sink was evicted`() {
+        // Emit and complete "term-victim"'s sink, then evict it (unsubscribed, so it is the
+        // eviction target) by filling the registry past capacity with other processes. A late
+        // AgentProcessFailedEvent/BpmnRunAbortedEvent racing in afterwards must not resurrect a
+        // second terminal for it — "terminated" is bounded on its own schedule, not tied to the
+        // sink's lifetime.
+        registry.emitTerminal("term-victim", ArtifactState.NONE, "first terminal", RunOutcome.COMPLETED)
+        assertTrue(sinkIds().contains("term-victim"))
+
+        (0 until MAX_PROCESS_BUFFERS).forEach { i -> registry.emit("filler-$i", RunPhase.READINESS, ArtifactState.NONE, "x") }
+        assertTrue(!sinkIds().contains("term-victim"), "term-victim's sink must have been evicted")
+
+        registry.emitTerminal("term-victim", ArtifactState.NONE, "late duplicate", RunOutcome.FAILED)
+
+        assertTrue(
+            !sinkIds().contains("term-victim"),
+            "a late duplicate terminal must not recreate a sink for an already-terminated process",
+        )
+    }
+
+    private fun registrySize(): Int = sinkIds().size
+
+    private fun sinkIds(): Set<*> {
         val sinksField = RunUpdateSinkRegistry::class.java.getDeclaredField("sinks")
         sinksField.isAccessible = true
-        return (sinksField.get(registry) as Map<*, *>).size
+        return (sinksField.get(registry) as Map<*, *>).keys
     }
 
     private companion object {
