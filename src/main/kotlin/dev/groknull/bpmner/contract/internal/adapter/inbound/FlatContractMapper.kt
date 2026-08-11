@@ -149,6 +149,20 @@ public fun FlatContractEndState.toSealed(): ContractEndState = when (kind) {
         sourceIds = sourceIds,
     )
 
+    FlatEndStateKind.SIGNAL -> ContractEndState.Signal(
+        id = id,
+        name = name,
+        signalName = requireField(signalName, kind, "signalName", id),
+        sourceIds = sourceIds,
+    )
+
+    FlatEndStateKind.ESCALATION -> ContractEndState.Escalation(
+        id = id,
+        name = name,
+        escalationCode = requireField(escalationCode, kind, "escalationCode", id),
+        sourceIds = sourceIds,
+    )
+
     FlatEndStateKind.MESSAGE -> ContractEndState.Message(
         id = id,
         name = name,
@@ -162,6 +176,20 @@ public fun FlatContractIntermediateThrow.toSealed(): ContractIntermediateThrow =
         id = id,
         name = name,
         messageName = requireField(messageName, kind, "messageName", id),
+        sourceIds = sourceIds,
+    )
+
+    FlatIntermediateThrowKind.SIGNAL -> ContractIntermediateThrow.Signal(
+        id = id,
+        name = name,
+        signalName = requireField(signalName, kind, "signalName", id),
+        sourceIds = sourceIds,
+    )
+
+    FlatIntermediateThrowKind.ESCALATION -> ContractIntermediateThrow.Escalation(
+        id = id,
+        name = name,
+        escalationCode = requireField(escalationCode, kind, "escalationCode", id),
         sourceIds = sourceIds,
     )
 }
@@ -198,6 +226,11 @@ public fun FlatContractTrigger.toSealed(): ContractTrigger = when (type) {
 
     FlatTriggerKind.MESSAGE -> ContractTrigger.Message(
         messageName = requireField(messageName, type, "messageName", description),
+        description = description,
+    )
+
+    FlatTriggerKind.SIGNAL -> ContractTrigger.Signal(
+        signalName = requireField(signalName, type, "signalName", description),
         description = description,
     )
 }

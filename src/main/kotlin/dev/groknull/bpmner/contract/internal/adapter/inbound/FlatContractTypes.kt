@@ -47,10 +47,14 @@ public enum class FlatEndStateKind {
     TERMINATE,
     ERROR,
     MESSAGE,
+    SIGNAL,
+    ESCALATION,
 }
 
 public enum class FlatIntermediateThrowKind {
     MESSAGE,
+    SIGNAL,
+    ESCALATION,
 }
 
 public enum class FlatBranchKind {
@@ -64,6 +68,7 @@ public enum class FlatTriggerKind {
     NONE,
     TIMER,
     MESSAGE,
+    SIGNAL,
 }
 
 @JsonClassDescription(
@@ -237,6 +242,18 @@ public data class FlatContractEndState(
         "Required when kind=MESSAGE. Human-readable message name (e.g. \"shipment confirmation\").",
     )
     val messageName: String? = null,
+    @field:Size(max = 200)
+    @get:JsonPropertyDescription(
+        "Required when kind=SIGNAL. Human-readable signal name broadcast to any listener " +
+            "(e.g. \"settlement complete\").",
+    )
+    val signalName: String? = null,
+    @field:Size(max = 200)
+    @get:JsonPropertyDescription(
+        "Required when kind=ESCALATION. Stable business escalation code an enclosing scope " +
+            "matches (e.g. \"APPROVAL_OVERDUE\"). NOT a user-facing message.",
+    )
+    val escalationCode: String? = null,
 )
 
 @JsonClassDescription(
@@ -264,6 +281,14 @@ public data class FlatContractIntermediateThrow(
     @field:Size(max = 200)
     @get:JsonPropertyDescription("Required when kind=MESSAGE. Human-readable message name.")
     val messageName: String? = null,
+    @field:Size(max = 200)
+    @get:JsonPropertyDescription("Required when kind=SIGNAL. Human-readable signal name broadcast mid-flow.")
+    val signalName: String? = null,
+    @field:Size(max = 200)
+    @get:JsonPropertyDescription(
+        "Required when kind=ESCALATION. Stable business escalation code raised mid-flow.",
+    )
+    val escalationCode: String? = null,
 )
 
 @JsonClassDescription(
@@ -339,6 +364,11 @@ public data class FlatContractTrigger(
         "Required when type=MESSAGE. Human-readable name of the inbound message (e.g. \"order.submitted\").",
     )
     val messageName: String? = null,
+    @get:JsonPropertyDescription(
+        "Required when type=SIGNAL. Human-readable name of the observed broadcast " +
+            "(e.g. \"market opened\").",
+    )
+    val signalName: String? = null,
 )
 
 @JsonClassDescription("Source-grounded process start declaration")

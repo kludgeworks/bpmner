@@ -865,6 +865,8 @@ class BpmnContractFidelityCheckerTest {
                     is ContractEndState.Terminate -> endState.copy(sourceIds = sources)
                     is ContractEndState.Error -> endState.copy(sourceIds = sources)
                     is ContractEndState.Message -> endState.copy(sourceIds = sources)
+                    is ContractEndState.Signal -> endState.copy(sourceIds = sources)
+                    is ContractEndState.Escalation -> endState.copy(sourceIds = sources)
                 },
             ),
         )
@@ -902,6 +904,8 @@ class BpmnContractFidelityCheckerTest {
             listOf(
                 when (intermediateThrow) {
                     is ContractIntermediateThrow.Message -> intermediateThrow.copy(sourceIds = sources)
+                    is ContractIntermediateThrow.Signal -> intermediateThrow.copy(sourceIds = sources)
+                    is ContractIntermediateThrow.Escalation -> intermediateThrow.copy(sourceIds = sources)
                 },
             ),
             endStates = listOf(ContractEndState.Normal("end-done", "Done", sourceIds = sources)),

@@ -138,8 +138,13 @@ private fun endStateSuffix(endState: ContractEndState): String = when (endState)
     is ContractEndState.Terminate -> " [TERMINATE]"
     is ContractEndState.Error -> " [ERROR errorCode=\"${endState.errorCode}\"]"
     is ContractEndState.Message -> " [MESSAGE messageName=\"${endState.messageName}\"]"
+    is ContractEndState.Signal -> " [SIGNAL signalName=\"${endState.signalName}\"]"
+    is ContractEndState.Escalation -> " [ESCALATION escalationCode=\"${endState.escalationCode}\"]"
 }
 
 private fun intermediateThrowSuffix(intermediateThrow: ContractIntermediateThrow): String = when (intermediateThrow) {
     is ContractIntermediateThrow.Message -> " [MESSAGE messageName=\"${intermediateThrow.messageName}\"]"
+    is ContractIntermediateThrow.Signal -> " [SIGNAL signalName=\"${intermediateThrow.signalName}\"]"
+    is ContractIntermediateThrow.Escalation ->
+        " [ESCALATION escalationCode=\"${intermediateThrow.escalationCode}\"]"
 }

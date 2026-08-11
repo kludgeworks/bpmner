@@ -14,6 +14,7 @@ import dev.groknull.bpmner.bpmn.BpmnDefinition
 import dev.groknull.bpmner.bpmn.BpmnEdge
 import dev.groknull.bpmner.bpmn.BpmnEndEvent
 import dev.groknull.bpmner.bpmn.BpmnErrorEventDefinition
+import dev.groknull.bpmner.bpmn.BpmnEscalationEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnEventBasedGateway
 import dev.groknull.bpmner.bpmn.BpmnEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnExclusiveGateway
@@ -29,6 +30,7 @@ import dev.groknull.bpmner.bpmn.BpmnReceiveTask
 import dev.groknull.bpmner.bpmn.BpmnScriptTask
 import dev.groknull.bpmner.bpmn.BpmnSendTask
 import dev.groknull.bpmner.bpmn.BpmnServiceTask
+import dev.groknull.bpmner.bpmn.BpmnSignalEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnSubProcess
 import dev.groknull.bpmner.bpmn.BpmnTask
 import dev.groknull.bpmner.bpmn.BpmnTerminateEventDefinition
@@ -583,6 +585,7 @@ internal class BpmnContractFidelityChecker : BpmnContractFidelityPort {
     private fun BpmnBoundaryEvent.matchesKind(kind: BoundaryEventKind): Boolean = when (kind) {
         BoundaryEventKind.TIMER -> eventDefinition is BpmnTimerEventDefinition
         BoundaryEventKind.ERROR -> eventDefinition is BpmnErrorEventDefinition
+        BoundaryEventKind.ESCALATION -> eventDefinition is BpmnEscalationEventDefinition
     }
 
     private fun BpmnBoundaryEvent.routesTo(
@@ -768,6 +771,8 @@ internal class BpmnContractFidelityChecker : BpmnContractFidelityPort {
         is ContractEndState.Terminate -> eventDefinition is BpmnTerminateEventDefinition
         is ContractEndState.Error -> eventDefinition is BpmnErrorEventDefinition
         is ContractEndState.Message -> eventDefinition is BpmnMessageEventDefinition
+        is ContractEndState.Signal -> eventDefinition is BpmnSignalEventDefinition
+        is ContractEndState.Escalation -> eventDefinition is BpmnEscalationEventDefinition
     }
 
     // Class references rather than hardcoded strings so the diagnostic message stays
@@ -778,6 +783,8 @@ internal class BpmnContractFidelityChecker : BpmnContractFidelityPort {
         is ContractEndState.Terminate -> BpmnTerminateEventDefinition::class.simpleName!!
         is ContractEndState.Error -> BpmnErrorEventDefinition::class.simpleName!!
         is ContractEndState.Message -> BpmnMessageEventDefinition::class.simpleName!!
+        is ContractEndState.Signal -> BpmnSignalEventDefinition::class.simpleName!!
+        is ContractEndState.Escalation -> BpmnEscalationEventDefinition::class.simpleName!!
     }
 
     private fun checkIntermediateThrowKind(
@@ -827,10 +834,14 @@ internal class BpmnContractFidelityChecker : BpmnContractFidelityPort {
 
     private fun ContractIntermediateThrow.matchesEventDefinition(eventDefinition: BpmnEventDefinition): Boolean = when (this) {
         is ContractIntermediateThrow.Message -> eventDefinition is BpmnMessageEventDefinition
+        is ContractIntermediateThrow.Signal -> eventDefinition is BpmnSignalEventDefinition
+        is ContractIntermediateThrow.Escalation -> eventDefinition is BpmnEscalationEventDefinition
     }
 
     private fun ContractIntermediateThrow.expectedEventDefinitionName(): String = when (this) {
         is ContractIntermediateThrow.Message -> BpmnMessageEventDefinition::class.simpleName!!
+        is ContractIntermediateThrow.Signal -> BpmnSignalEventDefinition::class.simpleName!!
+        is ContractIntermediateThrow.Escalation -> BpmnEscalationEventDefinition::class.simpleName!!
     }
 
     /**

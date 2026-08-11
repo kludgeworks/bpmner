@@ -500,4 +500,6 @@ private data class IdEntry(val id: String, val kind: String)
 
 private fun ContractIntermediateThrow.invalidPayloadField(): String? = when (this) {
     is ContractIntermediateThrow.Message -> "messageName".takeIf { messageName.isBlank() }
+    is ContractIntermediateThrow.Signal -> "signalName".takeIf { signalName.isBlank() }
+    is ContractIntermediateThrow.Escalation -> "escalationCode".takeIf { escalationCode.isBlank() }
 }

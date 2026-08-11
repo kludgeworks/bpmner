@@ -381,6 +381,8 @@ internal class ContractConformancePass : BpmnContractConformancePort {
             definition.errors.firstOrNull { it.code == errorCode }?.let { BpmnErrorEventDefinition(it.id) }
         is ContractEndState.Message ->
             definition.messages.firstOrNull { it.name == messageName }?.let { BpmnMessageEventDefinition(it.id) }
+        is ContractEndState.Signal -> null
+        is ContractEndState.Escalation -> null
     }
 
     // Stamp 6, mirroring stamp 5's catalogue-resolution limit.
@@ -405,5 +407,7 @@ internal class ContractConformancePass : BpmnContractConformancePort {
     private fun ContractIntermediateThrow.resolveEventDefinition(definition: BpmnDefinition): BpmnEventDefinition? = when (this) {
         is ContractIntermediateThrow.Message ->
             definition.messages.firstOrNull { it.name == messageName }?.let { BpmnMessageEventDefinition(it.id) }
+        is ContractIntermediateThrow.Signal -> null
+        is ContractIntermediateThrow.Escalation -> null
     }
 }

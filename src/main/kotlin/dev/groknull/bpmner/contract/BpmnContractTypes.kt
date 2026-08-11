@@ -49,6 +49,7 @@ data class ContractStart(
     JsonSubTypes.Type(value = ContractTrigger.None::class, name = "NONE"),
     JsonSubTypes.Type(value = ContractTrigger.Timer::class, name = "TIMER"),
     JsonSubTypes.Type(value = ContractTrigger.Message::class, name = "MESSAGE"),
+    JsonSubTypes.Type(value = ContractTrigger.Signal::class, name = "SIGNAL"),
 )
 sealed interface ContractTrigger {
     val description: String
@@ -65,6 +66,11 @@ sealed interface ContractTrigger {
 
     data class Message(
         val messageName: String,
+        override val description: String,
+    ) : ContractTrigger
+
+    data class Signal(
+        val signalName: String,
         override val description: String,
     ) : ContractTrigger
 }
@@ -620,7 +626,7 @@ data class ContractActor(
  *
  * Mirrors the sealed-subtype pattern used by [ContractTrigger], [ContractBranch],
  * and [ContractActivity]: the `kind` discriminator dispatches
- * to one of four subtypes, each carrying exactly the payload its end-event kind needs.
+ * to one of six subtypes, each carrying exactly the payload its end-event kind needs.
  * Kind / payload coupling is enforced by the type system — [Error] always carries an
  * `errorCode`, [Message] always carries a `messageName`, etc.
  *
@@ -635,16 +641,14 @@ data class ContractActor(
  *    [dev.groknull.bpmner.bpmn.BpmnErrorEventDefinition] + matching `BpmnErrorRef`
  *  - [Message] — point-to-point send on completion →
  *    [dev.groknull.bpmner.bpmn.BpmnMessageEventDefinition] + matching `BpmnMessageRef`
+ *  - [Signal] — broadcast observed by any listener →
+ *    [dev.groknull.bpmner.bpmn.BpmnSignalEventDefinition] + matching `BpmnSignalRef`
+ *  - [Escalation] — raises a business escalation to an enclosing scope →
+ *    [dev.groknull.bpmner.bpmn.BpmnEscalationEventDefinition] + matching `BpmnEscalationRef`
  *
- * Signal- and escalation-throwing end events (mapping to
- * [dev.groknull.bpmner.bpmn.BpmnSignalEventDefinition] /
- * [dev.groknull.bpmner.bpmn.BpmnEscalationEventDefinition]) are a supported BPMN generation
- * construct but have no dedicated [ContractEndState] kind — the contract-extraction vocabulary
- * stays at these four end states until a source description needs the distinction.
- *
- * Field naming follows the convention from [ContractTrigger]: Message carries a human-readable
- * name (extracted from prose; mapped to a catalogue id at generation time), and Error carries
- * the BPMN-spec matching code.
+ * Field naming follows the convention from [ContractTrigger]: Message and Signal carry a
+ * human-readable name (extracted from prose; mapped to a catalogue id at generation time), and
+ * Error and Escalation carry the BPMN-spec matching code.
  *
  * The companion `invoke` keeps existing flat-constructor call sites compiling by
  * defaulting to [Normal] — the most common end-state kind in practice.
@@ -656,6 +660,8 @@ data class ContractActor(
     JsonSubTypes.Type(value = ContractEndState.Terminate::class, name = "TERMINATE"),
     JsonSubTypes.Type(value = ContractEndState.Error::class, name = "ERROR"),
     JsonSubTypes.Type(value = ContractEndState.Message::class, name = "MESSAGE"),
+    JsonSubTypes.Type(value = ContractEndState.Signal::class, name = "SIGNAL"),
+    JsonSubTypes.Type(value = ContractEndState.Escalation::class, name = "ESCALATION"),
 )
 sealed interface ContractEndState {
     val id: String
@@ -701,6 +707,28 @@ sealed interface ContractEndState {
         override val sourceIds: List<String> = emptyList(),
     ) : ContractEndState
 
+    @JsonClassDescription(
+        "Signal end — broadcast observed by any listening process. Maps to BpmnEndEvent with " +
+            "SignalEventDefinition.",
+    )
+    data class Signal(
+        override val id: String,
+        override val name: String,
+        val signalName: String,
+        override val sourceIds: List<String> = emptyList(),
+    ) : ContractEndState
+
+    @JsonClassDescription(
+        "Escalation end — raises a business escalation to an enclosing scope. Maps to " +
+            "BpmnEndEvent with EscalationEventDefinition.",
+    )
+    data class Escalation(
+        override val id: String,
+        override val name: String,
+        val escalationCode: String,
+        override val sourceIds: List<String> = emptyList(),
+    ) : ContractEndState
+
     companion object {
         // Convenience factory: lets existing call sites that don't specify a kind keep working
         // (`ContractEndState("id", "name")` → Normal). Most end states are NORMAL in practice;
@@ -724,8 +752,16 @@ val ContractEndState.kindName: String
             is ContractEndState.Terminate -> "TERMINATE"
             is ContractEndState.Error -> "ERROR"
             is ContractEndState.Message -> "MESSAGE"
+            is ContractEndState.Signal -> "SIGNAL"
+            is ContractEndState.Escalation -> "ESCALATION"
         }
 
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "kind")
+@JsonSubTypes(
+    JsonSubTypes.Type(value = ContractIntermediateThrow.Message::class, name = "MESSAGE"),
+    JsonSubTypes.Type(value = ContractIntermediateThrow.Signal::class, name = "SIGNAL"),
+    JsonSubTypes.Type(value = ContractIntermediateThrow.Escalation::class, name = "ESCALATION"),
+)
 sealed interface ContractIntermediateThrow {
     val id: String
     val name: String
@@ -737,12 +773,28 @@ sealed interface ContractIntermediateThrow {
         val messageName: String,
         override val sourceIds: List<String> = emptyList(),
     ) : ContractIntermediateThrow
+
+    data class Signal(
+        override val id: String,
+        override val name: String,
+        val signalName: String,
+        override val sourceIds: List<String> = emptyList(),
+    ) : ContractIntermediateThrow
+
+    data class Escalation(
+        override val id: String,
+        override val name: String,
+        val escalationCode: String,
+        override val sourceIds: List<String> = emptyList(),
+    ) : ContractIntermediateThrow
 }
 
 val ContractIntermediateThrow.kindName: String
     get() =
         when (this) {
             is ContractIntermediateThrow.Message -> "MESSAGE"
+            is ContractIntermediateThrow.Signal -> "SIGNAL"
+            is ContractIntermediateThrow.Escalation -> "ESCALATION"
         }
 
 @JsonClassDescription("Assumption made while extracting the process contract")
