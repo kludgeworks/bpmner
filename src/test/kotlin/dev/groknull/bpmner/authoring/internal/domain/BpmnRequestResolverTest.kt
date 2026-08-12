@@ -8,7 +8,6 @@ package dev.groknull.bpmner.authoring.internal.domain
 import com.embabel.agent.domain.io.UserInput
 import dev.groknull.bpmner.authoring.BpmnRequestDraft
 import dev.groknull.bpmner.authoring.internal.adapter.inbound.InputPathResolver
-import dev.groknull.bpmner.bpmn.GenerationMode
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
@@ -32,7 +31,6 @@ class BpmnRequestResolverTest {
 
         assertEquals("Ship an order", request.processDescription)
         assertEquals(tempDir.resolve("output.bpmn").toString(), request.outputFile)
-        assertEquals(GenerationMode.INTERACTIVE, request.mode)
     }
 
     @Test

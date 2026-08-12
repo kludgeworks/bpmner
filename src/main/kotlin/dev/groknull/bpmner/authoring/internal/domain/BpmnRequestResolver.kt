@@ -10,7 +10,6 @@ import dev.groknull.bpmner.authoring.BpmnRequestDraft
 import dev.groknull.bpmner.authoring.BpmnRequestResolutionPort
 import dev.groknull.bpmner.authoring.internal.adapter.inbound.InputPathResolver
 import dev.groknull.bpmner.bpmn.BpmnRequest
-import dev.groknull.bpmner.bpmn.GenerationMode
 import org.springframework.stereotype.Component
 
 /**
@@ -38,7 +37,6 @@ internal class BpmnRequestResolver(
             processDescription = description,
             styleGuide = styleGuide,
             outputFile = outputFile,
-            mode = GenerationMode.INTERACTIVE,
         )
     }
 

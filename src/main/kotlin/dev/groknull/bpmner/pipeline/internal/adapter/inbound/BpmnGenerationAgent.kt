@@ -33,7 +33,6 @@ import dev.groknull.bpmner.authoring.BpmnRequestResolutionPort
 import dev.groknull.bpmner.authoring.BpmnResult
 import dev.groknull.bpmner.authoring.ValidatedOutline
 import dev.groknull.bpmner.bpmn.BpmnRequest
-import dev.groknull.bpmner.bpmn.GenerationMode
 import dev.groknull.bpmner.bpmn.LaidOutProcessGraph
 import dev.groknull.bpmner.bpmn.RenderedBpmn
 import dev.groknull.bpmner.conformance.BpmnXsdValidationPort
@@ -237,14 +236,12 @@ data class Assessing(
     val round: Int, // clarification rounds completed so far
 ) : ReadinessStage {
 
-    // Branch: READY -> Ready; not-ready + INTERACTIVE + rounds left -> ask;
-    // SINGLE_SHOT or rounds exhausted -> Blocked.
+    // Branch: READY -> Ready; not-ready with rounds left -> ask; rounds exhausted -> Blocked.
     @Action(clearBlackboard = true)
     fun assess(): ReadinessStage = when {
         assessment.verdict == ReadinessVerdict.READY ->
             Ready(ReadyBpmnContext(request, assessment))
-        request.mode == GenerationMode.SINGLE_SHOT || round >= MAX_ROUNDS ->
-            Blocked(request, assessment) // SINGLE_SHOT blocks immediately
+        round >= MAX_ROUNDS -> Blocked(request, assessment)
         else -> AwaitingClarification(request, assessment, round)
     }
 }

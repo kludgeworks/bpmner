@@ -20,7 +20,6 @@ import dev.groknull.bpmner.authoring.ValidatedOutline
 import dev.groknull.bpmner.bpmn.BpmnDefinition
 import dev.groknull.bpmner.bpmn.BpmnElementIndex
 import dev.groknull.bpmner.bpmn.BpmnRequest
-import dev.groknull.bpmner.bpmn.GenerationMode
 import dev.groknull.bpmner.bpmn.LaidOutProcessGraph
 import dev.groknull.bpmner.bpmn.RenderedBpmn
 import dev.groknull.bpmner.bpmn.RepairKind
@@ -188,7 +187,7 @@ class BpmnRepairLoopIntegrationTest : EmbabelMockitoIntegrationTest() {
 
     @Test
     fun `broken fixture is repaired to clean within max iterations`() {
-        val request = BpmnRequest(processDescription = "Make toast", mode = GenerationMode.SINGLE_SHOT)
+        val request = BpmnRequest(processDescription = "Make toast")
 
         val diagLocal = BpmnDiagnostic(
             source = BpmnDiagnosticSource.LINT,
@@ -217,7 +216,7 @@ class BpmnRepairLoopIntegrationTest : EmbabelMockitoIntegrationTest() {
 
     @Test
     fun `cost aware escalation order is honored`() {
-        val request = BpmnRequest(processDescription = "Make toast", mode = GenerationMode.SINGLE_SHOT)
+        val request = BpmnRequest(processDescription = "Make toast")
 
         val diagLocal = BpmnDiagnostic(
             source = BpmnDiagnosticSource.LINT,
@@ -287,7 +286,7 @@ class BpmnRepairLoopIntegrationTest : EmbabelMockitoIntegrationTest() {
 
     @Test
     fun `advisory local repair does not starve blocking structural repair`() {
-        val request = BpmnRequest(processDescription = "Make toast", mode = GenerationMode.SINGLE_SHOT)
+        val request = BpmnRequest(processDescription = "Make toast")
         val advisoryLocal = BpmnDiagnostic(
             source = BpmnDiagnosticSource.LINT,
             message = "Advisory local issue",
@@ -321,7 +320,7 @@ class BpmnRepairLoopIntegrationTest : EmbabelMockitoIntegrationTest() {
 
     @Test
     fun `no progress termination is preserved`() {
-        val request = BpmnRequest(processDescription = "Make toast", mode = GenerationMode.SINGLE_SHOT)
+        val request = BpmnRequest(processDescription = "Make toast")
 
         val diagLocal = BpmnDiagnostic(
             source = BpmnDiagnosticSource.LINT,
@@ -355,7 +354,7 @@ class BpmnRepairLoopIntegrationTest : EmbabelMockitoIntegrationTest() {
 
     @Test
     fun `stalled structural repair escalates to full rewrite`() {
-        val request = BpmnRequest(processDescription = "Make toast", mode = GenerationMode.SINGLE_SHOT)
+        val request = BpmnRequest(processDescription = "Make toast")
         val diagnostic = BpmnDiagnostic(
             source = BpmnDiagnosticSource.LINT,
             message = "Unnamed diverging gateway flow",

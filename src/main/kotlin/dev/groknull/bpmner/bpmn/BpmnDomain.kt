@@ -21,7 +21,6 @@ data class BpmnRequest(
     val styleGuide: String? = null,
     @get:JsonPropertyDescription("Optional BPMN output file path. Required for file generation mode.")
     val outputFile: String? = null,
-    val mode: GenerationMode = GenerationMode.SINGLE_SHOT,
     @field:Valid
     @get:JsonPropertyDescription("Ordered answered clarification history for this generation request")
     val clarificationHistory: List<ClarificationExchange> = emptyList(),

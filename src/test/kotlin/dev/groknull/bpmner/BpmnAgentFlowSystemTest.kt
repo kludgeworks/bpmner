@@ -26,7 +26,6 @@ import dev.groknull.bpmner.authoring.internal.adapter.outbound.FlatBpmnNode
 import dev.groknull.bpmner.authoring.internal.adapter.outbound.FlatBpmnNodeKind
 import dev.groknull.bpmner.bpmn.BpmnEdge
 import dev.groknull.bpmner.bpmn.BpmnRequest
-import dev.groknull.bpmner.bpmn.GenerationMode
 import dev.groknull.bpmner.conformance.BpmnLintingPort
 import dev.groknull.bpmner.conformance.LintIssue
 import dev.groknull.bpmner.conformance.internal.adapter.outbound.BpmnXsdValidator
@@ -223,21 +222,8 @@ class BpmnAgentFlowSystemTest : EmbabelMockitoIntegrationTest() {
     }
 
     @Test
-    fun `single-shot needs-clarification returns a needs-clarification result without waiting`() {
-        // SINGLE_SHOT cannot service a WaitFor, so a not-ready verdict must terminate immediately.
-        val result =
-            bpmnAgentInvoker.generate(
-                BpmnRequest(processDescription = "Make toast", mode = GenerationMode.SINGLE_SHOT),
-                needsClarification(),
-            )
-
-        assertEquals(BpmnGenerationStatus.NEEDS_CLARIFICATION, result.status)
-        assertEquals(ReadinessVerdict.NEEDS_CLARIFICATION, result.readinessReport?.verdict)
-    }
-
-    @Test
     fun `interactive needs-clarification pauses for clarification input`() {
-        val request = BpmnRequest(processDescription = "Ship something", mode = GenerationMode.INTERACTIVE)
+        val request = BpmnRequest(processDescription = "Ship something")
 
         val process = runGateProcess(ReadyBpmnContext::class.java, ephemeral = false, request, needsClarification())
 
@@ -277,7 +263,6 @@ class BpmnAgentFlowSystemTest : EmbabelMockitoIntegrationTest() {
         val request =
             BpmnRequest(
                 processDescription = "When an order is submitted, the clerk reviews it, then approves it.",
-                mode = GenerationMode.INTERACTIVE,
             )
 
         val process = runGateProcess(ReadyBpmnContext::class.java, ephemeral = false, request, needsClarification())
@@ -313,7 +298,6 @@ class BpmnAgentFlowSystemTest : EmbabelMockitoIntegrationTest() {
         val request =
             BpmnRequest(
                 processDescription = "When an order is submitted, the clerk reviews it, then approves it.",
-                mode = GenerationMode.INTERACTIVE,
             )
 
         whenCreateObject(
