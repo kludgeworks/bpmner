@@ -381,12 +381,14 @@ data class ContractBoundaryEvent(
         "Id of the activity, decision, or end state the exception path routes to when this event fires.",
     )
     val nextRef: String,
+    @field:NotBlank
     @field:Size(max = 200)
     @get:JsonPropertyDescription(
-        "Optional kind-specific detail: an ISO-8601 duration for TIMER (e.g. \"PT24H\"), a business " +
-            "error code for ERROR (e.g. \"CHARGEBACK\").",
+        "Kind-specific detail, required for every kind: an ISO-8601 duration for TIMER " +
+            "(e.g. \"PT24H\"), a business error code for ERROR (e.g. \"CHARGEBACK\"), or an " +
+            "escalation code for ESCALATION (e.g. \"APPROVAL_OVERDUE\").",
     )
-    val detail: String? = null,
+    val detail: String,
 )
 
 @JsonClassDescription(

@@ -5,7 +5,6 @@
 
 package dev.groknull.bpmner.contract.internal.adapter.inbound
 
-import dev.groknull.bpmner.bpmn.BoundaryEventKind
 import dev.groknull.bpmner.contract.ContractBoundaryEvent
 import dev.groknull.bpmner.contract.ContractIteration
 import dev.groknull.bpmner.contract.ContractLoop
@@ -35,10 +34,7 @@ internal fun FlatContractBoundaryEvent.toSealed(): ContractBoundaryEvent = Contr
     kind = kind,
     label = requireField(label, kind, "label", "boundaryEvent"),
     nextRef = requireField(nextRef, kind, "nextRef", "boundaryEvent"),
-    // TIMER needs its ISO-8601 duration and ESCALATION its escalation code; both are unusable
-    // without one. ERROR's code is deliberately left optional here — see the note on the sealed
-    // ContractBoundaryEvent.detail field.
-    detail = if (kind == BoundaryEventKind.ERROR) detail else requireField(detail, kind, "detail", "boundaryEvent"),
+    detail = requireField(detail, kind, "detail", "boundaryEvent"),
 )
 
 internal fun FlatContractLoop.toSealed(): ContractLoop = ContractLoop(

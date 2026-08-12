@@ -102,6 +102,7 @@ class ContractConservationTest {
                         ContractBoundaryEvent(
                             kind = BoundaryEventKind.TIMER,
                             label = "24h timeout",
+                            detail = "PT24H",
                             nextRef = "end-abandoned",
                         ),
                     ),
@@ -116,6 +117,7 @@ class ContractConservationTest {
                         ContractBoundaryEvent(
                             kind = BoundaryEventKind.ERROR,
                             label = "Notify failure",
+                            detail = "NOTIFY_FAILED",
                             nextRef = "end-abandoned",
                         ),
                     ),

@@ -593,6 +593,7 @@ class BpmnContractValidatorTest {
                             ContractBoundaryEvent(
                                 kind = BoundaryEventKind.TIMER,
                                 label = "24h timeout",
+                                detail = "PT24H",
                                 nextRef = "act-hallucinated",
                             ),
                         ),
