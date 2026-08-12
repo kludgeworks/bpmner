@@ -178,13 +178,10 @@ class BpmnAgentFlowSystemTest : EmbabelMockitoIntegrationTest() {
             )
 
         whenCreateObject(
-            { it.contains("Extract a BPMN generation request from the user's shell instruction") },
+            { it.contains("Route a BPMN generation request from the user's shell instruction") },
             BpmnRequestDraft::class.java,
         ).thenReturn(
-            BpmnRequestDraft(
-                processDescription = prose,
-                outputFile = outputFile.toString(),
-            ),
+            BpmnRequestDraft(outputFile = outputFile.toString()),
         )
         whenCreateObject(
             { it.contains("Assess whether the source describes a workflow ready for BPMN modelling") },
@@ -214,7 +211,7 @@ class BpmnAgentFlowSystemTest : EmbabelMockitoIntegrationTest() {
         val result =
             AgentPlatformTypedOps(agentPlatform)
                 .transform(
-                    UserInput("Generate BPMN for the order process and write it to $outputFile."),
+                    UserInput(prose),
                     BpmnResult::class.java,
                     ProcessOptions(budget = Budget(actions = 100), ephemeral = true),
                 )

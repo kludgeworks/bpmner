@@ -75,8 +75,8 @@ internal class BpmnGenerationAgent(
     }
 
     @Action
-    fun resolve(draft: BpmnRequestDraft): BpmnRequest {
-        return requestResolver.resolveShellRequest(draft)
+    fun resolve(userInput: UserInput, draft: BpmnRequestDraft): BpmnRequest {
+        return requestResolver.resolveShellRequest(userInput, draft)
     }
 
     // Must keep producing ProcessInputAssessment. An action's effect is the type it produces, and
