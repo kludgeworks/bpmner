@@ -28,6 +28,8 @@ import dev.groknull.bpmner.contract.ContractDecision
 import dev.groknull.bpmner.contract.ContractEndState
 import dev.groknull.bpmner.contract.ContractIteration
 import dev.groknull.bpmner.contract.ContractLoop
+import dev.groknull.bpmner.contract.ContractStart
+import dev.groknull.bpmner.contract.ContractTrigger
 import dev.groknull.bpmner.contract.FlatContractTestFixtures
 import dev.groknull.bpmner.contract.ProcessContract
 import dev.groknull.bpmner.contract.internal.BpmnContractThresholdsConfig
@@ -88,8 +90,7 @@ internal object PromptFixtures {
             id = "contract-credit-application",
             processName = "Credit application",
             summary = "Credit applications are scored and approved automatically when the score is high enough.",
-            trigger = "Customer submits credit application",
-            triggerSourceIds = listOf("ev1"),
+            start = ContractStart(ContractTrigger.None("Customer submits credit application"), listOf("ev1")),
             activities =
             listOf(
                 ContractActivity.Service(

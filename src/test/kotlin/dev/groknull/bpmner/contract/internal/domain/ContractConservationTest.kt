@@ -13,6 +13,8 @@ import dev.groknull.bpmner.contract.ContractBoundaryEvent
 import dev.groknull.bpmner.contract.ContractDecision
 import dev.groknull.bpmner.contract.ContractEndState
 import dev.groknull.bpmner.contract.ContractLoop
+import dev.groknull.bpmner.contract.ContractStart
+import dev.groknull.bpmner.contract.ContractTrigger
 import dev.groknull.bpmner.contract.ProcessContract
 import kotlin.test.Test
 import kotlin.test.assertTrue
@@ -84,8 +86,7 @@ class ContractConservationTest {
         id = "c-regression",
         processName = "Payment retry",
         summary = "Retry a failed payment with a timeout escape.",
-        trigger = "Payment attempted",
-        triggerSourceIds = sources,
+        start = ContractStart(ContractTrigger.None("Payment attempted"), sources),
         activities = listOf(
             ContractActivity.Service(
                 id = "act-hold-payment-failed",

@@ -14,7 +14,7 @@ class ValidatedProcessContractTest {
         id = "contract-1",
         processName = "Test process",
         summary = "A minimal process for factory tests",
-        trigger = "An order is received",
+        start = ContractStart(ContractTrigger.None("An order is received")),
         activities = listOf(ContractActivity.Service("act1", "Do work")),
         endStates = listOf(ContractEndState.Normal("end1", "Done")),
     )

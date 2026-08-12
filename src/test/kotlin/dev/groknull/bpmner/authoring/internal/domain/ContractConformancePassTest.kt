@@ -26,6 +26,8 @@ import dev.groknull.bpmner.contract.ContractEndState
 import dev.groknull.bpmner.contract.ContractIntermediateThrow
 import dev.groknull.bpmner.contract.ContractIteration
 import dev.groknull.bpmner.contract.ContractLoop
+import dev.groknull.bpmner.contract.ContractStart
+import dev.groknull.bpmner.contract.ContractTrigger
 import dev.groknull.bpmner.contract.DefaultBranch
 import dev.groknull.bpmner.contract.ProcessContract
 import kotlin.test.Test
@@ -357,8 +359,7 @@ class ContractConformancePassTest {
             id = "c-esc",
             processName = "Approval chase",
             summary = "Escalates an overdue approval",
-            trigger = "approval overdue",
-            triggerSourceIds = listOf("S1"),
+            start = ContractStart(ContractTrigger.None("approval overdue"), listOf("S1")),
             activities = listOf(
                 ContractActivity.Service(id = "act-chase", name = "Chase approver", sourceIds = listOf("S1")),
             ),
@@ -399,8 +400,7 @@ class ContractConformancePassTest {
         id = "c-signal",
         processName = "Settlement broadcast",
         summary = "Broadcasts settlement completion",
-        trigger = "settlement completes",
-        triggerSourceIds = listOf("S1"),
+        start = ContractStart(ContractTrigger.None("settlement completes"), listOf("S1")),
         activities = listOf(ContractActivity.Service(id = "act-settle", name = "Settle trade", sourceIds = listOf("S1"))),
         endStates = listOf(
             ContractEndState.Signal(
@@ -434,8 +434,7 @@ class ContractConformancePassTest {
         id = "c-credit",
         processName = "Credit-tier routing",
         summary = "Route by credit score.",
-        trigger = "Score received",
-        triggerSourceIds = listOf("ev1"),
+        start = ContractStart(ContractTrigger.None("Score received"), listOf("ev1")),
         activities =
         listOf(
             ContractActivity(id = "Task_fast", name = "Fast-track", sourceIds = listOf("ev1")),

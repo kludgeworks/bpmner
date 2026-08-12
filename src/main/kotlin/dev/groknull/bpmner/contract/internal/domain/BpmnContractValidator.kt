@@ -182,7 +182,7 @@ internal class BpmnContractValidator {
                 ),
             )
         }
-        if (contract.trigger.isBlank()) {
+        if (contract.start.trigger.description.isBlank()) {
             add(
                 errorIssue(
                     code = ContractValidationCode.MISSING_TRIGGER,
@@ -190,7 +190,7 @@ internal class BpmnContractValidator {
                     targetId = contract.id,
                 ),
             )
-        } else if (contract.triggerSourceIds.isEmpty()) {
+        } else if (contract.start.sourceIds.isEmpty()) {
             add(
                 errorIssue(
                     code = ContractValidationCode.TRIGGER_WITHOUT_TRACE,

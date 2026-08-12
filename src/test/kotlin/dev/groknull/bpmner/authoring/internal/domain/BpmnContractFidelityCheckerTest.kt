@@ -635,8 +635,7 @@ class BpmnContractFidelityCheckerTest {
                 id = "c-send",
                 processName = "Notification process",
                 summary = "send a notification then end",
-                trigger = "start",
-                triggerSourceIds = sources,
+                start = ContractStart(ContractTrigger.None("start"), sources),
                 activities =
                 listOf(
                     ContractActivity.Send(
@@ -722,8 +721,7 @@ class BpmnContractFidelityCheckerTest {
                 id = "c-msg",
                 processName = "Confirmation process",
                 summary = "send confirmation",
-                trigger = "start",
-                triggerSourceIds = sources,
+                start = ContractStart(ContractTrigger.None("start"), sources),
                 activities = listOf(ContractActivity.User(id = "act-do", name = "Do thing", sourceIds = sources)),
                 endStates =
                 listOf(
@@ -855,8 +853,7 @@ class BpmnContractFidelityCheckerTest {
             id = "c-end",
             processName = "End-state fidelity",
             summary = "single activity then typed end",
-            trigger = "start",
-            triggerSourceIds = sources,
+            start = ContractStart(ContractTrigger.None("start"), sources),
             activities = listOf(ContractActivity.User(id = "act-do", name = "Do thing", sourceIds = sources)),
             endStates =
             listOf(
@@ -897,8 +894,7 @@ class BpmnContractFidelityCheckerTest {
             id = "c-throw",
             processName = "Intermediate throw fidelity",
             summary = "single activity then typed intermediate throw",
-            trigger = "start",
-            triggerSourceIds = sources,
+            start = ContractStart(ContractTrigger.None("start"), sources),
             activities = listOf(ContractActivity.User(id = "act-do", name = "Do thing", sourceIds = sources)),
             intermediateThrows =
             listOf(
@@ -970,8 +966,7 @@ class BpmnContractFidelityCheckerTest {
                 id = "c-skip",
                 processName = "Forward skip",
                 summary = "decision skips an intermediate activity",
-                trigger = "start",
-                triggerSourceIds = sources,
+                start = ContractStart(ContractTrigger.None("start"), sources),
                 activities =
                 listOf(
                     ContractActivity.User(id = "act-pre-check", name = "Pre-check", sourceIds = sources),
@@ -1044,8 +1039,7 @@ class BpmnContractFidelityCheckerTest {
                 id = "c-multi",
                 processName = "Two decisions",
                 summary = "multi-decision contract",
-                trigger = "start",
-                triggerSourceIds = sources,
+                start = ContractStart(ContractTrigger.None("start"), sources),
                 activities = listOf(ContractActivity.User(id = "act-a", name = "A", sourceIds = sources)),
                 decisions =
                 listOf(
@@ -1129,8 +1123,7 @@ class BpmnContractFidelityCheckerTest {
                 id = "c-converging",
                 processName = "Payment processing",
                 summary = "Two payment decisions can mark an order paid",
-                trigger = "payment submitted",
-                triggerSourceIds = sources,
+                start = ContractStart(ContractTrigger.None("payment submitted"), sources),
                 activities = listOf(
                     ContractActivity.User(
                         id = "act-mark-order-paid",
@@ -1248,8 +1241,7 @@ class BpmnContractFidelityCheckerTest {
                 id = "c",
                 processName = "Linear",
                 summary = "linear",
-                trigger = "start",
-                triggerSourceIds = listOf("ev1"),
+                start = ContractStart(ContractTrigger.None("start"), listOf("ev1")),
                 activities =
                 listOf(
                     ContractActivity.User(id = "act-a", name = "A", sourceIds = listOf("ev1")),
@@ -1369,8 +1361,7 @@ private fun repairLoopContract(): ProcessContract {
         id = "c-repair",
         processName = "Repair loop",
         summary = "Iterative repair with three exit conditions.",
-        trigger = "request",
-        triggerSourceIds = sources,
+        start = ContractStart(ContractTrigger.None("request"), sources),
         activities =
         listOf(
             ContractActivity.User(id = "act-strategy-1", name = "Strategy 1", sourceIds = sources),
@@ -1440,8 +1431,7 @@ private fun parallelForkContract(): ProcessContract {
         id = "c-parallel",
         processName = "Three concurrent tracks",
         summary = "Fork into three independent preparation tracks then rejoin.",
-        trigger = "Hire confirmed",
-        triggerSourceIds = sources,
+        start = ContractStart(ContractTrigger.None("Hire confirmed"), sources),
         activities =
         listOf(
             ContractActivity.User(id = "act-prep-it", name = "IT prep", sourceIds = sources),
@@ -1505,8 +1495,7 @@ private fun unresolvedRefContract() = ProcessContract(
     id = "c",
     processName = "Test",
     summary = "test",
-    trigger = "start",
-    triggerSourceIds = listOf("ev1"),
+    start = ContractStart(ContractTrigger.None("start"), listOf("ev1")),
     activities = listOf(ContractActivity.User(id = "act-a", name = "A", sourceIds = listOf("ev1"))),
     decisions =
     listOf(
@@ -1553,8 +1542,7 @@ private fun skipForwardContract(): ProcessContract {
         id = "c-skip",
         processName = "Skip via join",
         summary = "Two branches converge to the same downstream activity.",
-        trigger = "Request received",
-        triggerSourceIds = sources,
+        start = ContractStart(ContractTrigger.None("Request received"), sources),
         activities =
         listOf(
             ContractActivity.User(id = "act-fast-target", name = "Fast", sourceIds = sources),
@@ -1671,8 +1659,7 @@ private fun defaultBranchContract(): ProcessContract {
         id = "c-dfm",
         processName = "Approval with fallback",
         summary = "Approve or fall back to manual review",
-        trigger = "start",
-        triggerSourceIds = sources,
+        start = ContractStart(ContractTrigger.None("start"), sources),
         activities =
         listOf(
             ContractActivity.User(id = "act-review", name = "Review", sourceIds = sources),
@@ -1764,8 +1751,7 @@ private fun rolesContract(): ProcessContract {
         id = "c-roles",
         processName = "Role-bearing process",
         summary = "Process with an explicit actor role",
-        trigger = "request received",
-        triggerSourceIds = sources,
+        start = ContractStart(ContractTrigger.None("request received"), sources),
         actors = listOf(ContractActor(id = "actor-sales", name = "Sales")),
         activities = listOf(ContractActivity.User(id = "act-process", name = "Process request", sourceIds = sources)),
         endStates = listOf(ContractEndState.Normal(id = "end-done", name = "Done", sourceIds = sources)),

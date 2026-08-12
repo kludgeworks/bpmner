@@ -20,6 +20,8 @@ import dev.groknull.bpmner.contract.ContractActor
 import dev.groknull.bpmner.contract.ContractAssumption
 import dev.groknull.bpmner.contract.ContractDecision
 import dev.groknull.bpmner.contract.ContractEndState
+import dev.groknull.bpmner.contract.ContractStart
+import dev.groknull.bpmner.contract.ContractTrigger
 import dev.groknull.bpmner.contract.ProcessContract
 import dev.groknull.bpmner.readiness.ClarificationQuestion
 import dev.groknull.bpmner.readiness.EvidenceSourceType
@@ -116,7 +118,7 @@ class BpmnGuardrailTypesTest {
                 id = "",
                 processName = "",
                 summary = "",
-                trigger = "",
+                start = ContractStart(ContractTrigger.None("")),
                 activities = emptyList(),
                 endStates = emptyList(),
             )
@@ -164,8 +166,7 @@ class BpmnGuardrailTypesTest {
         id = "contract-1",
         processName = "Ship order",
         summary = "Approved orders are packed and shipped.",
-        trigger = "An approved order is received",
-        triggerSourceIds = listOf("ev1"),
+        start = ContractStart(ContractTrigger.None("An approved order is received"), listOf("ev1")),
         activities = validContractActivities(),
         decisions = validContractDecisions(),
         actors = validContractActors(),

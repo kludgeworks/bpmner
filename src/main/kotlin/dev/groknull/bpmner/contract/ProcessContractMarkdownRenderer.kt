@@ -14,7 +14,7 @@ import org.springframework.stereotype.Component
 class ProcessContractMarkdownRenderer {
     fun render(contract: ProcessContract): String = buildString {
         appendLine("# ${contract.processName}")
-        appendLine("Trigger: ${contract.trigger}")
+        appendLine("Trigger: ${contract.start.trigger.description}")
         appendLine()
         appendLine("## Summary")
         appendLine(contract.summary)

@@ -16,6 +16,8 @@ import dev.groknull.bpmner.bpmn.MultiInstanceMode
 import dev.groknull.bpmner.contract.ContractActivity
 import dev.groknull.bpmner.contract.ContractActor
 import dev.groknull.bpmner.contract.ContractEndState
+import dev.groknull.bpmner.contract.ContractStart
+import dev.groknull.bpmner.contract.ContractTrigger
 import dev.groknull.bpmner.contract.ProcessContract
 import kotlin.test.Test
 import kotlin.test.assertTrue
@@ -77,8 +79,7 @@ class OutlineConservationTest {
         id = "c-outline",
         processName = "Review",
         summary = "Review each item.",
-        trigger = "Items submitted",
-        triggerSourceIds = sources,
+        start = ContractStart(ContractTrigger.None("Items submitted"), sources),
         activities = listOf(
             ContractActivity(id = "act-review", name = "Review item", sourceIds = sources),
         ),

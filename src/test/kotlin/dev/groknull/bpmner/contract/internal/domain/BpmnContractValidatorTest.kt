@@ -118,7 +118,7 @@ class BpmnContractValidatorTest {
                 id = "contract-junk",
                 processName = "",
                 summary = "Random list of colors",
-                trigger = "",
+                start = ContractStart(ContractTrigger.None("")),
                 activities = emptyList(),
                 endStates = emptyList(),
             )
@@ -641,8 +641,7 @@ class BpmnContractValidatorTest {
         id = "contract-linear",
         processName = "Submit application",
         summary = "Application is submitted and reviewed.",
-        trigger = "Applicant submits an application",
-        triggerSourceIds = sources,
+        start = ContractStart(ContractTrigger.None("Applicant submits an application"), sources),
         activities =
         listOf(
             ContractActivity(

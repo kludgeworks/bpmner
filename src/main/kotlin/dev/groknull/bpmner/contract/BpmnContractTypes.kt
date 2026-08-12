@@ -7,7 +7,6 @@ package dev.groknull.bpmner.contract
 
 import com.embabel.agent.core.NonRetryable
 import com.fasterxml.jackson.annotation.JsonClassDescription
-import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonPropertyDescription
 import com.fasterxml.jackson.annotation.JsonSubTypes
 import com.fasterxml.jackson.annotation.JsonTypeInfo
@@ -118,45 +117,7 @@ data class ProcessContract(
     @field:Size(max = 50)
     @get:JsonPropertyDescription("Assumptions made while extracting the contract")
     val assumptions: List<ContractAssumption> = emptyList(),
-) {
-    // Backward-compat read-only views over `start` for existing Kotlin callers that still use
-    // the flat `trigger: String` / `triggerSourceIds: List<String>` shape via the secondary
-    // constructor below. JsonIgnore keeps them out of the JSON wire format — without this,
-    // Jackson serialises `trigger` as a duplicate top-level property and round-trip
-    // deserialisation fails with "Unrecognized field 'trigger'".
-    @get:JsonIgnore
-    val trigger: String
-        get() = start.trigger.description
-
-    @get:JsonIgnore
-    val triggerSourceIds: List<String>
-        get() = start.sourceIds
-
-    constructor(
-        id: String,
-        processName: String,
-        summary: String,
-        trigger: String,
-        triggerSourceIds: List<String> = emptyList(),
-        activities: List<ContractActivity>,
-        decisions: List<ContractDecision> = emptyList(),
-        actors: List<ContractActor> = emptyList(),
-        endStates: List<ContractEndState>,
-        intermediateThrows: List<ContractIntermediateThrow> = emptyList(),
-        assumptions: List<ContractAssumption> = emptyList(),
-    ) : this(
-        id = id,
-        processName = processName,
-        summary = summary,
-        start = ContractStart(ContractTrigger.None(trigger), triggerSourceIds),
-        activities = activities,
-        decisions = decisions,
-        actors = actors,
-        endStates = endStates,
-        intermediateThrows = intermediateThrows,
-        assumptions = assumptions,
-    )
-}
+)
 
 /**
  * Activity required by the extracted process contract.

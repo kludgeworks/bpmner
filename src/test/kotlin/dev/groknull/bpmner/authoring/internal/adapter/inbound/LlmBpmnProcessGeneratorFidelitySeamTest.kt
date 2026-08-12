@@ -30,6 +30,8 @@ import dev.groknull.bpmner.bpmn.RetryableBpmnGenerationException
 import dev.groknull.bpmner.conformance.BpmnLoggingConfig
 import dev.groknull.bpmner.contract.ContractActivity
 import dev.groknull.bpmner.contract.ContractEndState
+import dev.groknull.bpmner.contract.ContractStart
+import dev.groknull.bpmner.contract.ContractTrigger
 import dev.groknull.bpmner.contract.ContractValidationReport
 import dev.groknull.bpmner.contract.ProcessContract
 import dev.groknull.bpmner.contract.ValidatedProcessContract
@@ -106,7 +108,7 @@ class LlmBpmnProcessGeneratorFidelitySeamTest {
         id = "contract-seam",
         processName = "Seam test",
         summary = "Seam test contract for fidelity exception coverage",
-        trigger = "An order is received",
+        start = ContractStart(ContractTrigger.None("An order is received")),
         activities = listOf(ContractActivity.Service("act1", "Do work")),
         endStates = listOf(ContractEndState.Normal("end1", "Done")),
     )

@@ -13,6 +13,8 @@ import dev.groknull.bpmner.contract.ContractDecision
 import dev.groknull.bpmner.contract.ContractEndState
 import dev.groknull.bpmner.contract.ContractGatewayKind
 import dev.groknull.bpmner.contract.ContractIntermediateThrow
+import dev.groknull.bpmner.contract.ContractStart
+import dev.groknull.bpmner.contract.ContractTrigger
 import dev.groknull.bpmner.contract.DefaultBranch
 import dev.groknull.bpmner.contract.ProcessContract
 import dev.groknull.bpmner.contract.ProcessContractMarkdownRenderer
@@ -70,8 +72,7 @@ class ProcessContractMarkdownRendererTest {
                 id = "credit",
                 processName = "Credit-tier routing",
                 summary = "Route loan applications by credit score.",
-                trigger = "Credit score returned",
-                triggerSourceIds = sources,
+                start = ContractStart(ContractTrigger.None("Credit score returned"), sources),
                 activities =
                 listOf(
                     ContractActivity(id = "act-fast", name = "Fast-track", sourceIds = sources),
@@ -145,7 +146,7 @@ class ProcessContractMarkdownRendererTest {
                 id = "min",
                 processName = "Approve",
                 summary = "Approves things.",
-                trigger = "Request arrives",
+                start = ContractStart(ContractTrigger.None("Request arrives")),
                 activities =
                 listOf(
                     ContractActivity(id = "a", name = "Review", sourceIds = sources),
@@ -196,7 +197,7 @@ class ProcessContractMarkdownRendererTest {
                 id = "contract-regression",
                 processName = "Toast workflow",
                 summary = "Regression: default kinds must be explicit in the prompt.",
-                trigger = "User is hungry",
+                start = ContractStart(ContractTrigger.None("User is hungry")),
                 activities =
                 listOf(
                     ContractActivity(id = "act-toast", name = "Toast bread", sourceIds = sources),
@@ -226,8 +227,7 @@ class ProcessContractMarkdownRendererTest {
             id = "contract-1",
             processName = "Ship order",
             summary = "Approved orders are packed and shipped.",
-            trigger = "An order is submitted",
-            triggerSourceIds = sources,
+            start = ContractStart(ContractTrigger.None("An order is submitted"), sources),
             actors =
             listOf(
                 ContractActor(id = "actor-warehouse", name = "Warehouse", role = "fulfilment"),
