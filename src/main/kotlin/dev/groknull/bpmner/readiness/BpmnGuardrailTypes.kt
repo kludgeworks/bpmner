@@ -7,8 +7,8 @@ package dev.groknull.bpmner.readiness
 
 import com.fasterxml.jackson.annotation.JsonAlias
 import com.fasterxml.jackson.annotation.JsonClassDescription
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonPropertyDescription
-import jakarta.validation.Valid
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.PositiveOrZero
 import dev.groknull.bpmner.bpmn.ClarificationExchange as ApiClarificationExchange
@@ -60,13 +60,10 @@ enum class ReadinessDimension {
     TRACEABILITY_TO_SOURCE,
 }
 
-enum class EvidenceSourceType {
-    ORIGINAL_INPUT,
-    STYLE_GUIDE,
-    CLARIFICATION,
-    GENERATED_BPMN,
-}
-
+// Tolerates unknown properties because the readiness model has been observed inventing evidence
+// fields; an unmodelled key must not fail the whole assessment into a retry that returns a more
+// conservative verdict (log bpmner-20260521-013529-906).
+@JsonIgnoreProperties(ignoreUnknown = true)
 @JsonClassDescription("Source evidence supporting a guardrail assessment or trace")
 data class SourceEvidence(
     // Optional from the model's perspective: ids are a code/traceability concern, not something the
@@ -79,13 +76,6 @@ data class SourceEvidence(
     @field:NotBlank
     @get:JsonPropertyDescription("Relevant source text excerpt or concise paraphrase")
     val text: String,
-    /**
-     * Not `@NotBlank`/non-null-with-no-default: nothing in production code reads [sourceType]
-     * today (it exists for future traceability); the empty default must survive bean validation
-     * rather than re-triggering the LLM retry loop for a value nothing downstream requires.
-     */
-    @get:JsonPropertyDescription("Type of source the evidence came from")
-    val sourceType: EvidenceSourceType? = null,
     @get:JsonPropertyDescription("Optional source reference, such as a filename or clarification question id")
     val sourceRef: String? = null,
     @field:PositiveOrZero
@@ -111,7 +101,4 @@ data class ClarificationExchange(
     val relatedMissingAreas: List<ReadinessDimension> = emptyList(),
     @get:JsonPropertyDescription("Readiness dimensions resolved or affected by this exchange")
     val relatedDimensions: List<ReadinessDimension> = emptyList(),
-    @field:Valid
-    @get:JsonPropertyDescription("Evidence or trace metadata attached to this answered exchange")
-    val evidence: List<SourceEvidence> = emptyList(),
 ) : ApiClarificationExchange

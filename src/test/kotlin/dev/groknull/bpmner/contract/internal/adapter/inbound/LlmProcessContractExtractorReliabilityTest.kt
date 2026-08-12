@@ -15,7 +15,6 @@ import dev.groknull.bpmner.authoring.internal.adapter.outbound.AgentPlatformBpmn
 import dev.groknull.bpmner.bpmn.BpmnRequest
 import dev.groknull.bpmner.contract.BpmnContractExtractionException
 import dev.groknull.bpmner.contract.FlatContractTestFixtures
-import dev.groknull.bpmner.readiness.EvidenceSourceType
 import dev.groknull.bpmner.readiness.ProcessInputAssessment
 import dev.groknull.bpmner.readiness.ReadinessDimension
 import dev.groknull.bpmner.readiness.ReadinessDimensionScore
@@ -92,7 +91,7 @@ class LlmProcessContractExtractorReliabilityTest : EmbabelMockitoIntegrationTest
         verdict = ReadinessVerdict.READY,
         overallScore = 90,
         dimensions = listOf(ReadinessDimensionScore(ReadinessDimension.START_TRIGGER, 90, "OK")),
-        evidence = listOf(SourceEvidence("ev1", "Unused", EvidenceSourceType.ORIGINAL_INPUT)),
+        evidence = listOf(SourceEvidence("ev1", "Unused")),
         rationale = "Ready",
     )
 }

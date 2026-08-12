@@ -24,7 +24,6 @@ import dev.groknull.bpmner.contract.ContractStart
 import dev.groknull.bpmner.contract.ContractTrigger
 import dev.groknull.bpmner.contract.ProcessContract
 import dev.groknull.bpmner.readiness.ClarificationQuestion
-import dev.groknull.bpmner.readiness.EvidenceSourceType
 import dev.groknull.bpmner.readiness.ProcessInputAssessment
 import dev.groknull.bpmner.readiness.ReadinessDimension
 import dev.groknull.bpmner.readiness.ReadinessDimensionScore
@@ -156,7 +155,6 @@ class BpmnGuardrailTypesTest {
             SourceEvidence(
                 id = "ev1",
                 text = "Ship approved order",
-                sourceType = EvidenceSourceType.ORIGINAL_INPUT,
             ),
         ),
         rationale = "One actor responsibility is underspecified.",

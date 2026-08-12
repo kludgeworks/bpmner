@@ -1,6 +1,6 @@
 {
 	"version": 1,
-	"_doc": "Char-count baseline for each LLM-facing payload. PromptSizeProbeTest derives ceiling as chars × 1.15 in code; there is no manual ceiling here. On growth past ceiling: trim the prompt. On shrinkage below 'chars': run `bazel run //src/test:update_prompt_baselines` to rewrite this file, then commit. Each entry carries 'updatedBy' (PR or issue ref) and 'reason' for audit trail; the updater stamps 'auto' / dated 'regenerated' when an entry changes, leaving you to refine those fields before committing.",
+	"_doc": "Char-count baseline for each LLM-facing payload. PromptSizeProbeTest derives ceiling as chars \u00d7 1.15 in code; there is no manual ceiling here. On growth past ceiling: trim the prompt. On shrinkage below 'chars': run `bazel run //src/test:update_prompt_baselines` to rewrite this file, then commit. Each entry carries 'updatedBy' (PR or issue ref) and 'reason' for audit trail; the updater stamps 'auto' / dated 'regenerated' when an entry changes, leaving you to refine those fields before committing.",
 	"baselines": {
 		"contractPrompt": {
 			"chars": 11565,
@@ -8,9 +8,9 @@
 			"reason": "regenerated 2026-07-11"
 		},
 		"contractFullPayload": {
-			"chars": 34497,
-			"updatedBy": "auto",
-			"reason": "regenerated 2026-07-31"
+			"chars": 35630,
+			"updatedBy": "696",
+			"reason": "signal/escalation vocabulary widened the contract schema (#696)"
 		},
 		"generationPrompt": {
 			"chars": 16052,
@@ -38,19 +38,19 @@
 			"reason": "regenerated 2026-07-31"
 		},
 		"readinessFullPayload": {
-			"chars": 10877,
-			"updatedBy": "auto",
-			"reason": "regenerated 2026-07-31"
+			"chars": 10403,
+			"updatedBy": "696",
+			"reason": "evidence chain narrowed: sourceType and two evidence lists removed (#696)"
 		},
 		"repairPatchPrompt": {
-			"chars": 1725,
-			"updatedBy": "671",
-			"reason": "compact JSON serialization for repair prompts"
+			"chars": 1756,
+			"updatedBy": "696",
+			"reason": "signal/escalation vocabulary widened the contract schema (#696)"
 		},
 		"repairFullPrompt": {
-			"chars": 1895,
-			"updatedBy": "671",
-			"reason": "compact JSON serialization and conditional XML exclusion in full feedback"
+			"chars": 1926,
+			"updatedBy": "696",
+			"reason": "signal/escalation vocabulary widened the contract schema (#696)"
 		}
 	}
 }
