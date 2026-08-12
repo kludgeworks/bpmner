@@ -477,7 +477,7 @@ enum class ContractGatewayKind {
     /**
      * The flow waits for one of several events; the first to fire selects its branch. Maps to
      * `<bpmn:eventBasedGateway>`. Branches are [EventGatewayBranch] — each names the event
-     * (TIMER / MESSAGE) that triggers it rather than carrying a condition.
+     * (TIMER / MESSAGE / SIGNAL) that triggers it rather than carrying a condition.
      */
     EVENT_BASED,
 }
@@ -594,11 +594,12 @@ data class UnconditionalBranch(
 enum class EventTriggerKind {
     TIMER,
     MESSAGE,
+    SIGNAL,
 }
 
 @JsonClassDescription(
     "Branch of an EVENT_BASED decision — taken when its event fires first. Names the triggering " +
-        "event kind (TIMER / MESSAGE) instead of a condition.",
+        "event kind (TIMER / MESSAGE / SIGNAL) instead of a condition.",
 )
 data class EventGatewayBranch(
     override val id: String,

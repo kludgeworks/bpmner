@@ -326,6 +326,32 @@ class FlatContractMapperTest {
         assertTrue("messageName" in messageEx.message.orEmpty())
     }
 
+    // EventTriggerKind is not mapped to a BpmnEventDefinition anywhere yet — the compiler stage
+    // (ADR-696-2 step 4) is what will consume it — so no exhaustive `when` guards this enum.
+    // Cover every value here instead, or a new kind lands unexercised.
+    @Test
+    fun `every EventTriggerKind round-trips on an event-gateway branch`() {
+        EventTriggerKind.entries.forEach { trigger ->
+            val sealed = FlatContractBranch(
+                id = "b-evt",
+                label = "Event fires",
+                kind = FlatBranchKind.EVENT_GATEWAY,
+                triggerKind = trigger,
+                triggerDetail = "detail for $trigger",
+            ).toSealed()
+
+            assertEquals(
+                EventGatewayBranch(
+                    id = "b-evt",
+                    label = "Event fires",
+                    triggerKind = trigger,
+                    triggerDetail = "detail for $trigger",
+                ),
+                sealed,
+            )
+        }
+    }
+
     @Test
     fun `SIGNAL trigger round-trips and requires its signal name`() {
         assertEquals(
