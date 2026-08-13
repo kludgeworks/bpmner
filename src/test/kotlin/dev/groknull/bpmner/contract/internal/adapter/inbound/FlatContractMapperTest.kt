@@ -15,6 +15,7 @@ import dev.groknull.bpmner.contract.ConditionalBranch
 import dev.groknull.bpmner.contract.ContractActivity
 import dev.groknull.bpmner.contract.ContractBoundaryEvent
 import dev.groknull.bpmner.contract.ContractEndState
+import dev.groknull.bpmner.contract.ContractFlow
 import dev.groknull.bpmner.contract.ContractIntermediateThrow
 import dev.groknull.bpmner.contract.ContractIteration
 import dev.groknull.bpmner.contract.ContractLoop
@@ -23,6 +24,7 @@ import dev.groknull.bpmner.contract.ContractTrigger
 import dev.groknull.bpmner.contract.DefaultBranch
 import dev.groknull.bpmner.contract.EventGatewayBranch
 import dev.groknull.bpmner.contract.EventTriggerKind
+import dev.groknull.bpmner.contract.FlatContractTestFixtures
 import dev.groknull.bpmner.contract.ProcessContract
 import dev.groknull.bpmner.contract.UnconditionalBranch
 import dev.groknull.bpmner.contract.boundaryEvents
@@ -427,6 +429,35 @@ class FlatContractMapperTest {
                 triggerDetail = "payment confirmation",
             ),
             eventGateway.toSealed(),
+        )
+    }
+
+    @Test
+    fun `every FlatContractFlow shape round-trips to the matching sealed ContractFlow subtype`() {
+        val sequence = FlatContractFlow(from = "start", to = "act-x", branchId = null)
+        assertEquals(ContractFlow.Sequence(from = "start", to = "act-x"), sequence.toSealed())
+
+        val branch = FlatContractFlow(from = "dec-x", to = "act-y", branchId = "br-yes")
+        assertEquals(ContractFlow.Branch(from = "dec-x", to = "act-y", branchId = "br-yes"), branch.toSealed())
+    }
+
+    @Test
+    fun `FlatProcessContract flows map through toSealed in order`() {
+        val flat = FlatContractTestFixtures.minimalContract() as FlatProcessContract
+        val withFlows = flat.copy(
+            flows = listOf(
+                FlatContractFlow(from = "start", to = "a1"),
+                FlatContractFlow(from = "a1", to = "a2"),
+                FlatContractFlow(from = "a2", to = "e1"),
+            ),
+        )
+        assertEquals(
+            listOf(
+                ContractFlow.Sequence(from = "start", to = "a1"),
+                ContractFlow.Sequence(from = "a1", to = "a2"),
+                ContractFlow.Sequence(from = "a2", to = "e1"),
+            ),
+            withFlows.toSealed().flows,
         )
     }
 

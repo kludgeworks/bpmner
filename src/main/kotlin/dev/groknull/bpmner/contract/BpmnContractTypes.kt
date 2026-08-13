@@ -40,6 +40,10 @@ data class ContractStart(
     @field:Size(max = 20)
     @get:JsonPropertyDescription("Source ids grounding the trigger in source evidence")
     val sourceIds: List<String> = emptyList(),
+    @field:NotBlank
+    @field:Size(max = 200)
+    @get:JsonPropertyDescription("Stable id for this start event, so `flows` can name it as a source.")
+    val id: String = "start",
 )
 
 @JsonClassDescription("Typed process trigger")
@@ -117,7 +121,52 @@ data class ProcessContract(
     @field:Size(max = 50)
     @get:JsonPropertyDescription("Assumptions made while extracting the contract")
     val assumptions: List<ContractAssumption> = emptyList(),
+    @field:NotEmpty
+    @field:Valid
+    @field:Size(max = 400)
+    @get:JsonPropertyDescription(
+        "Complete process topology: every flow from one element to the next, including branch " +
+            "routing, loop back-edges, and exception paths. Total — nothing downstream infers an " +
+            "edge this list does not state. Order is not significant; edge ids are assigned by " +
+            "graph traversal, not list position.",
+    )
+    val flows: List<ContractFlow> = emptyList(),
 )
+
+/**
+ * One edge in the process topology, stated in [ProcessContract.flows].
+ *
+ * Two kinds, matching the sealed pattern every other contract element already uses: they compile
+ * differently downstream (a decision's outgoing edge carries the branch it realises and gets
+ * label/condition/`isDefault` stamped onto it; an ordinary edge does not), so the type says what the
+ * code does and any `when` over it is exhaustive.
+ */
+@JsonClassDescription(
+    "One edge in the process topology. `branchId` is required when `from` is a decision (names " +
+        "which of its declared branches this edge realises) and omitted for every other edge.",
+)
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "kind")
+@JsonSubTypes(
+    JsonSubTypes.Type(value = ContractFlow.Sequence::class, name = "SEQUENCE"),
+    JsonSubTypes.Type(value = ContractFlow.Branch::class, name = "BRANCH"),
+)
+sealed interface ContractFlow {
+    val from: String
+    val to: String
+
+    /** An ordinary step-to-step edge. Its source is never a decision. */
+    data class Sequence(
+        override val from: String,
+        override val to: String,
+    ) : ContractFlow
+
+    /** A decision's outgoing edge, realising exactly one declared branch. */
+    data class Branch(
+        override val from: String,
+        override val to: String,
+        val branchId: String,
+    ) : ContractFlow
+}
 
 /**
  * Activity required by the extracted process contract.
@@ -350,6 +399,10 @@ data class ContractBoundaryEvent(
             "escalation code for ESCALATION (e.g. \"APPROVAL_OVERDUE\").",
     )
     val detail: String,
+    @field:NotBlank
+    @field:Size(max = 200)
+    @get:JsonPropertyDescription("Stable id for this boundary event, so `flows` can name it as a source.")
+    val id: String = "boundary-event",
 )
 
 @JsonClassDescription(

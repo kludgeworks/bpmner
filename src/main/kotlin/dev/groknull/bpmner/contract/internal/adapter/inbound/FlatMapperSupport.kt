@@ -35,6 +35,7 @@ internal fun FlatContractBoundaryEvent.toSealed(): ContractBoundaryEvent = Contr
     label = requireField(label, kind, "label", "boundaryEvent"),
     nextRef = requireField(nextRef, kind, "nextRef", "boundaryEvent"),
     detail = requireField(detail, kind, "detail", "boundaryEvent"),
+    id = id,
 )
 
 internal fun FlatContractLoop.toSealed(): ContractLoop = ContractLoop(

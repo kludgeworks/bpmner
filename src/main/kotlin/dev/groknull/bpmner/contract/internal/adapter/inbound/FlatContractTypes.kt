@@ -189,6 +189,10 @@ public data class FlatContractBoundaryEvent(
             "error code for ERROR (e.g. \"CHARGEBACK\"), or an escalation code for ESCALATION.",
     )
     val detail: String? = null,
+    @field:NotBlank
+    @field:Size(max = 200)
+    @get:JsonPropertyDescription("Stable id for this boundary event, so `flows` can name it as a source.")
+    val id: String = "boundary-event",
 )
 
 @JsonClassDescription(
@@ -379,6 +383,31 @@ public data class FlatContractStart(
     @field:Size(max = 20)
     @get:JsonPropertyDescription("Source ids grounding the trigger in source evidence")
     val sourceIds: List<String> = emptyList(),
+    @field:NotBlank
+    @field:Size(max = 200)
+    @get:JsonPropertyDescription("Stable id for this start event, so `flows` can name it as a source.")
+    val id: String = "start",
+)
+
+@JsonClassDescription(
+    "One edge in the process topology. `branchId` is required when `from` is a decision (names " +
+        "which of its declared branches this edge realises) and omitted for every other edge.",
+)
+public data class FlatContractFlow(
+    @field:NotBlank
+    @field:Size(max = 200)
+    @get:JsonPropertyDescription("Source element id: a start, activity, decision, or intermediate throw.")
+    val from: String,
+    @field:NotBlank
+    @field:Size(max = 200)
+    @get:JsonPropertyDescription("Target element id: an activity, decision, end state, or intermediate throw.")
+    val to: String,
+    @field:Size(max = 200)
+    @get:JsonPropertyDescription(
+        "Required when `from` is a decision: the id of the branch (from that decision's `branches`) " +
+            "this edge realises. Omit for every other edge.",
+    )
+    val branchId: String? = null,
 )
 
 @JsonClassDescription(
@@ -472,6 +501,15 @@ public data class FlatProcessContract(
     @field:Size(max = 50)
     @get:JsonPropertyDescription("Assumptions made while extracting the contract")
     val assumptions: List<ContractAssumption> = emptyList(),
+    @field:NotEmpty
+    @field:Valid
+    @field:Size(max = 400)
+    @get:JsonPropertyDescription(
+        "Complete process topology: every flow from one element to the next, including branch " +
+            "routing, loop back-edges, and exception paths. This is TOTAL — state every edge in the " +
+            "process, not just non-sequential ones. Order is not significant.",
+    )
+    val flows: List<FlatContractFlow> = emptyList(),
 )
 
 @JsonClassDescription("Decision required by the extracted process contract")

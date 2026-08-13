@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: MIT
  */
 
+@file:Suppress("TooManyFunctions")
+
 package dev.groknull.bpmner.contract.internal.adapter.inbound
 
 import dev.groknull.bpmner.bpmn.RetryableBpmnGenerationException
@@ -12,6 +14,7 @@ import dev.groknull.bpmner.contract.ContractActivity
 import dev.groknull.bpmner.contract.ContractBranch
 import dev.groknull.bpmner.contract.ContractDecision
 import dev.groknull.bpmner.contract.ContractEndState
+import dev.groknull.bpmner.contract.ContractFlow
 import dev.groknull.bpmner.contract.ContractIntermediateThrow
 import dev.groknull.bpmner.contract.ContractStart
 import dev.groknull.bpmner.contract.ContractTrigger
@@ -37,7 +40,7 @@ public fun FlatProcessContract.toSealed(): ProcessContract = ProcessContract(
     id = id,
     processName = processName,
     summary = summary,
-    start = ContractStart(trigger = start.trigger.toSealed(), sourceIds = start.sourceIds),
+    start = ContractStart(trigger = start.trigger.toSealed(), sourceIds = start.sourceIds, id = start.id),
     // Embedded subprocesses are appended to `activities` as ContractActivity.SubProcess entries so
     // the activity-keyed loops in the validator and fidelity checker pick them up uniformly — a
     // subprocess IS a (composite) activity in BPMN. Membership is carried by containedActivityIds.
@@ -47,7 +50,18 @@ public fun FlatProcessContract.toSealed(): ProcessContract = ProcessContract(
     endStates = endStates.map { it.toSealed() },
     intermediateThrows = intermediateThrows.map { it.toSealed() },
     assumptions = assumptions,
+    flows = flows.map { it.toSealed() },
 )
+
+/**
+ * Flat → sealed for a topology edge. `branchId` is recoverable from the payload — no `kind`
+ * discriminator needed on the wire — matching the pattern established for every other flat mirror.
+ */
+public fun FlatContractFlow.toSealed(): ContractFlow = if (branchId == null) {
+    ContractFlow.Sequence(from = from, to = to)
+} else {
+    ContractFlow.Branch(from = from, to = to, branchId = branchId)
+}
 
 public fun FlatContractSubProcess.toSealed(): ContractActivity.SubProcess = ContractActivity.SubProcess(
     id = id,

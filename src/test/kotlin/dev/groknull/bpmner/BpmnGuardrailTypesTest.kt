@@ -20,6 +20,7 @@ import dev.groknull.bpmner.contract.ContractActor
 import dev.groknull.bpmner.contract.ContractAssumption
 import dev.groknull.bpmner.contract.ContractDecision
 import dev.groknull.bpmner.contract.ContractEndState
+import dev.groknull.bpmner.contract.ContractFlow
 import dev.groknull.bpmner.contract.ContractStart
 import dev.groknull.bpmner.contract.ContractTrigger
 import dev.groknull.bpmner.contract.ProcessContract
@@ -170,6 +171,7 @@ class BpmnGuardrailTypesTest {
         actors = validContractActors(),
         endStates = validContractEndStates(),
         assumptions = validContractAssumptions(),
+        flows = validContractFlows(),
     )
 
     private fun validContractActivities() = listOf(
@@ -211,6 +213,12 @@ class BpmnGuardrailTypesTest {
             name = "Order shipped",
             sourceIds = listOf("ev1"),
         ),
+    )
+
+    private fun validContractFlows() = listOf(
+        ContractFlow.Sequence(from = "start", to = "activity-pack"),
+        ContractFlow.Sequence(from = "activity-pack", to = "decision-stock"),
+        ContractFlow.Branch(from = "decision-stock", to = "end-shipped", branchId = "branch-yes"),
     )
 
     private fun validContractAssumptions() = listOf(
