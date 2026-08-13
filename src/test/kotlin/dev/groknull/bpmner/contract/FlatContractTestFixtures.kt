@@ -8,6 +8,7 @@ package dev.groknull.bpmner.contract
 import dev.groknull.bpmner.contract.internal.adapter.inbound.FlatActivityKind
 import dev.groknull.bpmner.contract.internal.adapter.inbound.FlatContractActivity
 import dev.groknull.bpmner.contract.internal.adapter.inbound.FlatContractEndState
+import dev.groknull.bpmner.contract.internal.adapter.inbound.FlatContractFlow
 import dev.groknull.bpmner.contract.internal.adapter.inbound.FlatContractStart
 import dev.groknull.bpmner.contract.internal.adapter.inbound.FlatContractTrigger
 import dev.groknull.bpmner.contract.internal.adapter.inbound.FlatEndStateKind
@@ -58,6 +59,11 @@ object FlatContractTestFixtures {
         endStates = listOf(
             FlatContractEndState(id = "e1", name = "E1", kind = FlatEndStateKind.NORMAL, sourceIds = listOf("ev1")),
         ),
+        flows = listOf(
+            FlatContractFlow(from = "start", to = "a1"),
+            FlatContractFlow(from = "a1", to = "a2"),
+            FlatContractFlow(from = "a2", to = "e1"),
+        ),
     )
 
     /**
@@ -81,6 +87,11 @@ object FlatContractTestFixtures {
             ),
             endStates = listOf(
                 FlatContractEndState(id = "e1", name = "Toast ready", kind = FlatEndStateKind.NORMAL, sourceIds = sources),
+            ),
+            flows = listOf(
+                FlatContractFlow(from = "start", to = "a1"),
+                FlatContractFlow(from = "a1", to = "a2"),
+                FlatContractFlow(from = "a2", to = "e1"),
             ),
         )
     }
@@ -125,6 +136,12 @@ object FlatContractTestFixtures {
                 kind = FlatEndStateKind.NORMAL,
                 sourceIds = listOf("ev1"),
             ),
+        ),
+        flows = listOf(
+            FlatContractFlow(from = "start", to = "act-run-credit-check"),
+            FlatContractFlow(from = "act-run-credit-check", to = "end-approved"),
+            FlatContractFlow(from = "act-run-credit-check", to = "act-underwriter-review"),
+            FlatContractFlow(from = "act-underwriter-review", to = "end-reviewed"),
         ),
     )
 }

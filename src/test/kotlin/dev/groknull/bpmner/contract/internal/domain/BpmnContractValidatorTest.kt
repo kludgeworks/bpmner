@@ -13,6 +13,7 @@ import dev.groknull.bpmner.contract.ContractAssumption
 import dev.groknull.bpmner.contract.ContractBoundaryEvent
 import dev.groknull.bpmner.contract.ContractDecision
 import dev.groknull.bpmner.contract.ContractEndState
+import dev.groknull.bpmner.contract.ContractFlow
 import dev.groknull.bpmner.contract.ContractGatewayKind
 import dev.groknull.bpmner.contract.ContractIntermediateThrow
 import dev.groknull.bpmner.contract.ContractIssueSeverity
@@ -68,6 +69,11 @@ class BpmnContractValidatorTest {
                         calledElement = "fulfil-order",
                         sourceIds = sources,
                     ),
+                ),
+                flows = listOf(
+                    ContractFlow.Sequence(from = "start", to = "activity-receive"),
+                    ContractFlow.Sequence(from = "activity-receive", to = "activity-fulfil"),
+                    ContractFlow.Sequence(from = "activity-fulfil", to = "end-approved"),
                 ),
             )
         assertTrue(validator.validate(contract).isValid, "got: ${validator.validate(contract).issues}")
@@ -203,7 +209,16 @@ class BpmnContractValidatorTest {
                     DefaultBranch(id = "br-fallback", label = "Manual review"),
                 ),
             )
-        val contract = branchingContract.copy(decisions = listOf(decision))
+        val contract = branchingContract.copy(
+            decisions = listOf(decision),
+            flows = listOf(
+                ContractFlow.Sequence(from = "start", to = "activity-receive"),
+                ContractFlow.Sequence(from = "activity-receive", to = "decision-eligible"),
+                ContractFlow.Branch(from = "decision-eligible", to = "activity-review", branchId = "br-yes"),
+                ContractFlow.Branch(from = "decision-eligible", to = "end-approved", branchId = "br-fallback"),
+                ContractFlow.Sequence(from = "activity-review", to = "end-approved"),
+            ),
+        )
         val report = validator.validate(contract)
         assertTrue(report.isValid, "expected single-default decision to be valid, got ${report.issues}")
     }
@@ -460,6 +475,13 @@ class BpmnContractValidatorTest {
                 containedActivityIds = base.activities.map { it.id },
                 sourceIds = sources,
             ),
+            // The outer flow crosses through the subprocess's own id (V11), never through a
+            // member id directly. Interior connectivity (V12) is the member-to-member edge.
+            flows = listOf(
+                ContractFlow.Sequence(from = "start", to = "sub-assess"),
+                ContractFlow.Sequence(from = "activity-receive", to = "activity-review"),
+                ContractFlow.Sequence(from = "sub-assess", to = "end-approved"),
+            ),
         )
 
         val report = validator.validate(contract)
@@ -663,6 +685,11 @@ class BpmnContractValidatorTest {
                 sourceIds = sources,
             ),
         ),
+        flows = listOf(
+            ContractFlow.Sequence(from = "start", to = "activity-receive"),
+            ContractFlow.Sequence(from = "activity-receive", to = "activity-review"),
+            ContractFlow.Sequence(from = "activity-review", to = "end-approved"),
+        ),
     )
 
     private fun branchingContract(): ProcessContract {
@@ -689,6 +716,13 @@ class BpmnContractValidatorTest {
                     sourceIds = sources,
                 ),
             ),
+            flows = listOf(
+                ContractFlow.Sequence(from = "start", to = "activity-receive"),
+                ContractFlow.Sequence(from = "activity-receive", to = "decision-eligible"),
+                ContractFlow.Branch(from = "decision-eligible", to = "activity-review", branchId = "branch-yes"),
+                ContractFlow.Branch(from = "decision-eligible", to = "end-approved", branchId = "branch-no"),
+                ContractFlow.Sequence(from = "activity-review", to = "end-approved"),
+            ),
         )
     }
 
@@ -702,6 +736,15 @@ class BpmnContractValidatorTest {
                     name = "Application rejected",
                     sourceIds = sources,
                 ),
+            // The "not eligible" branch routes to the new rejection end state instead of
+            // end-approved — this is the exception path the fixture name promises.
+            flows = listOf(
+                ContractFlow.Sequence(from = "start", to = "activity-receive"),
+                ContractFlow.Sequence(from = "activity-receive", to = "decision-eligible"),
+                ContractFlow.Branch(from = "decision-eligible", to = "activity-review", branchId = "branch-yes"),
+                ContractFlow.Branch(from = "decision-eligible", to = "end-rejected", branchId = "branch-no"),
+                ContractFlow.Sequence(from = "activity-review", to = "end-approved"),
+            ),
         )
     }
 }

@@ -90,6 +90,69 @@ enum class ContractValidationCode {
 
     /** A call activity declares no `calledElement`; it must name the process it invokes. */
     CALL_ACTIVITY_MISSING_TARGET,
+
+    // V1-V13 (ADR-696-1): total-topology validation over ProcessContract.flows. NEXT_REF_NOT_FOUND
+    // above is V1's strictly weaker predecessor, deleted once nextRef is (stage 696-5 commit 3).
+
+    /** V1: a flow's `from` or `to` does not resolve to any declared element. */
+    FLOW_ENDPOINT_NOT_FOUND,
+
+    /** V2: a flow's `from` and `to` are the same element. */
+    FLOW_SELF_LOOP,
+
+    /** V3: the start has an incoming flow (it must have none). */
+    START_HAS_INCOMING_FLOW,
+
+    /** V3: the start does not have exactly one outgoing flow. */
+    START_OUTGOING_COUNT_WRONG,
+
+    /** V4: an end state has no incoming flow (it must have at least one). */
+    END_STATE_MISSING_INCOMING_FLOW,
+
+    /** V4: an end state has an outgoing flow (it must have none). */
+    END_STATE_HAS_OUTGOING_FLOW,
+
+    /** V5: a boundary event has an incoming flow (it must have none). */
+    BOUNDARY_EVENT_HAS_INCOMING_FLOW,
+
+    /** V5: a boundary event does not have exactly one outgoing flow. */
+    BOUNDARY_EVENT_OUTGOING_COUNT_WRONG,
+
+    /** V6: a non-start/end/boundary/subprocess-member element has no incoming flow. */
+    ELEMENT_MISSING_INCOMING_FLOW,
+
+    /** V6: a non-start/end/boundary/subprocess-member element has no outgoing flow. */
+    ELEMENT_MISSING_OUTGOING_FLOW,
+
+    /** V7: a declared element (other than a subprocess member) is not reachable from start. */
+    ELEMENT_UNREACHABLE_FROM_START,
+
+    /** V8: a declared element (other than a subprocess member) cannot reach any end state. */
+    ELEMENT_CANNOT_REACH_END_STATE,
+
+    /** V9: a decision's branch is not realised by any [dev.groknull.bpmner.contract.ContractFlow.Branch]. */
+    DECISION_BRANCH_NOT_REALIZED,
+
+    /** V9: a [dev.groknull.bpmner.contract.ContractFlow.Branch]'s `branchId` does not name a branch of the decision at `from`. */
+    FLOW_BRANCH_ID_UNKNOWN,
+
+    /** V10: a decision's outgoing flow is a Sequence flow; decisions route only via Branch flows. */
+    SEQUENCE_FLOW_FROM_DECISION,
+
+    /** V10: a non-decision's outgoing flow is a Branch flow; only decisions route via Branch flows. */
+    BRANCH_FLOW_FROM_NON_DECISION,
+
+    /** V11: a flow has exactly one endpoint among a subprocess's `containedActivityIds`. */
+    FLOW_CROSSES_SUBPROCESS_BOUNDARY,
+
+    /** V12: a subprocess member is not reachable from any member with no internal predecessor. */
+    SUBPROCESS_MEMBER_UNREACHABLE,
+
+    /** V13: more than one identical `(from, to)` Sequence flow. */
+    DUPLICATE_FLOW,
+
+    /** V13: more than one Branch flow realises the same `branchId`. */
+    DUPLICATE_BRANCH_REALIZATION,
 }
 
 @JsonClassDescription("Structural validation issue raised against an extracted ProcessContract")
