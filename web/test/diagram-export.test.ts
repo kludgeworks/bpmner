@@ -17,7 +17,7 @@ function fixture(): {
 	serializer: DiagramSerializer
 	xml: HTMLElement
 	svg: HTMLElement
-	xmlCalls: number[]
+	xmlCalls: Array<{ format: boolean }>
 	svgCalls: number[]
 } {
 	const dom = new JSDOM('<a id="xml"></a><a id="svg"></a>')
@@ -25,7 +25,7 @@ function fixture(): {
 	const svg = dom.window.document.querySelector("#svg")
 	assert.ok(xml instanceof dom.window.HTMLElement)
 	assert.ok(svg instanceof dom.window.HTMLElement)
-	const xmlCalls: number[] = []
+	const xmlCalls: Array<{ format: boolean }> = []
 	const svgCalls: number[] = []
 	return {
 		xml,
@@ -33,8 +33,8 @@ function fixture(): {
 		xmlCalls,
 		svgCalls,
 		serializer: {
-			saveXML: async () => {
-				xmlCalls.push(1)
+			saveXML: async (options) => {
+				xmlCalls.push(options)
 				return { xml: "<definitions />" }
 			},
 			saveSVG: async () => {
@@ -47,7 +47,7 @@ function fixture(): {
 
 describe("diagram export", () => {
 	it("serializes current XML and SVG into matching downloads", async () => {
-		const { serializer } = fixture()
+		const { serializer, xmlCalls } = fixture()
 		const dom = new JSDOM("<!doctype html><body></body>")
 		const originalDocument = globalThis.document
 		const originalCreateObjectURL = URL.createObjectURL
@@ -77,6 +77,7 @@ describe("diagram export", () => {
 				blobs.map((blob) => blob.type),
 				["application/bpmn20-xml;charset=utf-8", "image/svg+xml;charset=utf-8"],
 			)
+			assert.deepEqual(xmlCalls, [{ format: true }])
 		} finally {
 			Object.assign(globalThis, { document: originalDocument })
 			URL.createObjectURL = originalCreateObjectURL

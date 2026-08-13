@@ -163,3 +163,8 @@
 .bpmn-icon-connection:before { content: '\e8dc'; } /* '' */
 .bpmn-icon-conditional-flow:before { content: '\e8e0'; } /* '' */
 .bpmn-icon-default-flow:before { content: '\e8e1'; } /* '' */
+.bpmn-icon-size-reset:before { content: '\e800'; }
+.bpmn-icon-plus:before { content: '\e802'; }
+.bpmn-icon-minus:before { content: '\e803'; }
+.bpmn-icon-download:before { content: '\e87f'; }
+.bpmn-icon-picture:before { content: '\e880'; }

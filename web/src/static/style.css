@@ -294,26 +294,6 @@ button:disabled:hover {
 	cursor: default;
 }
 
-.icon-size-reset::before {
-	content: "↺";
-}
-
-.icon-plus::before {
-	content: "+";
-}
-
-.icon-minus::before {
-	content: "−";
-}
-
-.icon-download::before {
-	content: "⇩";
-}
-
-.icon-picture::before {
-	content: "▧";
-}
-
 /* --------------------------------------------------------------------------
  * Stage rail
  * ------------------------------------------------------------------------ */

@@ -1354,6 +1354,11 @@
 .bpmn-icon-connection:before { content: '\e8dc'; } /* '' */
 .bpmn-icon-conditional-flow:before { content: '\e8e0'; } /* '' */
 .bpmn-icon-default-flow:before { content: '\e8e1'; } /* '' */
+.bpmn-icon-size-reset:before { content: '\e800'; }
+.bpmn-icon-plus:before { content: '\e802'; }
+.bpmn-icon-minus:before { content: '\e803'; }
+.bpmn-icon-download:before { content: '\e87f'; }
+.bpmn-icon-picture:before { content: '\e880'; }
 
 </style>
   <style>
@@ -1443,12 +1448,6 @@
       pointer-events: none;
     }
 
-    .icon-size-reset::before { content: "↺"; }
-    .icon-plus::before { content: "+"; }
-    .icon-minus::before { content: "−"; }
-    .icon-download::before { content: "⇩"; }
-    .icon-picture::before { content: "▧"; }
-    }
   </style>
 </head>
 <body>
@@ -1457,18 +1456,18 @@
 
   <div class="io-zoom-controls">
     <ul class="io-zoom-reset io-control io-control-list" aria-label="Diagram zoom controls">
-      <li><button id="zoom-reset-btn" type="button" title="Reset zoom" aria-label="Reset zoom"><span class="icon-size-reset" aria-hidden="true"></span></button></li>
+      <li><button id="zoom-reset-btn" type="button" title="Reset zoom" aria-label="Reset zoom"><span class="bpmn-icon-size-reset" aria-hidden="true"></span></button></li>
       <li><hr></li>
-      <li><button id="zoom-in-btn" type="button" title="Zoom in" aria-label="Zoom in"><span class="icon-plus" aria-hidden="true"></span></button></li>
+      <li><button id="zoom-in-btn" type="button" title="Zoom in" aria-label="Zoom in"><span class="bpmn-icon-plus" aria-hidden="true"></span></button></li>
       <li><hr></li>
-      <li><button id="zoom-out-btn" type="button" title="Zoom out" aria-label="Zoom out"><span class="icon-minus" aria-hidden="true"></span></button></li>
+      <li><button id="zoom-out-btn" type="button" title="Zoom out" aria-label="Zoom out"><span class="bpmn-icon-minus" aria-hidden="true"></span></button></li>
     </ul>
   </div>
 
   <div class="io-import-export">
     <ul class="io-export io-control io-control-list io-horizontal" aria-label="Diagram export actions">
-      <li><a id="download-diagram-btn" role="button" aria-disabled="true" title="Download as BPMN 2.0 file"><span class="icon-download" aria-hidden="true"></span></a></li>
-      <li><a id="download-svg-btn" role="button" aria-disabled="true" title="Download as SVG image"><span class="icon-picture" aria-hidden="true"></span></a></li>
+      <li><a id="download-diagram-btn" role="button" aria-disabled="true" title="Download as BPMN 2.0 file"><span class="bpmn-icon-download" aria-hidden="true"></span></a></li>
+      <li><a id="download-svg-btn" role="button" aria-disabled="true" title="Download as SVG image"><span class="bpmn-icon-picture" aria-hidden="true"></span></a></li>
     </ul>
   </div>
   <script type="application/json" id="bpmn-preview-xml">"__BPMN_XML_JSON__"</script>
