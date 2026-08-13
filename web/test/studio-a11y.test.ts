@@ -55,9 +55,18 @@ const STUDIO_BODY = `
     <main class="studio-canvas" aria-label="Diagram canvas">
       <div id="canvas"></div>
       <div id="canvas-status" class="canvas-status"></div>
-      <div class="canvas-controls" role="group" aria-label="Diagram zoom controls">
-        <button id="zoom-in-btn" class="canvas-control" type="button" aria-label="Zoom in">+</button>
-        <button id="zoom-out-btn" class="canvas-control" type="button" aria-label="Zoom out">−</button>
+      <div class="io-zoom-controls">
+        <ul class="io-zoom-reset io-control io-control-list" aria-label="Diagram zoom controls">
+          <li><button id="zoom-reset-btn" type="button" title="Reset zoom" aria-label="Reset zoom"><span class="icon-size-reset" aria-hidden="true"></span></button></li>
+          <li><button id="zoom-in-btn" type="button" title="Zoom in" aria-label="Zoom in"><span class="icon-plus" aria-hidden="true"></span></button></li>
+          <li><button id="zoom-out-btn" type="button" title="Zoom out" aria-label="Zoom out"><span class="icon-minus" aria-hidden="true"></span></button></li>
+        </ul>
+      </div>
+      <div class="io-import-export">
+        <ul class="io-export io-control io-control-list io-horizontal" aria-label="Diagram export actions">
+          <li><a id="download-diagram-btn" role="button" aria-disabled="true" title="Download as BPMN 2.0 file"><span class="icon-download" aria-hidden="true"></span></a></li>
+          <li><a id="download-svg-btn" role="button" aria-disabled="true" title="Download as SVG image"><span class="icon-picture" aria-hidden="true"></span></a></li>
+        </ul>
       </div>
     </main>
   </div>

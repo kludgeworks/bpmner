@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: MIT
  */
 
-import BpmnViewer from "bpmn-js"
+import BpmnModeler from "bpmn-js/lib/Modeler"
 import {
 	buildClarifyState,
 	buildResultBarState,
@@ -16,6 +16,12 @@ import {
 	setZoomControlsEnabled,
 } from "./canvas-viewport"
 import { renderClarifyForm } from "./clarify-form"
+import {
+	bindDiagramExports,
+	type DiagramExportControls,
+	downloadDiagram,
+	setDiagramExportControlsEnabled,
+} from "./diagram-export"
 import { type ResultBarState, renderResultBar } from "./result-bar"
 import { isTerminal, type RunUpdate } from "./run-update"
 import { importSnapshot } from "./snapshot-import"
@@ -24,7 +30,7 @@ import { initialStages, reduceStages, renderStageRail } from "./stage-rail"
 import { shouldClose } from "./stream-settle"
 import { populateVersionFooter } from "./version-footer"
 
-const viewer = new BpmnViewer({
+const modeler = new BpmnModeler({
 	container: "#canvas",
 })
 
@@ -49,8 +55,14 @@ const canvasStatus = getRequiredElement<HTMLElement>("canvas-status")
 const canvasEl = getRequiredElement<HTMLElement>("canvas")
 const zoomInBtn = getRequiredElement<HTMLButtonElement>("zoom-in-btn")
 const zoomOutBtn = getRequiredElement<HTMLButtonElement>("zoom-out-btn")
-const canvasViewport = viewer.get("canvas") as CanvasViewport
-bindZoomControls(canvasViewport, zoomInBtn, zoomOutBtn)
+const zoomResetBtn = getRequiredElement<HTMLButtonElement>("zoom-reset-btn")
+const canvasViewport = modeler.get("canvas") as CanvasViewport
+bindZoomControls(canvasViewport, zoomInBtn, zoomOutBtn, zoomResetBtn)
+const exportControls: DiagramExportControls = {
+	xml: getRequiredElement<HTMLElement>("download-diagram-btn"),
+	svg: getRequiredElement<HTMLElement>("download-svg-btn"),
+}
+bindDiagramExports(modeler, exportControls)
 // Optional version footer (absent → no-op).
 const versionFooterEl = document.getElementById("version-footer")
 if (versionFooterEl) {
@@ -62,6 +74,27 @@ let stages: Record<StageKey, ChipState> = initialStages()
 let resultBarState: ResultBarState = {}
 /** processId captured from POST response; used to build the BPMN download/preview URL. */
 let currentProcessId: string | null = null
+let canvasLoaded = false
+
+function setCanvasLoaded(loaded: boolean): void {
+	canvasLoaded = loaded
+	canvasEl.inert = !loaded
+	canvasEl.classList.toggle("canvas--disabled", !loaded)
+	setZoomControlsEnabled(zoomInBtn, zoomOutBtn, zoomResetBtn, loaded)
+	setDiagramExportControlsEnabled(exportControls, loaded)
+}
+
+setCanvasLoaded(false)
+
+resultBarEl.addEventListener("click", (event) => {
+	const link = (event.target as Element).closest("a.download-bpmn")
+	if (!link) return
+
+	event.preventDefault()
+	if (canvasLoaded) {
+		void downloadDiagram(modeler, "xml")
+	}
+})
 
 generateBtn.addEventListener("click", async () => {
 	const desc = descriptionEl.value.trim()
@@ -76,12 +109,13 @@ generateBtn.addEventListener("click", async () => {
 	resultBarState = {}
 	renderResultBar(resultBarEl, resultBarState)
 	currentProcessId = null
-	setZoomControlsEnabled(zoomInBtn, zoomOutBtn, false)
+
 	stages = initialStages()
 	renderStageRail(stageRailEl, stages)
 	canvasStatus.textContent = ""
 	canvasStatus.classList.add("hidden")
-	viewer.clear()
+	setCanvasLoaded(false)
+	modeler.clear()
 
 	if (eventSource) {
 		eventSource.close()
@@ -95,6 +129,7 @@ generateBtn.addEventListener("click", async () => {
 		})
 
 		if (!res.ok) {
+			setCanvasLoaded(false)
 			throw new Error(`Failed to start generation: ${res.statusText}`)
 		}
 
@@ -231,7 +266,7 @@ async function loadFinalDiagram(url: string): Promise<void> {
 		}
 		const xml = await res.text()
 		const outcome = await importSnapshot(
-			{ importXML: (x) => viewer.importXML(x) },
+			{ importXML: (x) => modeler.importXML(x) },
 			xml,
 		)
 
@@ -241,14 +276,16 @@ async function loadFinalDiagram(url: string): Promise<void> {
 			triggerCanvasEntrance()
 			requestAnimationFrame(() => {
 				fitInitialViewport(canvasViewport)
-				setZoomControlsEnabled(zoomInBtn, zoomOutBtn, true)
+				setCanvasLoaded(true)
 			})
 		} else {
+			setCanvasLoaded(false)
 			canvasStatus.textContent = "Diagram unavailable"
 			canvasStatus.classList.remove("hidden")
 		}
 	} catch (e: unknown) {
 		console.error("Failed to load the final diagram", e)
+		setCanvasLoaded(false)
 		canvasStatus.textContent = "Diagram unavailable"
 		canvasStatus.classList.remove("hidden")
 	}
