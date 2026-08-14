@@ -5,14 +5,20 @@
 
 package dev.groknull.bpmner.contract.internal.domain
 
+import dev.groknull.bpmner.bpmn.BoundaryEventKind
+import dev.groknull.bpmner.bpmn.MultiInstanceMode
+import dev.groknull.bpmner.contract.ActivityModifiers
 import dev.groknull.bpmner.contract.ConditionalBranch
 import dev.groknull.bpmner.contract.ContractActivity
 import dev.groknull.bpmner.contract.ContractActor
 import dev.groknull.bpmner.contract.ContractAssumption
+import dev.groknull.bpmner.contract.ContractBoundaryEvent
 import dev.groknull.bpmner.contract.ContractDecision
 import dev.groknull.bpmner.contract.ContractEndState
 import dev.groknull.bpmner.contract.ContractGatewayKind
 import dev.groknull.bpmner.contract.ContractIntermediateThrow
+import dev.groknull.bpmner.contract.ContractIteration
+import dev.groknull.bpmner.contract.ContractLoop
 import dev.groknull.bpmner.contract.ContractStart
 import dev.groknull.bpmner.contract.ContractTrigger
 import dev.groknull.bpmner.contract.DefaultBranch
@@ -215,6 +221,68 @@ class ProcessContractMarkdownRendererTest {
         assertTrue(
             markdown.contains("[NORMAL]"),
             "Normal end state must render the [NORMAL] marker for lossless prompt projection; got:\n$markdown",
+        )
+    }
+
+    @Test
+    fun `renders activity modifiers — boundary events, iteration, and loop`() {
+        // ADR-696-11: this markdown is now the corrective extraction prompt's payload, so a
+        // modifier the render hides is a modifier the model is told (wrongly) to preserve.
+        val sources = listOf("ev1")
+        val contract = ProcessContract(
+            id = "contract-modifiers",
+            processName = "Process with modifiers",
+            summary = "Exercises every activity modifier the renderer must not hide.",
+            start = ContractStart(ContractTrigger.None("Request arrives"), sources),
+            activities = listOf(
+                ContractActivity.Service(
+                    id = "act-charge",
+                    name = "Charge card",
+                    sourceIds = sources,
+                    modifiers = ActivityModifiers(
+                        boundaryEvents = listOf(
+                            ContractBoundaryEvent(
+                                kind = BoundaryEventKind.MESSAGE,
+                                label = "Order cancelled",
+                                detail = "order cancellation",
+                                id = "be-order-cancelled",
+                            ),
+                        ),
+                        loop = ContractLoop(testBefore = false, loopCondition = "payment not yet successful", loopMaximum = 3),
+                    ),
+                ),
+                ContractActivity.User(
+                    id = "act-review",
+                    name = "Review item",
+                    sourceIds = sources,
+                    modifiers = ActivityModifiers(
+                        iteration = ContractIteration(
+                            mode = MultiInstanceMode.SEQUENTIAL,
+                            collectionDescription = "each line item on the packing slip",
+                        ),
+                    ),
+                ),
+            ),
+            endStates = listOf(ContractEndState(id = "end-done", name = "Done", sourceIds = sources)),
+        )
+
+        val markdown = renderer.render(contract)
+
+        assertTrue(
+            "be-order-cancelled" in markdown,
+            "boundary event id must survive the render; got:\n$markdown",
+        )
+        assertTrue(
+            markdown.contains("[MESSAGE be-order-cancelled detail=\"order cancellation\"]"),
+            "boundary event kind and detail must survive the render; got:\n$markdown",
+        )
+        assertTrue(
+            markdown.contains("[LOOP testBefore=false condition=\"payment not yet successful\" max=3]"),
+            "loop must survive the render; got:\n$markdown",
+        )
+        assertTrue(
+            markdown.contains("[ITERATION mode=SEQUENTIAL over=\"each line item on the packing slip\"]"),
+            "iteration must survive the render; got:\n$markdown",
         )
     }
 

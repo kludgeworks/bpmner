@@ -47,7 +47,8 @@ private fun StringBuilder.appendActivities(contract: ProcessContract) {
         contract.activities.forEach { activity ->
             val actor = activity.actorId?.let { " (actor: $it)" }.orEmpty()
             val kindSuffix = activitySuffix(activity)
-            appendLine("- ${activity.id}: ${activity.name}$actor$kindSuffix")
+            val modifiers = modifiersSuffix(activity)
+            appendLine("- ${activity.id}: ${activity.name}$actor$kindSuffix$modifiers")
         }
     }
 }
@@ -140,6 +141,25 @@ private fun activitySuffix(activity: ContractActivity): String = when (activity)
     is ContractActivity.SubProcess ->
         " [SUB_PROCESS contains=\"${activity.containedActivityIds.joinToString(",")}\"]"
     is ContractActivity.CallActivity -> " [CALL_ACTIVITY calledElement=\"${activity.calledElement}\"]"
+}
+
+// Activity modifiers (iteration, boundary events, loop) rendered inline. This markdown is now
+// also the corrective extraction prompt's payload (ADR-696-11): the model is told to preserve
+// the previous contract's elements exactly, and a render that hides modifiers reads as a
+// contract that has none — inviting the model to drop them. One bracket per modifier, in the
+// same style activitySuffix and activity_kinds.jinja's worked examples already use.
+private fun modifiersSuffix(activity: ContractActivity): String = buildString {
+    activity.iteration?.let {
+        append(" [ITERATION mode=${it.mode} over=\"${it.collectionDescription}\"]")
+    }
+    activity.boundaryEvents.forEach { boundaryEvent ->
+        append(" [${boundaryEvent.kind} ${boundaryEvent.id} detail=\"${boundaryEvent.detail}\"]")
+    }
+    activity.loop?.let {
+        val condition = it.loopCondition?.let { c -> " condition=\"$c\"" }.orEmpty()
+        val max = it.loopMaximum?.let { m -> " max=$m" }.orEmpty()
+        append(" [LOOP testBefore=${it.testBefore}$condition$max]")
+    }
 }
 
 // End-state-kind suffix for the markdown line. Normal carries an explicit [NORMAL] marker
