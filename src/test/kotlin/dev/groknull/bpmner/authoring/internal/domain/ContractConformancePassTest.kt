@@ -23,6 +23,7 @@ import dev.groknull.bpmner.contract.ConditionalBranch
 import dev.groknull.bpmner.contract.ContractActivity
 import dev.groknull.bpmner.contract.ContractDecision
 import dev.groknull.bpmner.contract.ContractEndState
+import dev.groknull.bpmner.contract.ContractFlow
 import dev.groknull.bpmner.contract.ContractIntermediateThrow
 import dev.groknull.bpmner.contract.ContractIteration
 import dev.groknull.bpmner.contract.ContractLoop
@@ -83,35 +84,18 @@ class ContractConformancePassTest {
     }
 
     @Test
-    fun `skips when DefaultBranch nextRef matches no outbound edge`() {
+    fun `skips when a branch's flow target matches no outbound edge`() {
         val contract =
             creditTierContract().copy(
-                decisions =
-                listOf(
-                    ContractDecision(
-                        id = "Gateway_1",
-                        question = "Which credit tier?",
-                        branches =
-                        listOf(
-                            ConditionalBranch(
-                                id = "br-fast",
-                                label = "Fast-track",
-                                condition = "score >= 750",
-                                nextRef = "Task_fast",
-                            ),
-                            DefaultBranch(
-                                id = "br-manual",
-                                label = "Manual review",
-                                nextRef = "act-nonexistent",
-                            ),
-                        ),
-                        sourceIds = listOf("ev1"),
-                    ),
+                flows = listOf(
+                    ContractFlow.Sequence(from = "start", to = "Gateway_1"),
+                    ContractFlow.Branch(from = "Gateway_1", to = "Task_fast", branchId = "br-fast"),
+                    ContractFlow.Branch(from = "Gateway_1", to = "act-nonexistent", branchId = "br-manual"),
                 ),
             )
         val original = creditTierDefinition()
         val result = pass.conform(contract, original).definition
-        // No edge was changed because the nextRef didn't match any outbound target.
+        // No edge was changed because the flow target didn't match any outbound target.
         assertEquals(original, result)
     }
 
@@ -451,18 +435,23 @@ class ContractConformancePassTest {
                         id = "br-fast",
                         label = "Fast-track",
                         condition = "score >= 750",
-                        nextRef = "Task_fast",
                     ),
                     DefaultBranch(
                         id = "br-manual",
                         label = "Manual review",
-                        nextRef = "Task_manual",
                     ),
                 ),
                 sourceIds = listOf("ev1"),
             ),
         ),
         endStates = listOf(ContractEndState(id = "end-offer", name = "Offer generated", sourceIds = listOf("ev1"))),
+        flows = listOf(
+            ContractFlow.Sequence(from = "start", to = "Gateway_1"),
+            ContractFlow.Branch(from = "Gateway_1", to = "Task_fast", branchId = "br-fast"),
+            ContractFlow.Branch(from = "Gateway_1", to = "Task_manual", branchId = "br-manual"),
+            ContractFlow.Sequence(from = "Task_fast", to = "end-offer"),
+            ContractFlow.Sequence(from = "Task_manual", to = "end-offer"),
+        ),
     )
 
     private fun creditTierDefinition(): BpmnDefinition = BpmnDefinition(

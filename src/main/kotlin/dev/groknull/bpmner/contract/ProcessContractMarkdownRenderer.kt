@@ -24,6 +24,7 @@ class ProcessContractMarkdownRenderer {
         appendDecisions(contract)
         appendIntermediateThrows(contract)
         appendEndStates(contract)
+        appendFlows(contract)
         appendAssumptions(contract)
     }
 }
@@ -60,8 +61,7 @@ private fun StringBuilder.appendDecisions(contract: ProcessContract) {
             appendLine("- ${decision.id}: ${decision.question}$kindSuffix")
             decision.branches.forEach { branch ->
                 val suffix = branchSuffix(branch)
-                val next = branchNextSuffix(branch)
-                appendLine("  - ${branch.id} → \"${branch.label}\"$suffix$next")
+                appendLine("  - ${branch.id} → \"${branch.label}\"$suffix")
             }
         }
     }
@@ -87,6 +87,18 @@ private fun StringBuilder.appendIntermediateThrows(contract: ProcessContract) {
     }
 }
 
+// The total topology (ADR-696-1): every flow the contract states, feeding the outline model
+// that still consumes this markdown projection.
+private fun StringBuilder.appendFlows(contract: ProcessContract) {
+    if (contract.flows.isNotEmpty()) {
+        appendLine()
+        appendLine("## Flows")
+        contract.flows.forEach { flow ->
+            appendLine("- ${flow.from} → ${flow.to}${flowSuffix(flow)}")
+        }
+    }
+}
+
 private fun StringBuilder.appendAssumptions(contract: ProcessContract) {
     if (contract.assumptions.isNotEmpty()) {
         appendLine()
@@ -106,7 +118,10 @@ private fun branchSuffix(branch: ContractBranch): String = when (branch) {
     is EventGatewayBranch -> " on ${branch.triggerKind} \"${branch.triggerDetail}\""
 }
 
-private fun branchNextSuffix(branch: ContractBranch): String = branch.nextRef?.let { " → $it" }.orEmpty()
+private fun flowSuffix(flow: ContractFlow): String = when (flow) {
+    is ContractFlow.Branch -> " [branch: ${flow.branchId}]"
+    is ContractFlow.Sequence -> ""
+}
 
 // Activity-kind suffix for the markdown line. Service carries an explicit [SERVICE] marker
 // because the markdown doubles as a generation-critical LLM prompt input; without it the

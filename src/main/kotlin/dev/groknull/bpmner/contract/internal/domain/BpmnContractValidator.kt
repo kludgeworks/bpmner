@@ -40,15 +40,14 @@ internal class BpmnContractValidator {
                 validateTraceability(contract) +
                 validateSubProcesses(contract) +
                 validateCallActivities(contract) +
-                validateReferences(contract) +
                 validateFlows(contract)
 
         return ContractValidationReport(issues = issues)
     }
 
     // V1-V13 (ADR-696-1): total-topology validation over `flows`, decidable and total — no
-    // reachability heuristic, no "probably meant". `nextRef`/validateReferences above is V1's
-    // strictly weaker predecessor; stage 696-5 commit 3 deletes it once this is proven out.
+    // reachability heuristic, no "probably meant". Replaces the deleted branch/boundary-event
+    // target field and its validateReferences checker; V1 is its strictly stronger successor.
     private fun validateFlows(contract: ProcessContract): List<ContractValidationIssue> = buildList {
         addAll(validateFlowEndpoints(contract)) // V1, V2
         addAll(validateDegreeConstraints(contract)) // V3, V4, V5, V6
@@ -406,49 +405,6 @@ internal class BpmnContractValidator {
             }
         }
         return visited
-    }
-
-    // R5's referential-integrity backstop (ADR-685-26): every nextRef — branch routing and
-    // boundary-event escape routing alike — must resolve to a declared contract element,
-    // following the SUBPROCESS_MEMBER_NOT_FOUND shape. A dangling nextRef here is the same
-    // defect regardless of which field carried it, so both sites share one code.
-    private fun validateReferences(contract: ProcessContract): List<ContractValidationIssue> = buildList {
-        val referenceableIds =
-            (
-                contract.activities.map { it.id } + contract.decisions.map { it.id } +
-                    contract.endStates.map { it.id } + contract.intermediateThrows.map { it.id }
-                ).toSet()
-
-        contract.decisions.forEach { decision ->
-            decision.branches.forEach { branch ->
-                val ref = branch.nextRef ?: return@forEach
-                if (ref !in referenceableIds) {
-                    add(
-                        errorIssue(
-                            code = ContractValidationCode.NEXT_REF_NOT_FOUND,
-                            message = "branch '${branch.id}' nextRef='$ref' does not resolve to any activity," +
-                                " decision, end state, or intermediate throw declared in the contract",
-                            targetId = branch.id,
-                        ),
-                    )
-                }
-            }
-        }
-        contract.activities.forEach { activity ->
-            activity.boundaryEvents.forEach { boundaryEvent ->
-                if (boundaryEvent.nextRef !in referenceableIds) {
-                    add(
-                        errorIssue(
-                            code = ContractValidationCode.NEXT_REF_NOT_FOUND,
-                            message = "activity '${activity.id}' boundary event nextRef='${boundaryEvent.nextRef}'" +
-                                " does not resolve to any activity, decision, end state, or intermediate throw" +
-                                " declared in the contract",
-                            targetId = activity.id,
-                        ),
-                    )
-                }
-            }
-        }
     }
 
     // A call activity delegates to a separately-defined process named by `calledElement`. That

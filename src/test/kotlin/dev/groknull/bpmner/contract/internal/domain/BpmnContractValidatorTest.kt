@@ -5,12 +5,9 @@
 
 package dev.groknull.bpmner.contract.internal.domain
 
-import dev.groknull.bpmner.bpmn.BoundaryEventKind
-import dev.groknull.bpmner.contract.ActivityModifiers
 import dev.groknull.bpmner.contract.ConditionalBranch
 import dev.groknull.bpmner.contract.ContractActivity
 import dev.groknull.bpmner.contract.ContractAssumption
-import dev.groknull.bpmner.contract.ContractBoundaryEvent
 import dev.groknull.bpmner.contract.ContractDecision
 import dev.groknull.bpmner.contract.ContractEndState
 import dev.groknull.bpmner.contract.ContractFlow
@@ -584,79 +581,161 @@ class BpmnContractValidatorTest {
         assertFalse(codes.contains(ContractValidationCode.SUBPROCESS_MEMBER_SHARED))
     }
 
+    // The four `nextRef`-hallucination/resolution tests formerly here tested a field and a code
+    // that no longer exist (ADR-696-1, stage 696-5 commit 3) — V1-V13's own tests, below, cover
+    // the successor behaviour.
+
     @Test
-    fun `a branch nextRef pointing at a hallucinated id fails with NEXT_REF_NOT_FOUND`() {
-        val branching = branchingContract()
-        val decision = branching.decisions.single()
-        val contract = branching.copy(
-            decisions = listOf(
-                decision.copy(
-                    branches = decision.branches.map {
-                        val branch = it as ConditionalBranch
-                        if (branch.id == "branch-yes") branch.copy(nextRef = "act-hallucinated") else branch
-                    },
-                ),
-            ),
+    fun `V1 - a flow endpoint that resolves to no declared element fails FLOW_ENDPOINT_NOT_FOUND`() {
+        val contract = linearContract().copy(
+            flows = linearContract().flows + ContractFlow.Sequence(from = "activity-review", to = "act-hallucinated"),
         )
-        val report = validator.validate(contract)
-        val issue = report.issues.single { it.code == ContractValidationCode.NEXT_REF_NOT_FOUND }
-        assertEquals("branch-yes", issue.targetId)
+        val issue = validator.validate(contract).issues.single { it.code == ContractValidationCode.FLOW_ENDPOINT_NOT_FOUND }
+        assertEquals("act-hallucinated", issue.targetId)
     }
 
     @Test
-    fun `a boundary event nextRef pointing at a hallucinated id fails with NEXT_REF_NOT_FOUND`() {
+    fun `V2 - a flow from an element to itself fails FLOW_SELF_LOOP`() {
+        val contract = linearContract().copy(
+            flows = linearContract().flows + ContractFlow.Sequence(from = "activity-review", to = "activity-review"),
+        )
+        assertTrue(validator.validate(contract).issues.any { it.code == ContractValidationCode.FLOW_SELF_LOOP })
+    }
+
+    @Test
+    fun `V7 - a declared but unreachable activity fails ELEMENT_UNREACHABLE_FROM_START, naming it`() {
         val linear = linearContract()
-        val activity = linear.activities.first()
         val contract = linear.copy(
-            activities = listOf(
-                (activity as ContractActivity.Service).copy(
-                    modifiers = ActivityModifiers(
-                        boundaryEvents = listOf(
-                            ContractBoundaryEvent(
-                                kind = BoundaryEventKind.TIMER,
-                                label = "24h timeout",
-                                detail = "PT24H",
-                                nextRef = "act-hallucinated",
-                            ),
-                        ),
-                    ),
-                ),
-                linear.activities[1],
+            activities = linear.activities + ContractActivity(
+                id = "act-orphan",
+                name = "Never wired in",
+                sourceIds = sources,
             ),
         )
-        val report = validator.validate(contract)
-        val issue = report.issues.single { it.code == ContractValidationCode.NEXT_REF_NOT_FOUND }
-        assertEquals(activity.id, issue.targetId)
+        val issue =
+            validator.validate(contract).issues.single { it.code == ContractValidationCode.ELEMENT_UNREACHABLE_FROM_START }
+        assertEquals("act-orphan", issue.targetId)
     }
 
     @Test
-    fun `a contract whose every nextRef resolves stays valid`() {
+    fun `V8 - a declared activity with no path to any end state fails ELEMENT_CANNOT_REACH_END_STATE`() {
+        val linear = linearContract()
+        val contract = linear.copy(
+            activities = linear.activities + ContractActivity(
+                id = "act-dead-end",
+                name = "Leads nowhere",
+                sourceIds = sources,
+            ),
+            flows = linear.flows + ContractFlow.Sequence(from = "activity-review", to = "act-dead-end"),
+        )
+        assertTrue(
+            validator.validate(contract).issues.any {
+                it.code == ContractValidationCode.ELEMENT_CANNOT_REACH_END_STATE && it.targetId == "act-dead-end"
+            },
+        )
+    }
+
+    @Test
+    fun `V9 - a decision branch with no realising flow fails DECISION_BRANCH_NOT_REALIZED`() {
         val branching = branchingContract()
         val decision = branching.decisions.single()
+        val extraBranch = ConditionalBranch(id = "branch-extra", label = "Extra", condition = "x")
+        val contract = branching.copy(decisions = listOf(decision.copy(branches = decision.branches + extraBranch)))
+        val issue =
+            validator.validate(contract).issues.single { it.code == ContractValidationCode.DECISION_BRANCH_NOT_REALIZED }
+        assertEquals("branch-extra", issue.targetId)
+    }
+
+    @Test
+    fun `V10 - a Sequence flow from a decision fails SEQUENCE_FLOW_FROM_DECISION`() {
+        val branching = branchingContract()
         val contract = branching.copy(
-            decisions = listOf(
-                decision.copy(
-                    branches = decision.branches.mapIndexed { index, branch ->
-                        (branch as ConditionalBranch).copy(
-                            nextRef = if (index == 0) "end-approved" else "activity-review",
-                        )
-                    },
-                ),
-            ),
+            flows = branching.flows + ContractFlow.Sequence(from = "decision-eligible", to = "end-approved"),
         )
-        val report = validator.validate(contract)
-        assertFalse(
-            report.issues.any { it.code == ContractValidationCode.NEXT_REF_NOT_FOUND },
-            "got: ${report.issues}",
+        assertTrue(
+            validator.validate(contract).issues.any { it.code == ContractValidationCode.SEQUENCE_FLOW_FROM_DECISION },
         )
     }
 
     @Test
-    fun `a null branch nextRef is not an error`() {
-        // Routing left to the model is legal — GATEWAY_BRANCH_COUNT_INSUFFICIENT's discriminator
-        // depends on being able to tell the difference between "not resolved" and "not stated".
-        val report = validator.validate(branchingContract())
-        assertFalse(report.issues.any { it.code == ContractValidationCode.NEXT_REF_NOT_FOUND })
+    fun `V11 - a flow reaching a subprocess member directly fails FLOW_CROSSES_SUBPROCESS_BOUNDARY`() {
+        val base = linearContract()
+        val contract = base.copy(
+            activities = base.activities + ContractActivity.SubProcess(
+                id = "sub-assess",
+                name = "Assess",
+                containedActivityIds = listOf("activity-review"),
+                sourceIds = sources,
+            ),
+            flows = listOf(
+                ContractFlow.Sequence(from = "start", to = "activity-receive"),
+                ContractFlow.Sequence(from = "activity-receive", to = "activity-review"),
+                ContractFlow.Sequence(from = "activity-review", to = "end-approved"),
+            ),
+        )
+        assertTrue(
+            validator.validate(contract).issues.any { it.code == ContractValidationCode.FLOW_CROSSES_SUBPROCESS_BOUNDARY },
+        )
+    }
+
+    @Test
+    fun `V12 - a subprocess member unreachable from any entry point fails SUBPROCESS_MEMBER_UNREACHABLE`() {
+        // A closed 2-cycle with no edge in from the subprocess's real entry point: neither
+        // act-cycle-a nor act-cycle-b has-no-internal-predecessor (each is the other's
+        // predecessor), so neither counts as an entry point, and both are unreachable from the
+        // one that does (activity-receive).
+        val base = linearContract()
+        val contract = base.copy(
+            activities = base.activities + listOf(
+                ContractActivity(id = "act-cycle-a", name = "Cycle A", sourceIds = sources),
+                ContractActivity(id = "act-cycle-b", name = "Cycle B", sourceIds = sources),
+                ContractActivity.SubProcess(
+                    id = "sub-assess",
+                    name = "Assess",
+                    containedActivityIds = listOf("activity-receive", "activity-review", "act-cycle-a", "act-cycle-b"),
+                    sourceIds = sources,
+                ),
+            ),
+            flows = listOf(
+                ContractFlow.Sequence(from = "start", to = "sub-assess"),
+                ContractFlow.Sequence(from = "activity-receive", to = "activity-review"),
+                ContractFlow.Sequence(from = "act-cycle-a", to = "act-cycle-b"),
+                ContractFlow.Sequence(from = "act-cycle-b", to = "act-cycle-a"),
+                ContractFlow.Sequence(from = "sub-assess", to = "end-approved"),
+            ),
+        )
+        val report = validator.validate(contract)
+        val unreachable = report.issues.filter { it.code == ContractValidationCode.SUBPROCESS_MEMBER_UNREACHABLE }
+        assertEquals(setOf("act-cycle-a", "act-cycle-b"), unreachable.map { it.targetId }.toSet())
+    }
+
+    @Test
+    fun `V13 - a decision with two branches to the same target passes (per-kind uniqueness)`() {
+        val branching = branchingContract()
+        val decision = branching.decisions.single()
+        val secondBranch = ConditionalBranch(id = "branch-also-approved", label = "Also approved", condition = "y")
+        val contract = branching.copy(
+            decisions = listOf(decision.copy(branches = decision.branches + secondBranch)),
+            flows = branching.flows + ContractFlow.Branch(
+                from = "decision-eligible",
+                to = "end-approved",
+                branchId = "branch-also-approved",
+            ),
+        )
+        assertFalse(
+            validator.validate(contract).issues.any {
+                it.code == ContractValidationCode.DUPLICATE_FLOW || it.code == ContractValidationCode.DUPLICATE_BRANCH_REALIZATION
+            },
+        )
+    }
+
+    @Test
+    fun `V13 - two identical Sequence flows fail DUPLICATE_FLOW`() {
+        val linear = linearContract()
+        val contract = linear.copy(
+            flows = linear.flows + ContractFlow.Sequence(from = "activity-receive", to = "activity-review"),
+        )
+        assertTrue(validator.validate(contract).issues.any { it.code == ContractValidationCode.DUPLICATE_FLOW })
     }
 
     private fun linearContract(): ProcessContract = ProcessContract(

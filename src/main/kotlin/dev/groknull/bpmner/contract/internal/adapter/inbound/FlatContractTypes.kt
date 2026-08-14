@@ -165,7 +165,8 @@ public data class FlatContractIteration(
 
 @JsonClassDescription(
     "A boundary event on an activity: a timeout (TIMER), caught business error (ERROR), or raised " +
-        "escalation (ESCALATION) that interrupts the activity and routes the flow to `nextRef`.",
+        "escalation (ESCALATION) that interrupts the activity. Its outgoing flow is stated in " +
+        "`flows`, like any other element.",
 )
 public data class FlatContractBoundaryEvent(
     @get:JsonPropertyDescription(
@@ -177,12 +178,6 @@ public data class FlatContractBoundaryEvent(
     @field:Size(max = 200)
     @get:JsonPropertyDescription("Short label for the event, e.g. \"24h timeout\" or \"chargeback raised\".")
     val label: String,
-    @field:NotBlank
-    @field:Size(max = 200)
-    @get:JsonPropertyDescription(
-        "Id of the activity, decision, or end state the exception path routes to when this event fires.",
-    )
-    val nextRef: String,
     @field:Size(max = 200)
     @get:JsonPropertyDescription(
         "Optional kind-specific detail: an ISO-8601 duration for TIMER (e.g. \"PT24H\"), a business " +
@@ -336,12 +331,6 @@ public data class FlatContractBranch(
             "message / signal name for MESSAGE / SIGNAL.",
     )
     val triggerDetail: String? = null,
-    @field:Size(max = 200)
-    @get:JsonPropertyDescription(
-        "Optional id of the next activity, decision, or end state this branch leads to. Omit for " +
-            "sequential continuation. Use to express loop back-edges and multi-exit topologies.",
-    )
-    val nextRef: String? = null,
 )
 
 @JsonClassDescription(

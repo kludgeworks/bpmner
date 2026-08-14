@@ -89,12 +89,10 @@ class ProcessContractMarkdownRendererTest {
                                 id = "b-fast",
                                 label = "Fast-track",
                                 condition = "score >= 750",
-                                nextRef = "act-fast",
                             ),
                             DefaultBranch(
                                 id = "b-manual",
                                 label = "Manual review",
-                                nextRef = "act-manual",
                             ),
                         ),
                         sourceIds = sources,
@@ -118,12 +116,12 @@ class ProcessContractMarkdownRendererTest {
 
         // Default branch carries the [default] marker.
         assertTrue(
-            markdown.contains("- b-manual → \"Manual review\" [default] → act-manual"),
+            markdown.contains("- b-manual → \"Manual review\" [default]"),
             "default branch should render the [default] marker; got:\n$markdown",
         )
         // Conditional branch keeps its existing `if "..."` rendering.
         assertTrue(
-            markdown.contains("- b-fast → \"Fast-track\" if \"score >= 750\" → act-fast"),
+            markdown.contains("- b-fast → \"Fast-track\" if \"score >= 750\""),
             "conditional branch should render its condition; got:\n$markdown",
         )
         // Unconditional (parallel) branches have neither suffix.

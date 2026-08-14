@@ -440,23 +440,6 @@ class BpmnContractFidelityCheckerTest {
     }
 
     @Test
-    fun `boundary event not routed to nextRef flagged`() {
-        val report =
-            checker.checkDetailed(
-                boundaryEventContract(timerBoundaryEvent()),
-                boundaryEventDefinition(
-                    boundary = timerBoundaryEventNode(),
-                    boundaryFlow = BpmnEdge("F3", "Boundary_1", "end-done"),
-                ),
-            )
-
-        assertTrue(
-            report.issues.any { it.code == BpmnFidelityCode.ACTIVITY_BOUNDARY_EVENT_MISMATCH },
-            "expected ACTIVITY_BOUNDARY_EVENT_MISMATCH for the misrouted escape path; got: ${report.issues.map { it.code }}",
-        )
-    }
-
-    @Test
     fun `matching boundary event passes`() {
         val report =
             checker.checkDetailed(
@@ -473,7 +456,6 @@ class BpmnContractFidelityCheckerTest {
     private fun timerBoundaryEvent(): ContractBoundaryEvent = ContractBoundaryEvent(
         kind = BoundaryEventKind.TIMER,
         label = "60s timeout",
-        nextRef = "end-timeout",
         detail = "PT60S",
     )
 
@@ -522,74 +504,11 @@ class BpmnContractFidelityCheckerTest {
         },
     )
 
-    @Test
-    fun `missing branch flow flagged as BRANCH_FLOW_MISSING`() {
-        // Definition lacks the back-edge from dec-validate to act-strategy-1
-        val report = checker.checkDetailed(repairLoopContract(), repairLoopDefinitionFlattened())
-
-        assertFalse(report.isValid)
-        assertTrue(
-            report.issues.any { it.code == BpmnFidelityCode.BRANCH_FLOW_MISSING },
-            "expected BRANCH_FLOW_MISSING; got: ${report.issues.map { it.code }}",
-        )
-    }
-
-    @Test
-    fun `branch flow through unnamed converging exclusive join passes`() {
-        val report =
-            checker.checkDetailed(
-                skipForwardContract(),
-                skipForwardViaJoinDefinition(join = BpmnExclusiveGateway("Gateway_join", name = null)),
-            )
-        assertTrue(
-            report.isValid,
-            "transparent exclusive join should not trip BRANCH_FLOW_MISSING; got: ${report.issues}",
-        )
-    }
-
-    @Test
-    fun `branch flow through unnamed converging parallel join passes`() {
-        val report =
-            checker.checkDetailed(
-                skipForwardContract(),
-                skipForwardViaJoinDefinition(join = BpmnParallelGateway("Gateway_join", name = null)),
-            )
-        assertTrue(
-            report.isValid,
-            "transparent parallel join should not trip BRANCH_FLOW_MISSING; got: ${report.issues}",
-        )
-    }
-
-    @Test
-    fun `branch flow through named gateway still flagged as BRANCH_FLOW_MISSING`() {
-        // A named gateway carries semantic content — it's not transparent. The walk must stop there.
-        val report =
-            checker.checkDetailed(
-                skipForwardContract(),
-                skipForwardViaJoinDefinition(join = BpmnExclusiveGateway("Gateway_named", name = "Re-check?")),
-            )
-        assertFalse(report.isValid)
-        assertTrue(
-            report.issues.any { it.code == BpmnFidelityCode.BRANCH_FLOW_MISSING },
-            "expected BRANCH_FLOW_MISSING for named intermediate gateway; got: ${report.issues.map { it.code }}",
-        )
-    }
-
-    @Test
-    fun `branch flow through gateway with multiple outbounds still flagged as BRANCH_FLOW_MISSING`() {
-        // A converging gateway that fans out again is a fork, not a transparent merge.
-        val report = checker.checkDetailed(skipForwardContract(), skipForwardViaMultiOutboundJoinDefinition())
-        assertFalse(report.isValid)
-        assertTrue(report.issues.any { it.code == BpmnFidelityCode.BRANCH_FLOW_MISSING })
-    }
-
-    @Test
-    fun `branch flow through user task still flagged as BRANCH_FLOW_MISSING`() {
-        // Only gateways qualify as transparent today; tasks must never be skipped over.
-        val report = checker.checkDetailed(skipForwardContract(), skipForwardViaTaskDefinition())
-        assertFalse(report.isValid)
-        assertTrue(report.issues.any { it.code == BpmnFidelityCode.BRANCH_FLOW_MISSING })
-    }
+    // The BRANCH_FLOW_MISSING and BRANCH_NEXT_REF_UNRESOLVED tests formerly here (missing branch
+    // flow, transparent-join walk in its three shapes, named/multi-outbound/task obstructions,
+    // and nextRef resolution) tested `verifyBranchTargetsAndFlows`, deleted whole with
+    // `ContractBranch.nextRef` (ADR-696-1, stage 696-5) — the contract now states every branch's
+    // target directly in `flows`, so there is nothing left to walk to or resolve at this stage.
 
     @Test
     fun `gateway with too few outbound flows flagged as GATEWAY_BRANCH_COUNT_INSUFFICIENT`() {
@@ -598,17 +517,6 @@ class BpmnContractFidelityCheckerTest {
 
         assertFalse(report.isValid)
         assertTrue(report.issues.any { it.code == BpmnFidelityCode.GATEWAY_BRANCH_COUNT_INSUFFICIENT })
-    }
-
-    @Test
-    fun `nextRef pointing at unknown node flagged as BRANCH_NEXT_REF_UNRESOLVED`() {
-        val contract = unresolvedRefContract()
-        val definition = unresolvedRefDefinition()
-
-        val report = checker.checkDetailed(contract, definition)
-
-        assertFalse(report.isValid)
-        assertTrue(report.issues.any { it.code == BpmnFidelityCode.BRANCH_NEXT_REF_UNRESOLVED })
     }
 
     @Test
@@ -957,9 +865,10 @@ class BpmnContractFidelityCheckerTest {
 
     @Test
     @Suppress("LongMethod") // inline definition fixture stays cohesive; splitting hides assertions
-    fun `forward-skip branch with a real edge does NOT trigger a false back-edge flag`() {
-        // Regression test for the pre-rewrite fragile heuristic: a forward-skip branch whose
-        // target is realised by a real sequence flow must NOT be flagged.
+    fun `a decision whose branches converge through an intervening activity is valid`() {
+        // This shape — a branch's target reached via real intervening work rather than
+        // directly — is exactly what #696 was filed over: the deleted nextRef-based branch-flow
+        // check used to misread it as a dropped edge. No such check remains to misfire.
         val sources = listOf("ev1")
         val contract =
             ProcessContract(
@@ -984,13 +893,11 @@ class BpmnContractFidelityCheckerTest {
                                 id = "br-skip",
                                 label = "Yes",
                                 condition = "skip",
-                                nextRef = "act-skip-target",
                             ),
                             ConditionalBranch(
                                 id = "br-detailed",
                                 label = "No",
                                 condition = "detailed",
-                                nextRef = "act-detailed-path",
                             ),
                         ),
                         sourceIds = sources,
@@ -1111,71 +1018,6 @@ class BpmnContractFidelityCheckerTest {
         assertTrue(
             countIssues.none { it.contractElementId == "dec-2" },
             "dec-2 has 3 outbound for 3 branches and must not be flagged; got: $countIssues",
-        )
-    }
-
-    @Suppress("LongMethod")
-    @Test
-    fun `separate decisions may converge directly on the same activity`() {
-        val sources = listOf("ev1")
-        val contract =
-            ProcessContract(
-                id = "c-converging",
-                processName = "Payment processing",
-                summary = "Two payment decisions can mark an order paid",
-                start = ContractStart(ContractTrigger.None("payment submitted"), sources),
-                activities = listOf(
-                    ContractActivity.User(
-                        id = "act-mark-order-paid",
-                        name = "Mark order paid",
-                        sourceIds = sources,
-                    ),
-                ),
-                decisions = listOf(
-                    ContractDecision(
-                        id = "dec-payment-received",
-                        question = "Was payment received?",
-                        branches = listOf(
-                            ConditionalBranch("br-received", "Received", "received", "act-mark-order-paid"),
-                            ConditionalBranch("br-verify", "Verify", "verify", "dec-payment-verified"),
-                        ),
-                        sourceIds = sources,
-                    ),
-                    ContractDecision(
-                        id = "dec-payment-verified",
-                        question = "Was payment verified?",
-                        branches = listOf(
-                            ConditionalBranch("br-verified", "Verified", "verified", "act-mark-order-paid"),
-                            ConditionalBranch("br-rejected", "Rejected", "rejected", "end-rejected"),
-                        ),
-                        sourceIds = sources,
-                    ),
-                ),
-                endStates = listOf(ContractEndState(id = "end-rejected", name = "Rejected", sourceIds = sources)),
-            )
-        val definition =
-            BpmnDefinition(
-                processId = "P",
-                processName = "Payment processing",
-                nodes = listOf(
-                    BpmnExclusiveGateway("dec-payment-received", "Was payment received?"),
-                    BpmnExclusiveGateway("dec-payment-verified", "Was payment verified?"),
-                    BpmnUserTask("act-mark-order-paid", "Mark order paid"),
-                    BpmnEndEvent("end-rejected", "Rejected"),
-                ),
-                sequences = listOf(
-                    BpmnEdge("F1", "dec-payment-received", "act-mark-order-paid"),
-                    BpmnEdge("F2", "dec-payment-received", "dec-payment-verified"),
-                    BpmnEdge("F3", "dec-payment-verified", "act-mark-order-paid"),
-                    BpmnEdge("F4", "dec-payment-verified", "end-rejected"),
-                ),
-            )
-
-        val report = checker.checkDetailed(contract, definition)
-
-        assertTrue(
-            report.issues.none { it.code == BpmnFidelityCode.BRANCH_FLOW_MISSING },
-            "expected both decisions to reach act-mark-order-paid; got: ${report.issues}",
         )
     }
 
@@ -1375,9 +1217,9 @@ private fun repairLoopContract(): ProcessContract {
                 question = "Did validation pass?",
                 branches =
                 listOf(
-                    ConditionalBranch(id = "br-pass", label = "Pass", condition = "pass", nextRef = "end-success"),
-                    ConditionalBranch(id = "br-fail", label = "Fail", condition = "fail", nextRef = "end-failed"),
-                    ConditionalBranch(id = "br-retry", label = "Retry", condition = "retry", nextRef = "act-strategy-1"),
+                    ConditionalBranch(id = "br-pass", label = "Pass", condition = "pass"),
+                    ConditionalBranch(id = "br-fail", label = "Fail", condition = "fail"),
+                    ConditionalBranch(id = "br-retry", label = "Retry", condition = "retry"),
                 ),
                 sourceIds = sources,
             ),
@@ -1415,11 +1257,6 @@ private fun repairLoopDefinitionWithBackEdge(): BpmnDefinition = BpmnDefinition(
     ),
 )
 
-private fun repairLoopDefinitionFlattened(): BpmnDefinition {
-    val withBack = repairLoopDefinitionWithBackEdge()
-    return withBack.copy(sequences = withBack.sequences.filterNot { it.id == "F7" })
-}
-
 private fun repairLoopDefinitionWithCollapsedBranches(): BpmnDefinition {
     val withBack = repairLoopDefinitionWithBackEdge()
     return withBack.copy(sequences = withBack.sequences.filterNot { it.id == "F6" || it.id == "F7" })
@@ -1445,9 +1282,9 @@ private fun parallelForkContract(): ProcessContract {
                 question = "Run all preparation tracks",
                 branches =
                 listOf(
-                    UnconditionalBranch(id = "br-it", label = "IT", nextRef = "act-prep-it"),
-                    UnconditionalBranch(id = "br-fac", label = "Facilities", nextRef = "act-prep-facilities"),
-                    UnconditionalBranch(id = "br-mgr", label = "Manager", nextRef = "act-prep-manager"),
+                    UnconditionalBranch(id = "br-it", label = "IT"),
+                    UnconditionalBranch(id = "br-fac", label = "Facilities"),
+                    UnconditionalBranch(id = "br-mgr", label = "Manager"),
                 ),
                 kind = ContractGatewayKind.PARALLEL,
                 sourceIds = sources,
@@ -1504,7 +1341,7 @@ private fun unresolvedRefContract() = ProcessContract(
             question = "Choose?",
             branches =
             listOf(
-                ConditionalBranch(id = "br-1", label = "Option 1", condition = "1", nextRef = "act-nonexistent"),
+                ConditionalBranch(id = "br-1", label = "Option 1", condition = "1"),
                 DefaultBranch(id = "br-2", label = "Option 2"),
             ),
             sourceIds = listOf("ev1"),
@@ -1526,127 +1363,6 @@ private fun unresolvedRefDefinition() = BpmnDefinition(
     listOf(
         BpmnEdge(id = "F1", sourceRef = "StartEvent_1", targetRef = "act-a"),
         BpmnEdge(id = "F2", sourceRef = "act-a", targetRef = "end-done"),
-    ),
-)
-
-/**
- * Contract for the transparent-join reachability tests.
- *
- * `dec-route` has two CONDITIONAL branches; `br-fast` resolves directly, `br-converge` goes
- * through an intermediate node before reaching its `nextRef`. Each `skipForwardVia*` fixture
- * varies the intermediate node's kind to exercise the transparency rule.
- */
-private fun skipForwardContract(): ProcessContract {
-    val sources = listOf("ev1")
-    return ProcessContract(
-        id = "c-skip",
-        processName = "Skip via join",
-        summary = "Two branches converge to the same downstream activity.",
-        start = ContractStart(ContractTrigger.None("Request received"), sources),
-        activities =
-        listOf(
-            ContractActivity.User(id = "act-fast-target", name = "Fast", sourceIds = sources),
-            ContractActivity.User(id = "act-converge-target", name = "Converge", sourceIds = sources),
-        ),
-        decisions =
-        listOf(
-            ContractDecision(
-                id = "dec-route",
-                question = "Which route?",
-                branches =
-                listOf(
-                    ConditionalBranch(
-                        id = "br-fast",
-                        label = "Fast",
-                        condition = "fast",
-                        nextRef = "act-fast-target",
-                    ),
-                    ConditionalBranch(
-                        id = "br-converge",
-                        label = "Converge",
-                        condition = "converge",
-                        nextRef = "act-converge-target",
-                    ),
-                ),
-                sourceIds = sources,
-            ),
-        ),
-        endStates = listOf(ContractEndState(id = "end-done", name = "Done", sourceIds = sources)),
-    )
-}
-
-/** `dec-route → [intermediate] → act-converge-target`; the intermediate node is supplied by the caller. */
-private fun skipForwardViaJoinDefinition(join: dev.groknull.bpmner.bpmn.BpmnNode): BpmnDefinition = BpmnDefinition(
-    processId = "P",
-    processName = "Skip via join",
-    nodes =
-    listOf(
-        BpmnStartEvent(id = "StartEvent_1", name = "Start"),
-        BpmnExclusiveGateway(id = "dec-route", name = "Which route?"),
-        BpmnUserTask(id = "act-fast-target", name = "Fast"),
-        join,
-        BpmnUserTask(id = "act-converge-target", name = "Converge"),
-        BpmnEndEvent(id = "end-done", name = "Done"),
-    ),
-    sequences =
-    listOf(
-        BpmnEdge(id = "F1", sourceRef = "StartEvent_1", targetRef = "dec-route"),
-        BpmnEdge(id = "F2", sourceRef = "dec-route", targetRef = "act-fast-target", conditionExpression = "fast"),
-        BpmnEdge(id = "F3", sourceRef = "dec-route", targetRef = join.id, conditionExpression = "converge"),
-        BpmnEdge(id = "F4", sourceRef = join.id, targetRef = "act-converge-target"),
-        BpmnEdge(id = "F5", sourceRef = "act-fast-target", targetRef = "end-done"),
-        BpmnEdge(id = "F6", sourceRef = "act-converge-target", targetRef = "end-done"),
-    ),
-)
-
-/** Variant: the intermediate is a gateway with multiple outbounds — a fork, not a transparent merge. */
-private fun skipForwardViaMultiOutboundJoinDefinition(): BpmnDefinition = BpmnDefinition(
-    processId = "P",
-    processName = "Skip via multi-outbound join",
-    nodes =
-    listOf(
-        BpmnStartEvent(id = "StartEvent_1", name = "Start"),
-        BpmnExclusiveGateway(id = "dec-route", name = "Which route?"),
-        BpmnUserTask(id = "act-fast-target", name = "Fast"),
-        BpmnExclusiveGateway(id = "Gateway_fork", name = null),
-        BpmnUserTask(id = "act-converge-target", name = "Converge"),
-        BpmnUserTask(id = "act-extra", name = "Extra"),
-        BpmnEndEvent(id = "end-done", name = "Done"),
-    ),
-    sequences =
-    listOf(
-        BpmnEdge(id = "F1", sourceRef = "StartEvent_1", targetRef = "dec-route"),
-        BpmnEdge(id = "F2", sourceRef = "dec-route", targetRef = "act-fast-target", conditionExpression = "fast"),
-        BpmnEdge(id = "F3", sourceRef = "dec-route", targetRef = "Gateway_fork", conditionExpression = "converge"),
-        BpmnEdge(id = "F4", sourceRef = "Gateway_fork", targetRef = "act-converge-target"),
-        BpmnEdge(id = "F4b", sourceRef = "Gateway_fork", targetRef = "act-extra"),
-        BpmnEdge(id = "F5", sourceRef = "act-fast-target", targetRef = "end-done"),
-        BpmnEdge(id = "F6", sourceRef = "act-converge-target", targetRef = "end-done"),
-        BpmnEdge(id = "F7", sourceRef = "act-extra", targetRef = "end-done"),
-    ),
-)
-
-/** Variant: the intermediate is a UserTask — never transparent. */
-private fun skipForwardViaTaskDefinition(): BpmnDefinition = BpmnDefinition(
-    processId = "P",
-    processName = "Skip via task",
-    nodes =
-    listOf(
-        BpmnStartEvent(id = "StartEvent_1", name = "Start"),
-        BpmnExclusiveGateway(id = "dec-route", name = "Which route?"),
-        BpmnUserTask(id = "act-fast-target", name = "Fast"),
-        BpmnUserTask(id = "Task_intermediate", name = "Intermediate work"),
-        BpmnUserTask(id = "act-converge-target", name = "Converge"),
-        BpmnEndEvent(id = "end-done", name = "Done"),
-    ),
-    sequences =
-    listOf(
-        BpmnEdge(id = "F1", sourceRef = "StartEvent_1", targetRef = "dec-route"),
-        BpmnEdge(id = "F2", sourceRef = "dec-route", targetRef = "act-fast-target", conditionExpression = "fast"),
-        BpmnEdge(id = "F3", sourceRef = "dec-route", targetRef = "Task_intermediate", conditionExpression = "converge"),
-        BpmnEdge(id = "F4", sourceRef = "Task_intermediate", targetRef = "act-converge-target"),
-        BpmnEdge(id = "F5", sourceRef = "act-fast-target", targetRef = "end-done"),
-        BpmnEdge(id = "F6", sourceRef = "act-converge-target", targetRef = "end-done"),
     ),
 )
 
@@ -1676,12 +1392,10 @@ private fun defaultBranchContract(): ProcessContract {
                         id = "br-approve",
                         label = "Approved",
                         condition = "approved",
-                        nextRef = "end-done",
                     ),
                     DefaultBranch(
                         id = "br-fallback",
                         label = "Manual review",
-                        nextRef = "act-manual",
                     ),
                 ),
                 sourceIds = sources,

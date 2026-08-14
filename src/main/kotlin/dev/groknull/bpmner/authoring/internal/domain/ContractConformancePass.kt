@@ -41,6 +41,7 @@ import dev.groknull.bpmner.bpmn.typeName
 import dev.groknull.bpmner.contract.ContractActivity
 import dev.groknull.bpmner.contract.ContractDecision
 import dev.groknull.bpmner.contract.ContractEndState
+import dev.groknull.bpmner.contract.ContractFlow
 import dev.groknull.bpmner.contract.ContractGatewayKind
 import dev.groknull.bpmner.contract.ContractIntermediateThrow
 import dev.groknull.bpmner.contract.ContractIteration
@@ -87,12 +88,14 @@ internal class ContractConformancePass : BpmnContractConformancePort {
         val edgesById = definition.sequences.associateBy { it.id }.toMutableMap()
         val annotationsById = definition.annotations.associateBy { it.id }.toMutableMap()
         val associationsById = definition.associations.associateBy { it.id }.toMutableMap()
-        val outboundBySource = definition.sequences.groupBy { it.sourceRef }
         val corrections = mutableListOf<ContractCorrection>()
         val artifacts = AnnotationArtifacts(annotationsById, associationsById, corrections)
+        // branchId is contract-wide unique (V9/V13, ADR-696-1), so this needs computing once,
+        // not once per decision.
+        val branchTargets = contract.flows.filterIsInstance<ContractFlow.Branch>().associate { it.branchId to it.to }
 
         contract.decisions.forEach { decision ->
-            stampBranches(decision, outboundBySource[decision.id].orEmpty(), definition, edgesById, corrections)
+            stampBranches(decision, branchTargets, definition, edgesById, corrections)
             stampGatewayKind(decision, nodesById, corrections)
         }
         contract.activities.forEach { activity ->
@@ -116,18 +119,21 @@ internal class ContractConformancePass : BpmnContractConformancePort {
     }
 
     // Stamps 1 (default flow) and 2 (edge label), generalised from the one DefaultBranch a
-    // decision may carry to every branch: the branch→edge matching itself
-    // (nextRef equality, single-outbound fallback when nextRef is null) is unchanged from the
-    // predecessor DefaultFlowAssigner.
+    // decision may carry to every branch: the branch→edge matching itself (target-id equality,
+    // single-outbound fallback when a branch has no matching flow) is unchanged from the
+    // predecessor DefaultFlowAssigner — only where the target id comes from has changed, from
+    // the branch's own deleted target field (ADR-696-1) to the `ContractFlow.Branch` naming
+    // this branchId.
     private fun stampBranches(
         decision: ContractDecision,
-        outbound: List<BpmnEdge>,
+        branchTargets: Map<String, String>,
         definition: BpmnDefinition,
         edgesById: MutableMap<String, BpmnEdge>,
         corrections: MutableList<ContractCorrection>,
     ) {
+        val outbound = definition.sequences.filter { it.sourceRef == decision.id }
         decision.branches.forEach { branch ->
-            val matched = resolveOutboundEdge(branch.nextRef, outbound, definition) ?: return@forEach
+            val matched = resolveOutboundEdge(branchTargets[branch.id], outbound, definition) ?: return@forEach
             var edge = edgesById.getValue(matched.id)
 
             if (branch is DefaultBranch && (!edge.isDefault || !edge.conditionExpression.isNullOrBlank())) {
@@ -153,37 +159,37 @@ internal class ContractConformancePass : BpmnContractConformancePort {
     }
 
     private fun resolveOutboundEdge(
-        nextRef: String?,
+        branchTarget: String?,
         outbound: List<BpmnEdge>,
         definition: BpmnDefinition,
     ): BpmnEdge? = when {
-        nextRef != null -> resolveDirectOrRedirectedBranch(nextRef, outbound, definition)
+        branchTarget != null -> resolveDirectOrRedirectedBranch(branchTarget, outbound, definition)
         outbound.size == 1 -> outbound.single()
         else -> null
     }
 
     private fun resolveDirectOrRedirectedBranch(
-        nextRef: String,
+        branchTarget: String,
         outbound: List<BpmnEdge>,
         definition: BpmnDefinition,
     ): BpmnEdge? {
-        val direct = outbound.filter { it.targetRef == nextRef }
+        val direct = outbound.filter { it.targetRef == branchTarget }
         return when (direct.size) {
             1 -> direct.single()
-            0 -> resolveRedirectedBranch(nextRef, outbound, definition)
+            0 -> resolveRedirectedBranch(branchTarget, outbound, definition)
             else -> null
         }
     }
 
     private fun resolveRedirectedBranch(
-        nextRef: String,
+        branchTarget: String,
         outbound: List<BpmnEdge>,
         definition: BpmnDefinition,
     ): BpmnEdge? = outbound.singleOrNull { edge ->
         val joinId = edge.targetRef
         definition.nodes.any { it.id == joinId && it is BpmnGateway } &&
             definition.sequences.count { it.targetRef == joinId } > 1 &&
-            definition.sequences.filter { it.sourceRef == joinId }.singleOrNull()?.targetRef == nextRef
+            definition.sequences.filter { it.sourceRef == joinId }.singleOrNull()?.targetRef == branchTarget
     }
 
     // Stamp 7: gateway subtype substitution. Total and lossless only because the four contract

@@ -182,7 +182,6 @@ class FlatContractMapperTest {
                 FlatContractBoundaryEvent(
                     kind = BoundaryEventKind.ERROR,
                     label = "Chargeback raised",
-                    nextRef = "act-dispute",
                     detail = "CHARGEBACK",
                 ),
             ),
@@ -193,8 +192,8 @@ class FlatContractMapperTest {
                 ContractBoundaryEvent(
                     kind = BoundaryEventKind.ERROR,
                     label = "Chargeback raised",
-                    nextRef = "act-dispute",
                     detail = "CHARGEBACK",
+                    id = "boundary-event",
                 ),
             ),
             flat.toSealed().boundaryEvents,
@@ -378,7 +377,6 @@ class FlatContractMapperTest {
             FlatContractBoundaryEvent(
                 kind = BoundaryEventKind.ESCALATION,
                 label = "approval overdue",
-                nextRef = "act-chase",
                 detail = null,
             ).toSealed()
         }
@@ -387,7 +385,6 @@ class FlatContractMapperTest {
         val valid = FlatContractBoundaryEvent(
             kind = BoundaryEventKind.ESCALATION,
             label = "approval overdue",
-            nextRef = "act-chase",
             detail = "APPROVAL_OVERDUE",
         ).toSealed()
         assertEquals("APPROVAL_OVERDUE", valid.detail)
@@ -400,7 +397,6 @@ class FlatContractMapperTest {
             label = "Eligible",
             kind = FlatBranchKind.CONDITIONAL,
             condition = "score >= 750",
-            nextRef = null,
         )
         assertEquals(
             ConditionalBranch(id = "b-c", label = "Eligible", condition = "score >= 750"),

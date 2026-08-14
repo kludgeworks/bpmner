@@ -213,19 +213,17 @@ public fun FlatContractBranch.toSealed(): ContractBranch = when (kind) {
         id = id,
         label = label,
         condition = requireField(condition, kind, "condition", id),
-        nextRef = nextRef,
     )
 
-    FlatBranchKind.DEFAULT -> DefaultBranch(id = id, label = label, nextRef = nextRef)
+    FlatBranchKind.DEFAULT -> DefaultBranch(id = id, label = label)
 
-    FlatBranchKind.UNCONDITIONAL -> UnconditionalBranch(id = id, label = label, nextRef = nextRef)
+    FlatBranchKind.UNCONDITIONAL -> UnconditionalBranch(id = id, label = label)
 
     FlatBranchKind.EVENT_GATEWAY -> EventGatewayBranch(
         id = id,
         label = label,
         triggerKind = requireField(triggerKind, kind, "triggerKind", id),
         triggerDetail = requireField(triggerDetail, kind, "triggerDetail", id),
-        nextRef = nextRef,
     )
 }
 

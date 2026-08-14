@@ -50,13 +50,6 @@ enum class ContractValidationCode {
     DUPLICATE_CONTRACT_ELEMENT_ID,
     INVALID_CONTRACT_ITEM,
 
-    /**
-     * A [dev.groknull.bpmner.contract.ContractBranch.nextRef] or
-     * [dev.groknull.bpmner.contract.ContractBoundaryEvent.nextRef] does not resolve to any
-     * activity, decision, end state, or intermediate throw declared in the contract.
-     */
-    NEXT_REF_NOT_FOUND,
-
     /** A subprocess declares no member activities. An embedded subprocess must contain at least one. */
     SUBPROCESS_EMPTY,
 
@@ -91,8 +84,8 @@ enum class ContractValidationCode {
     /** A call activity declares no `calledElement`; it must name the process it invokes. */
     CALL_ACTIVITY_MISSING_TARGET,
 
-    // V1-V13 (ADR-696-1): total-topology validation over ProcessContract.flows. NEXT_REF_NOT_FOUND
-    // above is V1's strictly weaker predecessor, deleted once nextRef is (stage 696-5 commit 3).
+    // V1-V13 (ADR-696-1): total-topology validation over ProcessContract.flows, replacing the
+    // deleted branch/boundary-event target fields and their weaker predecessor check.
 
     /** V1: a flow's `from` or `to` does not resolve to any declared element. */
     FLOW_ENDPOINT_NOT_FOUND,

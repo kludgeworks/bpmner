@@ -57,7 +57,6 @@ class PromptJsonRendererTest {
                         ContractBoundaryEvent(
                             kind = BoundaryEventKind.TIMER,
                             label = "60s timeout",
-                            nextRef = "end-timed-out",
                             detail = "PT60S",
                         ),
                     ),

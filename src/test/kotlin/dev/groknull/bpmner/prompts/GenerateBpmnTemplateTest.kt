@@ -270,7 +270,6 @@ class GenerateBpmnTemplateTest {
                             ContractBoundaryEvent(
                                 kind = BoundaryEventKind.TIMER,
                                 label = "24h escalation",
-                                nextRef = "end-escalated",
                                 detail = "PT24H",
                             ),
                         ),

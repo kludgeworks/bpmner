@@ -111,7 +111,6 @@ internal object PromptFixtures {
                             ContractBoundaryEvent(
                                 kind = BoundaryEventKind.TIMER,
                                 label = "24h review timeout",
-                                nextRef = "end-reviewed",
                                 detail = "PT24H",
                             ),
                         ),

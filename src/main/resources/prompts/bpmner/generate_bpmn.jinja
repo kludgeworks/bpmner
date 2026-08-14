@@ -18,7 +18,7 @@ Contract-to-BPMN wiring (the schema covers each `kind` → BPMN `type`/`eventDef
 - BusinessRule: copy `decisionName` from the contract verbatim into `decisionRef` on the BPMN node.
 - Send / Receive: point the task's `messageRef` at a `definition.messages` entry whose `name` is the contract's `messageName`.
 - Iteration → multi-instance: when a contract activity carries `iteration`, set `multiInstance` on its BPMN task — `mode` = the contract's `iteration.mode` (SEQUENTIAL renders `isSequential=true`, PARALLEL renders `isSequential=false`). ALSO emit, for that task: (1) a `definition.annotations` text annotation whose text names the item set using "each"/"every"/"per" (e.g. "For each line item on the slip"), and (2) a `definition.associations` edge with `sourceRef` = the task id and `targetRef` = that annotation's id. Every multi-instance task MUST have this linked annotation.
-- Boundary events → boundary-event nodes: when a contract activity carries `boundaryEvents`, emit one interrupting `BOUNDARY_EVENT` node per entry with `attachedToRef` = that activity's BPMN task id. Map `kind`: TIMER → `BpmnTimerEventDefinition` whose expression is the contract `detail` (an ISO-8601 duration); ERROR → `BpmnErrorEventDefinition` pointing at a `definition.errors` entry whose `code` is the contract `detail`. Emit exactly one outbound sequence flow from the boundary event to the node whose id is `nextRef`, with no incoming flow into it.
+- Boundary events → boundary-event nodes: when a contract activity carries `boundaryEvents`, emit one interrupting `BOUNDARY_EVENT` node per entry with `attachedToRef` = that activity's BPMN task id. Map `kind`: TIMER → `BpmnTimerEventDefinition` whose expression is the contract `detail` (an ISO-8601 duration); ERROR → `BpmnErrorEventDefinition` pointing at a `definition.errors` entry whose `code` is the contract `detail`. Emit exactly one outbound sequence flow from the boundary event to the target named in the contract's `## Flows` section (the entry whose `from` is this boundary event's id), with no incoming flow into it.
 - Loop → standard-loop: when a contract activity carries `loop`, set `standardLoop` on its BPMN task — `testBefore` from the contract (true = while, false = until), `loopCondition` and `loopMaximum` copied verbatim. ALSO emit, for that task: (1) a `definition.annotations` text annotation whose text states the loop condition using "until"/"while"/"unless"/"till" (e.g. "Retry until the payment succeeds"), and (2) a `definition.associations` edge with `sourceRef` = the task id and `targetRef` = that annotation's id. Every standard-loop task has this linked annotation. Treat `loop` as a self-repeating task; reserve gateway back-edges for explicit branch flows.
 - Error / Message end states: point the event definition's ref at a matching entry in the process-level `definition.errors` / `.messages` catalogue whose `code`/`name` is the contract's.
 - Message intermediate throws: point the event definition's ref at a matching entry in the process-level `definition.messages` catalogue whose name is the contract's.
@@ -32,7 +32,7 @@ Naming shape rules — follow these on your first emission to avoid lint repair 
 
 Loop and back-edge rules:
 - A sequence flow with `sourceRef == targetRef` is forbidden. Back-edges to earlier elements (a different `targetRef` that the process has already visited) are valid and required when the contract describes an iterative process.
-- When a ContractBranch carries a `nextRef`, emit a sequence flow from the decision's gateway to the node with that id. If `nextRef` points to an earlier activity, this is the loop back-edge.
+- The contract's `## Flows` section states every branch's target directly (the entry whose `from` is the decision's id and whose label names the branch): emit a sequence flow from the decision's gateway to that target. If it points to an earlier activity, this is the loop back-edge.
 - For multi-exit loops (e.g. pass / no-progress / exhausted), emit ONE XOR gateway after the loop body with one outbound flow per branch — including the back-edge — not separate gateways per exit.
 
 Parallel-gateway topology:
@@ -56,7 +56,7 @@ Call-activity topology:
 
 Event-based-gateway topology:
 - An EVENT_BASED decision becomes an `EVENT_BASED_GATEWAY` node. For each EVENT_GATEWAY branch, emit an `INTERMEDIATE_CATCH_EVENT` whose `eventDefinition` matches the branch `triggerKind`: TIMER → `BpmnTimerEventDefinition` (expression from `triggerDetail`, an ISO-8601 duration); MESSAGE → `BpmnMessageEventDefinition` pointing at a `definition.messages` entry named from `triggerDetail`.
-- The gateway's only direct successors are those catch events — one outbound flow from the gateway to each catch event, and no activities directly between them. From each catch event, emit one flow to the branch's `nextRef`.
+- The gateway's only direct successors are those catch events — one outbound flow from the gateway to each catch event, and no activities directly between them. From each catch event, emit one flow to that branch's target, per the contract's `## Flows` section.
 - The gateway is a pure wait: it has no join. Each branch proceeds independently after its event fires.
 
 Pools-and-lanes topology (collaboration):

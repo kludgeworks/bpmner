@@ -372,8 +372,8 @@ data class ContractIteration(
 
 @JsonClassDescription(
     "A boundary event attached to an activity: a timeout (TIMER) or caught business error (ERROR) " +
-        "that interrupts the activity and routes the flow to " +
-        "`nextRef`. Realized as a `BpmnBoundaryEvent` on the activity's BPMN task.",
+        "that interrupts the activity. Its outgoing flow is stated in `flows`, like any other " +
+        "element. Realized as a `BpmnBoundaryEvent` on the activity's BPMN task.",
 )
 data class ContractBoundaryEvent(
     @get:JsonPropertyDescription(
@@ -385,12 +385,6 @@ data class ContractBoundaryEvent(
     @field:Size(max = 200)
     @get:JsonPropertyDescription("Short label for the event, e.g. \"24h timeout\" or \"chargeback raised\".")
     val label: String,
-    @field:NotBlank
-    @field:Size(max = 200)
-    @get:JsonPropertyDescription(
-        "Id of the activity, decision, or end state the exception path routes to when this event fires.",
-    )
-    val nextRef: String,
     @field:NotBlank
     @field:Size(max = 200)
     @get:JsonPropertyDescription(
@@ -556,7 +550,6 @@ data class ContractDecision(
 sealed interface ContractBranch {
     val id: String
     val label: String
-    val nextRef: String?
 }
 
 /**
@@ -577,7 +570,6 @@ data class ConditionalBranch(
     override val id: String,
     override val label: String,
     val condition: String,
-    override val nextRef: String? = null,
 ) : ContractBranch
 
 @JsonClassDescription(
@@ -587,7 +579,6 @@ data class ConditionalBranch(
 data class DefaultBranch(
     override val id: String,
     override val label: String,
-    override val nextRef: String? = null,
 ) : ContractBranch
 
 @JsonClassDescription(
@@ -597,7 +588,6 @@ data class DefaultBranch(
 data class UnconditionalBranch(
     override val id: String,
     override val label: String,
-    override val nextRef: String? = null,
 ) : ContractBranch
 
 /**
@@ -620,7 +610,6 @@ data class EventGatewayBranch(
     override val label: String,
     val triggerKind: EventTriggerKind,
     val triggerDetail: String,
-    override val nextRef: String? = null,
 ) : ContractBranch
 
 @JsonClassDescription("Actor referenced by the extracted process contract")
