@@ -14,6 +14,7 @@ import dev.groknull.bpmner.bpmn.BpmnDefinition
 import dev.groknull.bpmner.bpmn.BpmnEdge
 import dev.groknull.bpmner.bpmn.BpmnEndEvent
 import dev.groknull.bpmner.bpmn.BpmnErrorEventDefinition
+import dev.groknull.bpmner.bpmn.BpmnEscalationEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnEventBasedGateway
 import dev.groknull.bpmner.bpmn.BpmnEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnExclusiveGateway
@@ -29,12 +30,12 @@ import dev.groknull.bpmner.bpmn.BpmnReceiveTask
 import dev.groknull.bpmner.bpmn.BpmnScriptTask
 import dev.groknull.bpmner.bpmn.BpmnSendTask
 import dev.groknull.bpmner.bpmn.BpmnServiceTask
+import dev.groknull.bpmner.bpmn.BpmnSignalEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnSubProcess
 import dev.groknull.bpmner.bpmn.BpmnTask
 import dev.groknull.bpmner.bpmn.BpmnTerminateEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnTimerEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnUserTask
-import dev.groknull.bpmner.bpmn.isSemanticallyTransparent
 import dev.groknull.bpmner.bpmn.typeName
 import dev.groknull.bpmner.conformance.BpmnDiagnostic
 import dev.groknull.bpmner.conformance.BpmnDiagnosticSeverity
@@ -71,13 +72,11 @@ import org.springframework.stereotype.Component
  *    (exclusive vs parallel) does not match the decision's declared [ContractGatewayKind].
  * 3. [BpmnFidelityCode.GATEWAY_BRANCH_COUNT_INSUFFICIENT] — the gateway exists but emits
  *    fewer outbound flows than the decision has branches.
- * 4. [BpmnFidelityCode.BRANCH_NEXT_REF_UNRESOLVED] — a branch's `nextRef` points at an id
- *    that doesn't exist anywhere in the BPMN.
- * 5. [BpmnFidelityCode.BRANCH_FLOW_MISSING] — a branch's `nextRef` resolves but no sequence
- *    flow path connects this decision's gateway to that target — directly OR via one or more
- *    *semantically transparent* nodes (see [isSemanticallyTransparent]). The transparent-node
- *    walk accepts the legitimate generator pattern where flows pass through unnamed converging
- *    joins; missing-edge bugs are still caught.
+ *
+ * `BRANCH_NEXT_REF_UNRESOLVED` and `BRANCH_FLOW_MISSING` — checks keyed on the branch's own
+ * (now deleted) target field — were removed with it (ADR-696-1, stage 696-5): the contract now
+ * states every branch's target directly in `flows`, so there is nothing left to resolve or walk
+ * to at this stage.
  *
  * Relocated from `authoring` root package to `authoring.internal.domain` as part of S9
  * (ADR-009 (port-fronting) disposition a). Cross-module callers inject [BpmnContractFidelityPort] instead.
@@ -168,8 +167,6 @@ internal class BpmnContractFidelityChecker : BpmnContractFidelityPort {
             verifyOutboundBranchCount(decision, validGateway, outbound, issues)
             verifyDefaultFlow(decision, validGateway, outbound, issues)
         }
-
-        verifyBranchTargetsAndFlows(decision, validGateway, nodeById, outgoingBySource, issues)
     }
 
     private fun verifyGatewayTypeAndPresence(
@@ -219,6 +216,10 @@ internal class BpmnContractFidelityChecker : BpmnContractFidelityPort {
         }
     }
 
+    // Independent of the branch's own target field: compares the rendered gateway's outbound
+    // edge count against the contract's declared branch count. The contract states the target
+    // of every branch directly (`flows`, ADR-696-1), so this check no longer needs a
+    // discriminator to say whether the missing edge(s) are determined — they always are now.
     private fun verifyOutboundBranchCount(
         decision: ContractDecision,
         gateway: BpmnNode,
@@ -226,16 +227,6 @@ internal class BpmnContractFidelityChecker : BpmnContractFidelityPort {
         issues: MutableList<BpmnFidelityIssue>,
     ) {
         if (outbound.size < decision.branches.size) {
-            // Discriminator: every branch naming a nextRef makes the missing edges fully
-            // determined (name the targets); a branch with no nextRef leaves genuine routing
-            // choice to the model, so the remainder is its responsibility to resolve.
-            val discriminator = if (decision.branches.all { it.nextRef != null }) {
-                "Every branch names a nextRef, so the missing outbound flow(s) are determined — " +
-                    "emit one edge per branch to: ${decision.branches.joinToString { "'${it.nextRef}'" }}."
-            } else {
-                "Not every branch names a nextRef, so the remaining routing is left to you — add " +
-                    "the missing outbound flow(s)."
-            }
             issues +=
                 BpmnFidelityIssue(
                     code = BpmnFidelityCode.GATEWAY_BRANCH_COUNT_INSUFFICIENT,
@@ -243,7 +234,7 @@ internal class BpmnContractFidelityChecker : BpmnContractFidelityPort {
                     message =
                     "Decision '${decision.id}' declares ${decision.branches.size} branches but its " +
                         "gateway has only ${outbound.size} outbound sequence flow(s). The LLM has " +
-                        "likely conflated branches into fewer outbound flows. $discriminator",
+                        "likely conflated branches into fewer outbound flows.",
                     contractElementId = decision.id,
                     bpmnElementId = gateway.id,
                 )
@@ -279,132 +270,6 @@ internal class BpmnContractFidelityChecker : BpmnContractFidelityPort {
                     )
             }
         }
-    }
-
-    private fun verifyBranchTargetsAndFlows(
-        decision: ContractDecision,
-        gateway: BpmnNode?,
-        nodeById: Map<String, BpmnNode>,
-        outgoingBySource: Map<String, List<BpmnEdge>>,
-        issues: MutableList<BpmnFidelityIssue>,
-    ) {
-        decision.branches.forEach { branch ->
-            val ref = branch.nextRef ?: return@forEach
-            val targetExists = ref in nodeById
-            if (!targetExists) {
-                issues +=
-                    BpmnFidelityIssue(
-                        code = BpmnFidelityCode.BRANCH_NEXT_REF_UNRESOLVED,
-                        severity = BpmnFidelitySeverity.ERROR,
-                        message =
-                        "Branch '${branch.id}' of decision '${decision.id}' has nextRef='$ref' " +
-                            "which does not match any node id in the generated BPMN. Contract " +
-                            "validation requires '$ref' to be a declared contract element, so the " +
-                            "contract declares it and the BPMN is missing the node — emit it.",
-                        contractElementId = branch.id,
-                        bpmnElementId = ref,
-                    )
-                return@forEach
-            }
-            if (gateway != null && !targetReachableSemantically(gateway, ref, outgoingBySource, nodeById)) {
-                issues +=
-                    BpmnFidelityIssue(
-                        code = BpmnFidelityCode.BRANCH_FLOW_MISSING,
-                        severity = BpmnFidelitySeverity.ERROR,
-                        message =
-                        "Branch '${branch.id}' of decision '${decision.id}' specifies nextRef='$ref' " +
-                            "but no sequence flow connects gateway '${gateway.id}' to '$ref' " +
-                            "(directly or via transparent routing nodes). " +
-                            branchFlowMissingDiscriminator(gateway, ref, outgoingBySource, nodeById),
-                        contractElementId = branch.id,
-                        bpmnElementId = ref,
-                    )
-            }
-        }
-    }
-
-    // Discriminator for BRANCH_FLOW_MISSING: an opaque-tolerant walk (every node treated as
-    // transparent, not just the semantically-transparent ones) over the same frontier the
-    // reachability check already builds. No path at any hop means the model dropped an edge
-    // (underdetermined, patchable); a path through named tasks means the contract's nextRef
-    // skipped real work the routing must still pass through — name it so the fix is unambiguous.
-    private fun branchFlowMissingDiscriminator(
-        gateway: BpmnNode,
-        targetId: String,
-        outgoingBySource: Map<String, List<BpmnEdge>>,
-        nodeById: Map<String, BpmnNode>,
-    ): String {
-        val (opaqueReachable, visited) =
-            walkReachability(gateway, targetId, outgoingBySource, nodeById) { true }
-        if (!opaqueReachable) {
-            return "No path to '$targetId' exists at any hop — the model dropped an edge."
-        }
-        val skipped = visited.mapNotNull { nodeById[it] }.filterIsInstance<BpmnTask>().map { it.id }
-        return if (skipped.isEmpty()) {
-            "A path to '$targetId' exists but only through routing-only nodes — the model dropped an edge."
-        } else {
-            "A path to '$targetId' exists through ${skipped.joinToString()} — the contract's nextRef " +
-                "skipped over real work; route through it instead of around it."
-        }
-    }
-
-    /**
-     * Returns true if [targetId] is reachable from [from] either directly or by walking forward
-     * through one or more [isSemanticallyTransparent] nodes. Bounded by [MAX_REACHABILITY_HOPS]
-     * to keep the check finite on pathological topologies.
-     */
-    private fun targetReachableSemantically(
-        from: BpmnNode,
-        targetId: String,
-        outgoingBySource: Map<String, List<BpmnEdge>>,
-        nodeById: Map<String, BpmnNode>,
-    ): Boolean = walkReachability(from, targetId, outgoingBySource, nodeById) {
-        it.isSemanticallyTransparent(outgoingBySource)
-    }.first
-
-    /**
-     * Shared bounded BFS behind [targetReachableSemantically] and [branchFlowMissingDiscriminator]:
-     * walks forward from [from] through nodes matching [isTransparent], returning whether
-     * [targetId] was reached plus every intermediate node id visited along the way (useful for a
-     * caller that needs to say *what* stood in the way, not just whether something did).
-     */
-    private fun walkReachability(
-        from: BpmnNode,
-        targetId: String,
-        outgoingBySource: Map<String, List<BpmnEdge>>,
-        nodeById: Map<String, BpmnNode>,
-        isTransparent: (BpmnNode) -> Boolean,
-    ): Pair<Boolean, Set<String>> {
-        val direct = outgoingBySource[from.id].orEmpty()
-        if (direct.any { it.targetRef == targetId }) return true to emptySet()
-        val seen = mutableSetOf(from.id)
-        var frontier = direct.map { it.targetRef }.toSet() - from.id
-        val visited = mutableSetOf<String>()
-
-        repeat(MAX_REACHABILITY_HOPS) {
-            if (frontier.isEmpty()) return false to visited
-            if (targetId in frontier) return true to visited
-            visited += frontier
-            // Step the BFS one hop: keep only unseen, transparent-per-[isTransparent] nodes;
-            // collect their outbound edge targets as the next frontier. Chained pipeline keeps
-            // the loop body free of multi-branch jumps (detekt LoopWithTooManyJumpStatements).
-            frontier =
-                frontier
-                    .asSequence()
-                    .filter { seen.add(it) }
-                    .mapNotNull { nodeById[it] }
-                    .filter(isTransparent)
-                    .flatMap { outgoingBySource[it.id].orEmpty().asSequence() }
-                    .map { it.targetRef }
-                    .toSet()
-        }
-        return false to visited
-    }
-
-    private companion object {
-        // Bound the transparent-join walk. Six hops handles real-world process topologies
-        // comfortably and prevents pathological loops from making the check non-terminating.
-        const val MAX_REACHABILITY_HOPS = 6
     }
 
     /**
@@ -520,15 +385,19 @@ internal class BpmnContractFidelityChecker : BpmnContractFidelityPort {
 
     /**
      * Verifies that each contract `boundaryEvents` entry is realised as a [BpmnBoundaryEvent]
-     * attached to the activity's BPMN task, with a matching `eventDefinition` kind and exactly
-     * one outbound sequence flow to the entry's `nextRef`, and that the task carries no
-     * undeclared boundary event. A [ContractBoundaryEvent] carries no id of its own, so matching
-     * is by (kind, nextRef) — the pair that fully expresses its routing intent.
+     * attached to the activity's BPMN task with a matching `eventDefinition` kind, and that the
+     * task carries no undeclared boundary event. A [ContractBoundaryEvent] carries no id of its
+     * own, so matching is by kind alone.
+     *
+     * Routing (where the boundary event's single outbound edge leads) is **not** checked here —
+     * that is V1/V5's job on the contract itself (ADR-696-1), the earlier artifact that can be
+     * wrong. This file is deleted whole in stage 696-6; a `flows`-aware rewrite of the routing
+     * check here would be built only to be thrown away.
      *
      * Deliberately does not compare `label` (free text) or `detail` (an ISO-8601 duration for
      * TIMER, a catalogue business-error code for ERROR resolved indirectly via `errorRef`):
      * ADR-685-17 reserves ERROR-severity fidelity checks for values that change the diagram's
-     * meaning — presence, kind, and routing — not prose.
+     * meaning — presence and kind — not prose.
      */
     private fun checkActivityBoundaryEvents(
         activity: ContractActivity,
@@ -539,29 +408,20 @@ internal class BpmnContractFidelityChecker : BpmnContractFidelityPort {
         val attached = definition.nodes.filterIsInstance<BpmnBoundaryEvent>().filter { it.attachedToRef == activity.id }
         if (declared.isEmpty() && attached.isEmpty()) return
 
-        val outgoingBySource = definition.sequences.groupBy { it.sourceRef }
         val unmatched = attached.toMutableList()
 
         declared.forEach { boundaryEvent ->
-            val match = unmatched.firstOrNull {
-                it.matchesKind(boundaryEvent.kind) && it.routesTo(boundaryEvent.nextRef, outgoingBySource)
-            }
+            val match = unmatched.firstOrNull { it.matchesKind(boundaryEvent.kind) }
             if (match != null) {
                 unmatched.remove(match)
                 return@forEach
-            }
-            val message = if (attached.none { it.matchesKind(boundaryEvent.kind) }) {
-                "Activity '${activity.id}' declares a ${boundaryEvent.kind} boundary event but its BPMN task " +
-                    "carries no matching boundary event — the escape path was dropped."
-            } else {
-                "Activity '${activity.id}' declares a ${boundaryEvent.kind} boundary event routed to " +
-                    "'${boundaryEvent.nextRef}' but no matching BPMN boundary event routes there."
             }
             issues +=
                 BpmnFidelityIssue(
                     code = BpmnFidelityCode.ACTIVITY_BOUNDARY_EVENT_MISMATCH,
                     severity = BpmnFidelitySeverity.ERROR,
-                    message = message,
+                    message = "Activity '${activity.id}' declares a ${boundaryEvent.kind} boundary event but its" +
+                        " BPMN task carries no matching boundary event — the escape path was dropped.",
                     contractElementId = activity.id,
                     bpmnElementId = activity.id,
                 )
@@ -583,14 +443,8 @@ internal class BpmnContractFidelityChecker : BpmnContractFidelityPort {
     private fun BpmnBoundaryEvent.matchesKind(kind: BoundaryEventKind): Boolean = when (kind) {
         BoundaryEventKind.TIMER -> eventDefinition is BpmnTimerEventDefinition
         BoundaryEventKind.ERROR -> eventDefinition is BpmnErrorEventDefinition
-    }
-
-    private fun BpmnBoundaryEvent.routesTo(
-        nextRef: String,
-        outgoingBySource: Map<String, List<BpmnEdge>>,
-    ): Boolean {
-        val outgoing = outgoingBySource[id].orEmpty()
-        return outgoing.size == 1 && outgoing.single().targetRef == nextRef
+        BoundaryEventKind.ESCALATION -> eventDefinition is BpmnEscalationEventDefinition
+        BoundaryEventKind.MESSAGE -> eventDefinition is BpmnMessageEventDefinition
     }
 
     /**
@@ -768,6 +622,8 @@ internal class BpmnContractFidelityChecker : BpmnContractFidelityPort {
         is ContractEndState.Terminate -> eventDefinition is BpmnTerminateEventDefinition
         is ContractEndState.Error -> eventDefinition is BpmnErrorEventDefinition
         is ContractEndState.Message -> eventDefinition is BpmnMessageEventDefinition
+        is ContractEndState.Signal -> eventDefinition is BpmnSignalEventDefinition
+        is ContractEndState.Escalation -> eventDefinition is BpmnEscalationEventDefinition
     }
 
     // Class references rather than hardcoded strings so the diagnostic message stays
@@ -778,6 +634,8 @@ internal class BpmnContractFidelityChecker : BpmnContractFidelityPort {
         is ContractEndState.Terminate -> BpmnTerminateEventDefinition::class.simpleName!!
         is ContractEndState.Error -> BpmnErrorEventDefinition::class.simpleName!!
         is ContractEndState.Message -> BpmnMessageEventDefinition::class.simpleName!!
+        is ContractEndState.Signal -> BpmnSignalEventDefinition::class.simpleName!!
+        is ContractEndState.Escalation -> BpmnEscalationEventDefinition::class.simpleName!!
     }
 
     private fun checkIntermediateThrowKind(
@@ -827,10 +685,14 @@ internal class BpmnContractFidelityChecker : BpmnContractFidelityPort {
 
     private fun ContractIntermediateThrow.matchesEventDefinition(eventDefinition: BpmnEventDefinition): Boolean = when (this) {
         is ContractIntermediateThrow.Message -> eventDefinition is BpmnMessageEventDefinition
+        is ContractIntermediateThrow.Signal -> eventDefinition is BpmnSignalEventDefinition
+        is ContractIntermediateThrow.Escalation -> eventDefinition is BpmnEscalationEventDefinition
     }
 
     private fun ContractIntermediateThrow.expectedEventDefinitionName(): String = when (this) {
         is ContractIntermediateThrow.Message -> BpmnMessageEventDefinition::class.simpleName!!
+        is ContractIntermediateThrow.Signal -> BpmnSignalEventDefinition::class.simpleName!!
+        is ContractIntermediateThrow.Escalation -> BpmnEscalationEventDefinition::class.simpleName!!
     }
 
     /**

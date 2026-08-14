@@ -47,10 +47,14 @@ public enum class FlatEndStateKind {
     TERMINATE,
     ERROR,
     MESSAGE,
+    SIGNAL,
+    ESCALATION,
 }
 
 public enum class FlatIntermediateThrowKind {
     MESSAGE,
+    SIGNAL,
+    ESCALATION,
 }
 
 public enum class FlatBranchKind {
@@ -64,6 +68,7 @@ public enum class FlatTriggerKind {
     NONE,
     TIMER,
     MESSAGE,
+    SIGNAL,
 }
 
 @JsonClassDescription(
@@ -159,31 +164,33 @@ public data class FlatContractIteration(
 )
 
 @JsonClassDescription(
-    "A boundary event on an activity: a timeout (TIMER), caught business error (ERROR), or raised " +
-        "escalation (ESCALATION) that interrupts the activity and routes the flow to `nextRef`.",
+    "A boundary event on an activity: a timeout (TIMER), caught business error (ERROR), raised " +
+        "escalation (ESCALATION), or an asynchronous message from another party (MESSAGE, e.g. a " +
+        "cancellation) that interrupts the activity. Its outgoing flow is stated in `flows`, like " +
+        "any other element.",
 )
 public data class FlatContractBoundaryEvent(
     @get:JsonPropertyDescription(
         "Event kind: TIMER (a deadline/duration elapses), ERROR (the activity throws a named " +
-            "business error), ESCALATION (the activity raises a business escalation).",
+            "business error), ESCALATION (the activity raises a business escalation), MESSAGE " +
+            "(an asynchronous message from another party arrives).",
     )
     val kind: BoundaryEventKind,
     @field:NotBlank
     @field:Size(max = 200)
     @get:JsonPropertyDescription("Short label for the event, e.g. \"24h timeout\" or \"chargeback raised\".")
     val label: String,
-    @field:NotBlank
-    @field:Size(max = 200)
-    @get:JsonPropertyDescription(
-        "Id of the activity, decision, or end state the exception path routes to when this event fires.",
-    )
-    val nextRef: String,
     @field:Size(max = 200)
     @get:JsonPropertyDescription(
         "Optional kind-specific detail: an ISO-8601 duration for TIMER (e.g. \"PT24H\"), a business " +
-            "error code for ERROR (e.g. \"CHARGEBACK\"), or an escalation code for ESCALATION.",
+            "error code for ERROR (e.g. \"CHARGEBACK\"), an escalation code for ESCALATION, or a " +
+            "message name for MESSAGE.",
     )
     val detail: String? = null,
+    @field:NotBlank
+    @field:Size(max = 200)
+    @get:JsonPropertyDescription("Stable id for this boundary event, so `flows` can name it as a source.")
+    val id: String = "boundary-event",
 )
 
 @JsonClassDescription(
@@ -237,6 +244,18 @@ public data class FlatContractEndState(
         "Required when kind=MESSAGE. Human-readable message name (e.g. \"shipment confirmation\").",
     )
     val messageName: String? = null,
+    @field:Size(max = 200)
+    @get:JsonPropertyDescription(
+        "Required when kind=SIGNAL. Human-readable signal name broadcast to any listener " +
+            "(e.g. \"settlement complete\").",
+    )
+    val signalName: String? = null,
+    @field:Size(max = 200)
+    @get:JsonPropertyDescription(
+        "Required when kind=ESCALATION. Stable business escalation code an enclosing scope " +
+            "matches (e.g. \"APPROVAL_OVERDUE\"). NOT a user-facing message.",
+    )
+    val escalationCode: String? = null,
 )
 
 @JsonClassDescription(
@@ -264,6 +283,14 @@ public data class FlatContractIntermediateThrow(
     @field:Size(max = 200)
     @get:JsonPropertyDescription("Required when kind=MESSAGE. Human-readable message name.")
     val messageName: String? = null,
+    @field:Size(max = 200)
+    @get:JsonPropertyDescription("Required when kind=SIGNAL. Human-readable signal name broadcast mid-flow.")
+    val signalName: String? = null,
+    @field:Size(max = 200)
+    @get:JsonPropertyDescription(
+        "Required when kind=ESCALATION. Stable business escalation code raised mid-flow.",
+    )
+    val escalationCode: String? = null,
 )
 
 @JsonClassDescription(
@@ -307,12 +334,6 @@ public data class FlatContractBranch(
             "message / signal name for MESSAGE / SIGNAL.",
     )
     val triggerDetail: String? = null,
-    @field:Size(max = 200)
-    @get:JsonPropertyDescription(
-        "Optional id of the next activity, decision, or end state this branch leads to. Omit for " +
-            "sequential continuation. Use to express loop back-edges and multi-exit topologies.",
-    )
-    val nextRef: String? = null,
 )
 
 @JsonClassDescription(
@@ -339,6 +360,11 @@ public data class FlatContractTrigger(
         "Required when type=MESSAGE. Human-readable name of the inbound message (e.g. \"order.submitted\").",
     )
     val messageName: String? = null,
+    @get:JsonPropertyDescription(
+        "Required when type=SIGNAL. Human-readable name of the observed broadcast " +
+            "(e.g. \"market opened\").",
+    )
+    val signalName: String? = null,
 )
 
 @JsonClassDescription("Source-grounded process start declaration")
@@ -349,6 +375,36 @@ public data class FlatContractStart(
     @field:Size(max = 20)
     @get:JsonPropertyDescription("Source ids grounding the trigger in source evidence")
     val sourceIds: List<String> = emptyList(),
+    @field:NotBlank
+    @field:Size(max = 200)
+    @get:JsonPropertyDescription("Stable id for this start event, so `flows` can name it as a source.")
+    val id: String = "start",
+)
+
+@JsonClassDescription(
+    "One edge in the process topology. `branchId` is required when `from` is a decision (names " +
+        "which of its declared branches this edge realises) and omitted for every other edge.",
+)
+public data class FlatContractFlow(
+    @field:NotBlank
+    @field:Size(max = 200)
+    @get:JsonPropertyDescription(
+        "Source element id: a start, activity, decision, intermediate throw, or boundary event.",
+    )
+    val from: String,
+    @field:NotBlank
+    @field:Size(max = 200)
+    @get:JsonPropertyDescription(
+        "Target element id: an activity, decision, end state, or intermediate throw. Never a " +
+            "boundary event — it is a source only, reached by attachment to its activity, not by an edge.",
+    )
+    val to: String,
+    @field:Size(max = 200)
+    @get:JsonPropertyDescription(
+        "Required when `from` is a decision: the id of the branch (from that decision's `branches`) " +
+            "this edge realises. Omit for every other edge.",
+    )
+    val branchId: String? = null,
 )
 
 @JsonClassDescription(
@@ -442,6 +498,15 @@ public data class FlatProcessContract(
     @field:Size(max = 50)
     @get:JsonPropertyDescription("Assumptions made while extracting the contract")
     val assumptions: List<ContractAssumption> = emptyList(),
+    @field:NotEmpty
+    @field:Valid
+    @field:Size(max = 400)
+    @get:JsonPropertyDescription(
+        "Complete process topology: every flow from one element to the next, including branch " +
+            "routing, loop back-edges, and exception paths. This is TOTAL — state every edge in the " +
+            "process, not just non-sequential ones. Order is not significant.",
+    )
+    val flows: List<FlatContractFlow> = emptyList(),
 )
 
 @JsonClassDescription("Decision required by the extracted process contract")

@@ -15,7 +15,6 @@ import dev.groknull.bpmner.authoring.internal.adapter.outbound.AgentPlatformBpmn
 import dev.groknull.bpmner.bpmn.BpmnRequest
 import dev.groknull.bpmner.contract.BpmnContractExtractionException
 import dev.groknull.bpmner.contract.FlatContractTestFixtures
-import dev.groknull.bpmner.readiness.EvidenceSourceType
 import dev.groknull.bpmner.readiness.ProcessInputAssessment
 import dev.groknull.bpmner.readiness.ReadinessDimension
 import dev.groknull.bpmner.readiness.ReadinessDimensionScore
@@ -88,13 +87,66 @@ class LlmProcessContractExtractorReliabilityTest : EmbabelMockitoIntegrationTest
         assertFalse(extractionFailure is Retryable)
     }
 
+    @Test
+    fun `a corrective attempt receives the previous contract in its prompt`() {
+        // Attempt 1 has no previousIssues yet, so its prompt cannot carry the marker. It returns
+        // a contract that fails validation (act-orphan has no flow in or out — V6), which drives
+        // a corrective attempt. The marker lives in the activity's NAME, not its id: V6's message
+        // quotes only the id ("element 'act-orphan' is declared but..."), so previousIssues alone
+        // can never leak the marker — only rendering the full previousContract can.
+        whenCreateObject({ prompt -> MARKER_TOKEN !in prompt }, FlatContractTestFixtures.FLAT_PROCESS_CONTRACT_CLASS)
+            .thenReturn(invalidContractWithMarkerActivity())
+        // Only matches once the corrective prompt renders the previous contract. Without commit
+        // 7's fix, this predicate never matches and the run exhausts its attempts on the same
+        // invalid contract instead.
+        whenCreateObject({ prompt -> MARKER_TOKEN in prompt }, FlatContractTestFixtures.FLAT_PROCESS_CONTRACT_CLASS)
+            .thenReturn(FlatContractTestFixtures.minimalContract())
+
+        // Contract extraction succeeding drives the run into the next (unstubbed) stage, which
+        // is out of scope here — only the contract-extraction prompt is under test.
+        runCatching { bpmnAgentInvoker.generate(BpmnRequest(processDescription = READY_PROSE), readyAssessment()) }
+
+        verifyCreateObjectMatching(
+            { prompt -> MARKER_TOKEN in prompt },
+            FlatContractTestFixtures.FLAT_PROCESS_CONTRACT_CLASS,
+        ) { true }
+    }
+
+    private fun invalidContractWithMarkerActivity(): Any = FlatProcessContract(
+        id = "contract-orphan",
+        processName = "Orphan process",
+        summary = "Summary",
+        start = FlatContractStart(
+            trigger = FlatContractTrigger(type = FlatTriggerKind.NONE, description = "Trigger"),
+            sourceIds = listOf("ev1"),
+        ),
+        activities = listOf(
+            FlatContractActivity(id = "a1", name = "A1", kind = FlatActivityKind.SERVICE, sourceIds = listOf("ev1")),
+            FlatContractActivity(
+                id = "act-orphan",
+                name = MARKER_TOKEN,
+                kind = FlatActivityKind.SERVICE,
+                sourceIds = listOf("ev1"),
+            ),
+        ),
+        endStates = listOf(
+            FlatContractEndState(id = "e1", name = "E1", kind = FlatEndStateKind.NORMAL, sourceIds = listOf("ev1")),
+        ),
+        // a1 is wired end to end; act-orphan has no incoming or outgoing flow (V6).
+        flows = listOf(
+            FlatContractFlow(from = "start", to = "a1"),
+            FlatContractFlow(from = "a1", to = "e1"),
+        ),
+    )
+
     private fun readyAssessment() = ProcessInputAssessment(
         verdict = ReadinessVerdict.READY,
         overallScore = 90,
         dimensions = listOf(ReadinessDimensionScore(ReadinessDimension.START_TRIGGER, 90, "OK")),
-        evidence = listOf(SourceEvidence("ev1", "Unused", EvidenceSourceType.ORIGINAL_INPUT)),
+        evidence = listOf(SourceEvidence("ev1", "Unused")),
         rationale = "Ready",
     )
 }
 
 private const val READY_PROSE = "When a user submits an order, we process it and then it is completed."
+private const val MARKER_TOKEN = "Marker only in previous contract render zqxwv"

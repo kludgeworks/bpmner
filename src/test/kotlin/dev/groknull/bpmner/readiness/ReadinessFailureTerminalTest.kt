@@ -105,7 +105,7 @@ class ReadinessFailureTerminalTest : EmbabelMockitoIntegrationTest() {
         verdict = ReadinessVerdict.READY,
         overallScore = 90,
         dimensions = listOf(ReadinessDimensionScore(ReadinessDimension.START_TRIGGER, 90, "OK")),
-        evidence = listOf(SourceEvidence("ev1", "Unused", EvidenceSourceType.ORIGINAL_INPUT)),
+        evidence = listOf(SourceEvidence("ev1", "Unused")),
         rationale = "Ready",
     )
 

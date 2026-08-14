@@ -15,6 +15,7 @@ import dev.groknull.bpmner.contract.ConditionalBranch
 import dev.groknull.bpmner.contract.ContractActivity
 import dev.groknull.bpmner.contract.ContractBoundaryEvent
 import dev.groknull.bpmner.contract.ContractEndState
+import dev.groknull.bpmner.contract.ContractFlow
 import dev.groknull.bpmner.contract.ContractIntermediateThrow
 import dev.groknull.bpmner.contract.ContractIteration
 import dev.groknull.bpmner.contract.ContractLoop
@@ -23,6 +24,7 @@ import dev.groknull.bpmner.contract.ContractTrigger
 import dev.groknull.bpmner.contract.DefaultBranch
 import dev.groknull.bpmner.contract.EventGatewayBranch
 import dev.groknull.bpmner.contract.EventTriggerKind
+import dev.groknull.bpmner.contract.FlatContractTestFixtures
 import dev.groknull.bpmner.contract.ProcessContract
 import dev.groknull.bpmner.contract.UnconditionalBranch
 import dev.groknull.bpmner.contract.boundaryEvents
@@ -180,7 +182,6 @@ class FlatContractMapperTest {
                 FlatContractBoundaryEvent(
                     kind = BoundaryEventKind.ERROR,
                     label = "Chargeback raised",
-                    nextRef = "act-dispute",
                     detail = "CHARGEBACK",
                 ),
             ),
@@ -191,12 +192,36 @@ class FlatContractMapperTest {
                 ContractBoundaryEvent(
                     kind = BoundaryEventKind.ERROR,
                     label = "Chargeback raised",
-                    nextRef = "act-dispute",
                     detail = "CHARGEBACK",
+                    id = "boundary-event",
                 ),
             ),
             flat.toSealed().boundaryEvents,
         )
+    }
+
+    // ADR-696-9's recurrence guard, boundary-event instance (ADR-696-11): a kind with no case
+    // here is untested by construction. This is what would have caught ESCALATION being missed
+    // twice in 696-4 — the same pattern the end-state and intermediate-throw round-trips below use.
+    @Test
+    fun `every BoundaryEventKind round-trips with its kind-specific detail`() {
+        val cases: List<Pair<FlatContractBoundaryEvent, ContractBoundaryEvent>> = listOf(
+            flatBoundaryEvent(BoundaryEventKind.TIMER, "be-timer", detail = "PT24H") to
+                ContractBoundaryEvent(BoundaryEventKind.TIMER, "Label", "PT24H", id = "be-timer"),
+            flatBoundaryEvent(BoundaryEventKind.ERROR, "be-error", detail = "CHARGEBACK") to
+                ContractBoundaryEvent(BoundaryEventKind.ERROR, "Label", "CHARGEBACK", id = "be-error"),
+            flatBoundaryEvent(BoundaryEventKind.ESCALATION, "be-escalation", detail = "APPROVAL_OVERDUE") to
+                ContractBoundaryEvent(BoundaryEventKind.ESCALATION, "Label", "APPROVAL_OVERDUE", id = "be-escalation"),
+            flatBoundaryEvent(BoundaryEventKind.MESSAGE, "be-message", detail = "order cancellation") to
+                ContractBoundaryEvent(BoundaryEventKind.MESSAGE, "Label", "order cancellation", id = "be-message"),
+        )
+        assertEquals(
+            BoundaryEventKind.entries.size,
+            cases.size,
+            "every BoundaryEventKind needs a case here — a new kind must not slip through untested",
+        )
+
+        cases.forEach { (flat, expected) -> assertEquals(expected, flat.toSealed()) }
     }
 
     @Test
@@ -226,6 +251,20 @@ class FlatContractMapperTest {
                 ContractEndState.Error("e-err", "End", errorCode = "CREDIT_REJECTED", sourceIds = sourceIds),
             flatEnd(FlatEndStateKind.MESSAGE, "e-msg", payload = "shipped") to
                 ContractEndState.Message("e-msg", "End", messageName = "shipped", sourceIds = sourceIds),
+            flatEnd(FlatEndStateKind.SIGNAL, "e-sig", payload = "settlement complete") to
+                ContractEndState.Signal("e-sig", "End", signalName = "settlement complete", sourceIds = sourceIds),
+            flatEnd(FlatEndStateKind.ESCALATION, "e-esc", payload = "APPROVAL_OVERDUE") to
+                ContractEndState.Escalation(
+                    "e-esc",
+                    "End",
+                    escalationCode = "APPROVAL_OVERDUE",
+                    sourceIds = sourceIds,
+                ),
+        )
+        assertEquals(
+            FlatEndStateKind.entries.size,
+            cases.size,
+            "every FlatEndStateKind needs a case here — a new kind must not slip through untested",
         )
 
         cases.forEach { (flat, expected) -> assertEquals(expected, flat.toSealed()) }
@@ -280,6 +319,25 @@ class FlatContractMapperTest {
                     messageName = "invoice ready",
                     sourceIds = sourceIds,
                 ),
+            flatThrow(FlatIntermediateThrowKind.SIGNAL, "throw-sig", payload = "batch closed") to
+                ContractIntermediateThrow.Signal(
+                    "throw-sig",
+                    "Throw",
+                    signalName = "batch closed",
+                    sourceIds = sourceIds,
+                ),
+            flatThrow(FlatIntermediateThrowKind.ESCALATION, "throw-esc", payload = "SLA_BREACHED") to
+                ContractIntermediateThrow.Escalation(
+                    "throw-esc",
+                    "Throw",
+                    escalationCode = "SLA_BREACHED",
+                    sourceIds = sourceIds,
+                ),
+        )
+        assertEquals(
+            FlatIntermediateThrowKind.entries.size,
+            cases.size,
+            "every FlatIntermediateThrowKind needs a case here",
         )
 
         cases.forEach { (flat, expected) -> assertEquals(expected, flat.toSealed()) }
@@ -293,6 +351,69 @@ class FlatContractMapperTest {
         assertTrue("messageName" in messageEx.message.orEmpty())
     }
 
+    // EventTriggerKind is not mapped to a BpmnEventDefinition anywhere yet — the compiler stage
+    // (ADR-696-2 step 4) is what will consume it — so no exhaustive `when` guards this enum.
+    // Cover every value here instead, or a new kind lands unexercised.
+    @Test
+    fun `every EventTriggerKind round-trips on an event-gateway branch`() {
+        EventTriggerKind.entries.forEach { trigger ->
+            val sealed = FlatContractBranch(
+                id = "b-evt",
+                label = "Event fires",
+                kind = FlatBranchKind.EVENT_GATEWAY,
+                triggerKind = trigger,
+                triggerDetail = "detail for $trigger",
+            ).toSealed()
+
+            assertEquals(
+                EventGatewayBranch(
+                    id = "b-evt",
+                    label = "Event fires",
+                    triggerKind = trigger,
+                    triggerDetail = "detail for $trigger",
+                ),
+                sealed,
+            )
+        }
+    }
+
+    @Test
+    fun `SIGNAL trigger round-trips and requires its signal name`() {
+        assertEquals(
+            ContractTrigger.Signal(signalName = "market opened", description = "market opens"),
+            FlatContractTrigger(
+                type = FlatTriggerKind.SIGNAL,
+                description = "market opens",
+                signalName = "market opened",
+            ).toSealed(),
+        )
+
+        val missing = FlatContractTrigger(type = FlatTriggerKind.SIGNAL, description = "market opens")
+        val ex = assertFailsWith<IllegalArgumentException> { missing.toSealed() }
+        assertTrue("signalName" in ex.message.orEmpty())
+    }
+
+    // An ESCALATION boundary event carries its escalation code in `detail`, exactly as a TIMER
+    // carries its duration there; without one the generated escalation has nothing to reference.
+    @Test
+    fun `ESCALATION boundary event requires its escalation code`() {
+        val ex = assertFailsWith<IllegalArgumentException> {
+            FlatContractBoundaryEvent(
+                kind = BoundaryEventKind.ESCALATION,
+                label = "approval overdue",
+                detail = null,
+            ).toSealed()
+        }
+        assertTrue("detail" in ex.message.orEmpty())
+
+        val valid = FlatContractBoundaryEvent(
+            kind = BoundaryEventKind.ESCALATION,
+            label = "approval overdue",
+            detail = "APPROVAL_OVERDUE",
+        ).toSealed()
+        assertEquals("APPROVAL_OVERDUE", valid.detail)
+    }
+
     @Test
     fun `every FlatContractBranch kind round-trips to the matching sealed subtype`() {
         val conditional = FlatContractBranch(
@@ -300,7 +421,6 @@ class FlatContractMapperTest {
             label = "Eligible",
             kind = FlatBranchKind.CONDITIONAL,
             condition = "score >= 750",
-            nextRef = null,
         )
         assertEquals(
             ConditionalBranch(id = "b-c", label = "Eligible", condition = "score >= 750"),
@@ -329,6 +449,35 @@ class FlatContractMapperTest {
                 triggerDetail = "payment confirmation",
             ),
             eventGateway.toSealed(),
+        )
+    }
+
+    @Test
+    fun `every FlatContractFlow shape round-trips to the matching sealed ContractFlow subtype`() {
+        val sequence = FlatContractFlow(from = "start", to = "act-x", branchId = null)
+        assertEquals(ContractFlow.Sequence(from = "start", to = "act-x"), sequence.toSealed())
+
+        val branch = FlatContractFlow(from = "dec-x", to = "act-y", branchId = "br-yes")
+        assertEquals(ContractFlow.Branch(from = "dec-x", to = "act-y", branchId = "br-yes"), branch.toSealed())
+    }
+
+    @Test
+    fun `FlatProcessContract flows map through toSealed in order`() {
+        val flat = FlatContractTestFixtures.minimalContract() as FlatProcessContract
+        val withFlows = flat.copy(
+            flows = listOf(
+                FlatContractFlow(from = "start", to = "a1"),
+                FlatContractFlow(from = "a1", to = "a2"),
+                FlatContractFlow(from = "a2", to = "e1"),
+            ),
+        )
+        assertEquals(
+            listOf(
+                ContractFlow.Sequence(from = "start", to = "a1"),
+                ContractFlow.Sequence(from = "a1", to = "a2"),
+                ContractFlow.Sequence(from = "a2", to = "e1"),
+            ),
+            withFlows.toSealed().flows,
         )
     }
 
@@ -463,6 +612,17 @@ class FlatContractMapperTest {
         calledElement = calledElement,
     )
 
+    private fun flatBoundaryEvent(
+        kind: BoundaryEventKind,
+        id: String,
+        detail: String?,
+    ): FlatContractBoundaryEvent = FlatContractBoundaryEvent(
+        kind = kind,
+        label = "Label",
+        detail = detail,
+        id = id,
+    )
+
     private fun flatEnd(
         kind: FlatEndStateKind,
         id: String,
@@ -474,6 +634,8 @@ class FlatContractMapperTest {
         sourceIds = listOf("ev1"),
         errorCode = payload.takeIf { kind == FlatEndStateKind.ERROR },
         messageName = payload.takeIf { kind == FlatEndStateKind.MESSAGE },
+        signalName = payload.takeIf { kind == FlatEndStateKind.SIGNAL },
+        escalationCode = payload.takeIf { kind == FlatEndStateKind.ESCALATION },
     )
 
     private fun flatThrow(
@@ -486,6 +648,8 @@ class FlatContractMapperTest {
         kind = kind,
         sourceIds = listOf("ev1"),
         messageName = payload.takeIf { kind == FlatIntermediateThrowKind.MESSAGE },
+        signalName = payload.takeIf { kind == FlatIntermediateThrowKind.SIGNAL },
+        escalationCode = payload.takeIf { kind == FlatIntermediateThrowKind.ESCALATION },
     )
 
     // Site 15: toPayloadActivity called with non-payload kind throws RetryableBpmnGenerationException.

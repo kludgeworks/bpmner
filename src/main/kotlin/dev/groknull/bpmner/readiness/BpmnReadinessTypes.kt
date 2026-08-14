@@ -74,9 +74,6 @@ data class ClarificationQuestion(
     @field:Size(max = 8)
     @get:JsonPropertyDescription("Optional bounded answer options when the question is multiple choice")
     val options: List<String> = emptyList(),
-    @field:Valid
-    @get:JsonPropertyDescription("Evidence motivating the question")
-    val evidence: List<SourceEvidence> = emptyList(),
 )
 
 /**

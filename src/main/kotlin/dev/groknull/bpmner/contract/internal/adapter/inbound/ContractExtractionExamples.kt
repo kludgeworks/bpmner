@@ -288,14 +288,12 @@ internal object ContractExtractionExamples {
                             label = "Customer notification",
                             kind = FlatBranchKind.CONDITIONAL,
                             condition = "customer notification is enabled",
-                            nextRef = ACT_SEND_CONFIRM,
                         ),
                         FlatContractBranch(
                             id = "br-manager",
                             label = "Manager notification",
                             kind = FlatBranchKind.CONDITIONAL,
                             condition = "manager notification is enabled",
-                            nextRef = ACT_NOTIFY_MANAGER,
                         ),
                     ),
                     sourceIds = listOf("src-1"),
@@ -308,6 +306,13 @@ internal object ContractExtractionExamples {
                     kind = FlatEndStateKind.NORMAL,
                     sourceIds = listOf("src-1"),
                 ),
+            ),
+            flows = listOf(
+                FlatContractFlow(from = "start", to = "dec-notifications"),
+                FlatContractFlow(from = "dec-notifications", to = ACT_SEND_CONFIRM, branchId = "br-customer"),
+                FlatContractFlow(from = "dec-notifications", to = ACT_NOTIFY_MANAGER, branchId = "br-manager"),
+                FlatContractFlow(from = ACT_SEND_CONFIRM, to = END_NORMAL),
+                FlatContractFlow(from = ACT_NOTIFY_MANAGER, to = END_NORMAL),
             ),
         )
 

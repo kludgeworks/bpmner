@@ -5,14 +5,22 @@
 
 package dev.groknull.bpmner.contract.internal.domain
 
+import dev.groknull.bpmner.bpmn.BoundaryEventKind
+import dev.groknull.bpmner.bpmn.MultiInstanceMode
+import dev.groknull.bpmner.contract.ActivityModifiers
 import dev.groknull.bpmner.contract.ConditionalBranch
 import dev.groknull.bpmner.contract.ContractActivity
 import dev.groknull.bpmner.contract.ContractActor
 import dev.groknull.bpmner.contract.ContractAssumption
+import dev.groknull.bpmner.contract.ContractBoundaryEvent
 import dev.groknull.bpmner.contract.ContractDecision
 import dev.groknull.bpmner.contract.ContractEndState
 import dev.groknull.bpmner.contract.ContractGatewayKind
 import dev.groknull.bpmner.contract.ContractIntermediateThrow
+import dev.groknull.bpmner.contract.ContractIteration
+import dev.groknull.bpmner.contract.ContractLoop
+import dev.groknull.bpmner.contract.ContractStart
+import dev.groknull.bpmner.contract.ContractTrigger
 import dev.groknull.bpmner.contract.DefaultBranch
 import dev.groknull.bpmner.contract.ProcessContract
 import dev.groknull.bpmner.contract.ProcessContractMarkdownRenderer
@@ -70,8 +78,7 @@ class ProcessContractMarkdownRendererTest {
                 id = "credit",
                 processName = "Credit-tier routing",
                 summary = "Route loan applications by credit score.",
-                trigger = "Credit score returned",
-                triggerSourceIds = sources,
+                start = ContractStart(ContractTrigger.None("Credit score returned"), sources),
                 activities =
                 listOf(
                     ContractActivity(id = "act-fast", name = "Fast-track", sourceIds = sources),
@@ -88,12 +95,10 @@ class ProcessContractMarkdownRendererTest {
                                 id = "b-fast",
                                 label = "Fast-track",
                                 condition = "score >= 750",
-                                nextRef = "act-fast",
                             ),
                             DefaultBranch(
                                 id = "b-manual",
                                 label = "Manual review",
-                                nextRef = "act-manual",
                             ),
                         ),
                         sourceIds = sources,
@@ -117,12 +122,12 @@ class ProcessContractMarkdownRendererTest {
 
         // Default branch carries the [default] marker.
         assertTrue(
-            markdown.contains("- b-manual → \"Manual review\" [default] → act-manual"),
+            markdown.contains("- b-manual → \"Manual review\" [default]"),
             "default branch should render the [default] marker; got:\n$markdown",
         )
         // Conditional branch keeps its existing `if "..."` rendering.
         assertTrue(
-            markdown.contains("- b-fast → \"Fast-track\" if \"score >= 750\" → act-fast"),
+            markdown.contains("- b-fast → \"Fast-track\" if \"score >= 750\""),
             "conditional branch should render its condition; got:\n$markdown",
         )
         // Unconditional (parallel) branches have neither suffix.
@@ -145,7 +150,7 @@ class ProcessContractMarkdownRendererTest {
                 id = "min",
                 processName = "Approve",
                 summary = "Approves things.",
-                trigger = "Request arrives",
+                start = ContractStart(ContractTrigger.None("Request arrives")),
                 activities =
                 listOf(
                     ContractActivity(id = "a", name = "Review", sourceIds = sources),
@@ -196,7 +201,7 @@ class ProcessContractMarkdownRendererTest {
                 id = "contract-regression",
                 processName = "Toast workflow",
                 summary = "Regression: default kinds must be explicit in the prompt.",
-                trigger = "User is hungry",
+                start = ContractStart(ContractTrigger.None("User is hungry")),
                 activities =
                 listOf(
                     ContractActivity(id = "act-toast", name = "Toast bread", sourceIds = sources),
@@ -219,6 +224,68 @@ class ProcessContractMarkdownRendererTest {
         )
     }
 
+    @Test
+    fun `renders activity modifiers — boundary events, iteration, and loop`() {
+        // ADR-696-11: this markdown is now the corrective extraction prompt's payload, so a
+        // modifier the render hides is a modifier the model is told (wrongly) to preserve.
+        val sources = listOf("ev1")
+        val contract = ProcessContract(
+            id = "contract-modifiers",
+            processName = "Process with modifiers",
+            summary = "Exercises every activity modifier the renderer must not hide.",
+            start = ContractStart(ContractTrigger.None("Request arrives"), sources),
+            activities = listOf(
+                ContractActivity.Service(
+                    id = "act-charge",
+                    name = "Charge card",
+                    sourceIds = sources,
+                    modifiers = ActivityModifiers(
+                        boundaryEvents = listOf(
+                            ContractBoundaryEvent(
+                                kind = BoundaryEventKind.MESSAGE,
+                                label = "Order cancelled",
+                                detail = "order cancellation",
+                                id = "be-order-cancelled",
+                            ),
+                        ),
+                        loop = ContractLoop(testBefore = false, loopCondition = "payment not yet successful", loopMaximum = 3),
+                    ),
+                ),
+                ContractActivity.User(
+                    id = "act-review",
+                    name = "Review item",
+                    sourceIds = sources,
+                    modifiers = ActivityModifiers(
+                        iteration = ContractIteration(
+                            mode = MultiInstanceMode.SEQUENTIAL,
+                            collectionDescription = "each line item on the packing slip",
+                        ),
+                    ),
+                ),
+            ),
+            endStates = listOf(ContractEndState(id = "end-done", name = "Done", sourceIds = sources)),
+        )
+
+        val markdown = renderer.render(contract)
+
+        assertTrue(
+            "be-order-cancelled" in markdown,
+            "boundary event id must survive the render; got:\n$markdown",
+        )
+        assertTrue(
+            markdown.contains("[MESSAGE be-order-cancelled detail=\"order cancellation\"]"),
+            "boundary event kind and detail must survive the render; got:\n$markdown",
+        )
+        assertTrue(
+            markdown.contains("[LOOP testBefore=false condition=\"payment not yet successful\" max=3]"),
+            "loop must survive the render; got:\n$markdown",
+        )
+        assertTrue(
+            markdown.contains("[ITERATION mode=SEQUENTIAL over=\"each line item on the packing slip\"]"),
+            "iteration must survive the render; got:\n$markdown",
+        )
+    }
+
     @Suppress("LongMethod")
     private fun fullContract(): ProcessContract {
         val sources = listOf("ev1")
@@ -226,8 +293,7 @@ class ProcessContractMarkdownRendererTest {
             id = "contract-1",
             processName = "Ship order",
             summary = "Approved orders are packed and shipped.",
-            trigger = "An order is submitted",
-            triggerSourceIds = sources,
+            start = ContractStart(ContractTrigger.None("An order is submitted"), sources),
             actors =
             listOf(
                 ContractActor(id = "actor-warehouse", name = "Warehouse", role = "fulfilment"),

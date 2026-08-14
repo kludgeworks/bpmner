@@ -14,7 +14,6 @@ import dev.groknull.bpmner.bpmn.BpmnRequest
 import dev.groknull.bpmner.contract.FlatContractTestFixtures
 import dev.groknull.bpmner.contract.internal.BpmnContractThresholdsConfig
 import dev.groknull.bpmner.readiness.ClarificationExchange
-import dev.groknull.bpmner.readiness.EvidenceSourceType
 import dev.groknull.bpmner.readiness.ProcessInputAssessment
 import dev.groknull.bpmner.readiness.ReadinessDimension
 import dev.groknull.bpmner.readiness.ReadinessVerdict
@@ -178,7 +177,6 @@ class ExtractContractTemplateTest {
             SourceEvidence(
                 id = "ev1",
                 text = "Ship approved order",
-                sourceType = EvidenceSourceType.ORIGINAL_INPUT,
             ),
         ),
         rationale = "One actor responsibility is underspecified.",

@@ -14,6 +14,8 @@ import dev.groknull.bpmner.bpmn.BpmnRequest
 import dev.groknull.bpmner.bpmn.StandardLoopCharacteristics
 import dev.groknull.bpmner.contract.ContractActivity
 import dev.groknull.bpmner.contract.ContractEndState
+import dev.groknull.bpmner.contract.ContractStart
+import dev.groknull.bpmner.contract.ContractTrigger
 import dev.groknull.bpmner.contract.ProcessContract
 import dev.groknull.bpmner.llm.PromptJsonRenderer
 import kotlin.test.Test
@@ -133,7 +135,7 @@ class CheckAlignmentTemplateTest {
         id = "contract-1",
         processName = "Make Toast",
         summary = "Toast bread for breakfast.",
-        trigger = "Hunger",
+        start = ContractStart(ContractTrigger.None("Hunger")),
         activities = listOf(ContractActivity(id = "act-toast", name = "Toast bread")),
         endStates = listOf(ContractEndState(id = "end-served", name = "Toast served")),
     )

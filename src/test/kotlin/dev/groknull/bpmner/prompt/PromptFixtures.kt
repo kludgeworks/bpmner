@@ -28,12 +28,13 @@ import dev.groknull.bpmner.contract.ContractDecision
 import dev.groknull.bpmner.contract.ContractEndState
 import dev.groknull.bpmner.contract.ContractIteration
 import dev.groknull.bpmner.contract.ContractLoop
+import dev.groknull.bpmner.contract.ContractStart
+import dev.groknull.bpmner.contract.ContractTrigger
 import dev.groknull.bpmner.contract.FlatContractTestFixtures
 import dev.groknull.bpmner.contract.ProcessContract
 import dev.groknull.bpmner.contract.internal.BpmnContractThresholdsConfig
 import dev.groknull.bpmner.llm.PromptJsonRenderer
 import dev.groknull.bpmner.readiness.BpmnReadinessThresholdsConfig
-import dev.groknull.bpmner.readiness.EvidenceSourceType
 import dev.groknull.bpmner.readiness.ProcessInputAssessment
 import dev.groknull.bpmner.readiness.ReadinessVerdict
 import dev.groknull.bpmner.readiness.SourceEvidence
@@ -72,12 +73,10 @@ internal object PromptFixtures {
                 SourceEvidence(
                     id = "ev1",
                     text = "Customer submits credit application",
-                    sourceType = EvidenceSourceType.ORIGINAL_INPUT,
                 ),
                 SourceEvidence(
                     id = "ev2",
                     text = "Score >= 700 approves the application",
-                    sourceType = EvidenceSourceType.ORIGINAL_INPUT,
                 ),
             ),
             rationale = "The source describes a complete credit-decisioning workflow.",
@@ -88,8 +87,7 @@ internal object PromptFixtures {
             id = "contract-credit-application",
             processName = "Credit application",
             summary = "Credit applications are scored and approved automatically when the score is high enough.",
-            trigger = "Customer submits credit application",
-            triggerSourceIds = listOf("ev1"),
+            start = ContractStart(ContractTrigger.None("Customer submits credit application"), listOf("ev1")),
             activities =
             listOf(
                 ContractActivity.Service(
@@ -113,7 +111,6 @@ internal object PromptFixtures {
                             ContractBoundaryEvent(
                                 kind = BoundaryEventKind.TIMER,
                                 label = "24h review timeout",
-                                nextRef = "end-reviewed",
                                 detail = "PT24H",
                             ),
                         ),

@@ -22,6 +22,8 @@ import dev.groknull.bpmner.contract.ContractDecision
 import dev.groknull.bpmner.contract.ContractEndState
 import dev.groknull.bpmner.contract.ContractIteration
 import dev.groknull.bpmner.contract.ContractLoop
+import dev.groknull.bpmner.contract.ContractStart
+import dev.groknull.bpmner.contract.ContractTrigger
 import dev.groknull.bpmner.contract.DefaultBranch
 import dev.groknull.bpmner.contract.ProcessContract
 import dev.groknull.bpmner.llm.PromptJsonRenderer
@@ -180,8 +182,7 @@ class GenerateBpmnTemplateTest {
             id = "contract-claim-assess",
             processName = "Assess and pay claim",
             summary = "Assess a claim as one composite step, then pay it.",
-            trigger = "Claim is filed",
-            triggerSourceIds = sources,
+            start = ContractStart(ContractTrigger.None("Claim is filed"), sources),
             activities = listOf(
                 ContractActivity(id = "a-validate", name = "Validate documents", sourceIds = sources),
                 ContractActivity(id = "a-estimate", name = "Estimate damage", sourceIds = sources),
@@ -218,8 +219,7 @@ class GenerateBpmnTemplateTest {
             id = "contract-credit-tier",
             processName = "Credit-tier routing",
             summary = "Loan applications routed by credit-bureau score to one of three underwriting paths.",
-            trigger = "Credit-check subprocess returns a score",
-            triggerSourceIds = sources,
+            start = ContractStart(ContractTrigger.None("Credit-check subprocess returns a score"), sources),
             activities = listOf(
                 ContractActivity(id = "a-fast", name = "Fast-track underwriting", sourceIds = sources),
                 ContractActivity(id = "a-standard", name = "Standard underwriting", sourceIds = sources),
@@ -247,8 +247,7 @@ class GenerateBpmnTemplateTest {
             id = "contract-modifiers",
             processName = "Handle claim with retries",
             summary = "Retries a declined charge and escalates unresolved line items.",
-            trigger = "Claim is submitted",
-            triggerSourceIds = sources,
+            start = ContractStart(ContractTrigger.None("Claim is submitted"), sources),
             activities = listOf(
                 ContractActivity.Service(
                     id = "a-charge",
@@ -271,7 +270,6 @@ class GenerateBpmnTemplateTest {
                             ContractBoundaryEvent(
                                 kind = BoundaryEventKind.TIMER,
                                 label = "24h escalation",
-                                nextRef = "end-escalated",
                                 detail = "PT24H",
                             ),
                         ),
@@ -291,8 +289,7 @@ class GenerateBpmnTemplateTest {
             id = "contract-claim",
             processName = "Handle claim",
             summary = "Claims are reviewed, routed for rework when incomplete, and closed.",
-            trigger = "Claim is submitted",
-            triggerSourceIds = sources,
+            start = ContractStart(ContractTrigger.None("Claim is submitted"), sources),
             actors = listOf(ContractActor(id = "actor-claims", name = "Claims team")),
             activities = listOf(
                 ContractActivity(

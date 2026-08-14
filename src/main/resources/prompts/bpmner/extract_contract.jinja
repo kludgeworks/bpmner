@@ -53,8 +53,12 @@ Style guide (constraints on naming and structure):
 {% endif %}
 {% if previousIssues %}
 
-Your previous attempt was rejected: it failed contract validation.
-Fix every issue below in this attempt — do not repeat them:
+Your previous attempt was rejected: it failed contract validation. This is the contract you
+produced last time:
+{{ previousContract }}
+
+Correct only what the issues below name, and return the complete contract with everything else
+preserved exactly — same ids, same names. Fix every issue below in this attempt — do not repeat them:
 {{ previousIssues }}
 {% endif %}
 

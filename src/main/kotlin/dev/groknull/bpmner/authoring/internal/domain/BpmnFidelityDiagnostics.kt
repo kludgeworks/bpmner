@@ -31,22 +31,12 @@ enum class BpmnFidelityCode {
      */
     DECISION_GATEWAY_KIND_MISMATCH,
 
-    /** A `ContractBranch.nextRef` points at an id that does not exist in the generated BPMN. */
-    BRANCH_NEXT_REF_UNRESOLVED,
-
     /**
      * The decision's gateway exists but has fewer outbound sequence flows than the
      * decision has branches. The LLM has likely conflated branches into fewer outbound
      * flows.
      */
     GATEWAY_BRANCH_COUNT_INSUFFICIENT,
-
-    /**
-     * A branch's `nextRef` resolves to a real node, but no sequence flow connects the
-     * decision's gateway to that target. Catches both missing loop back-edges and
-     * missing forward-skip edges in a single check.
-     */
-    BRANCH_FLOW_MISSING,
 
     /**
      * A ContractActivity is realised by a BPMN task node whose kind doesn't match. For
@@ -75,11 +65,12 @@ enum class BpmnFidelityCode {
 
     /**
      * A ContractActivity's `boundaryEvents` disagree with the `BpmnBoundaryEvent` nodes attached
-     * to the BPMN task realising it: an entry is missing, present-but-undeclared, realised with
-     * the wrong `eventDefinition` kind, or not routed by exactly one outbound flow to its
-     * `nextRef`. Catches the failure mode where the generator drops a boundary timeout or error
-     * catch — previously unchecked (R2, ADR-685-16/17, epic #685); passable only once the
-     * generation prompt carries the contract's `boundaryEvents` as JSON.
+     * to the BPMN task realising it: an entry is missing, present-but-undeclared, or realised
+     * with the wrong `eventDefinition` kind. Catches the failure mode where the generator drops
+     * a boundary timeout or error catch — previously unchecked (R2, ADR-685-16/17, epic #685);
+     * passable only once the generation prompt carries the contract's `boundaryEvents` as JSON.
+     * Routing (where the boundary event leads) is checked upstream, on the contract itself
+     * (V1/V5, ADR-696-1) — not here.
      */
     ACTIVITY_BOUNDARY_EVENT_MISMATCH,
 

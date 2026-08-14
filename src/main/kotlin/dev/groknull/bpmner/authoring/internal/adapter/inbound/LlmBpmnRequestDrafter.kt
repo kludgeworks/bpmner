@@ -26,11 +26,15 @@ internal class LlmBpmnRequestDrafter(
     ): BpmnRequestDraft {
         val prompt =
             """
-            Extract a BPMN generation request from the user's shell instruction.
+            Route a BPMN generation request from the user's shell instruction.
+
+            Do not repeat the workflow prose back. When the user describes a workflow directly, the
+            system reads it from this instruction verbatim; your job is only to say where the prose
+            lives and where the output goes.
 
             Rules:
-            - Put the workflow prose in processDescription when the user described the workflow directly.
-            - Put a file path in processFile only when the user explicitly says the workflow is in a file.
+            - Set processFile only when the user explicitly says the workflow is in a file.
+              Leave it null when the user described the workflow directly.
             - Always set outputFile. If the user named a specific output file, use it exactly;
               otherwise generate a concise, lowercase, kebab-case name ending in .bpmn derived from
               the process, with no directories or spaces (e.g. purchase-order-approval.bpmn).

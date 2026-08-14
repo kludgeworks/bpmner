@@ -8,7 +8,13 @@ package dev.groknull.bpmner.authoring.internal.domain
 import dev.groknull.bpmner.bpmn.BpmnDefinition
 import dev.groknull.bpmner.bpmn.BpmnEdge
 import dev.groknull.bpmner.bpmn.BpmnEndEvent
+import dev.groknull.bpmner.bpmn.BpmnEscalationEventDefinition
+import dev.groknull.bpmner.bpmn.BpmnEscalationRef
 import dev.groknull.bpmner.bpmn.BpmnExclusiveGateway
+import dev.groknull.bpmner.bpmn.BpmnIntermediateThrowEvent
+import dev.groknull.bpmner.bpmn.BpmnNoneEventDefinition
+import dev.groknull.bpmner.bpmn.BpmnSignalEventDefinition
+import dev.groknull.bpmner.bpmn.BpmnSignalRef
 import dev.groknull.bpmner.bpmn.BpmnStartEvent
 import dev.groknull.bpmner.bpmn.BpmnUserTask
 import dev.groknull.bpmner.bpmn.MultiInstanceMode
@@ -17,8 +23,12 @@ import dev.groknull.bpmner.contract.ConditionalBranch
 import dev.groknull.bpmner.contract.ContractActivity
 import dev.groknull.bpmner.contract.ContractDecision
 import dev.groknull.bpmner.contract.ContractEndState
+import dev.groknull.bpmner.contract.ContractFlow
+import dev.groknull.bpmner.contract.ContractIntermediateThrow
 import dev.groknull.bpmner.contract.ContractIteration
 import dev.groknull.bpmner.contract.ContractLoop
+import dev.groknull.bpmner.contract.ContractStart
+import dev.groknull.bpmner.contract.ContractTrigger
 import dev.groknull.bpmner.contract.DefaultBranch
 import dev.groknull.bpmner.contract.ProcessContract
 import kotlin.test.Test
@@ -74,35 +84,18 @@ class ContractConformancePassTest {
     }
 
     @Test
-    fun `skips when DefaultBranch nextRef matches no outbound edge`() {
+    fun `skips when a branch's flow target matches no outbound edge`() {
         val contract =
             creditTierContract().copy(
-                decisions =
-                listOf(
-                    ContractDecision(
-                        id = "Gateway_1",
-                        question = "Which credit tier?",
-                        branches =
-                        listOf(
-                            ConditionalBranch(
-                                id = "br-fast",
-                                label = "Fast-track",
-                                condition = "score >= 750",
-                                nextRef = "Task_fast",
-                            ),
-                            DefaultBranch(
-                                id = "br-manual",
-                                label = "Manual review",
-                                nextRef = "act-nonexistent",
-                            ),
-                        ),
-                        sourceIds = listOf("ev1"),
-                    ),
+                flows = listOf(
+                    ContractFlow.Sequence(from = "start", to = "Gateway_1"),
+                    ContractFlow.Branch(from = "Gateway_1", to = "Task_fast", branchId = "br-fast"),
+                    ContractFlow.Branch(from = "Gateway_1", to = "act-nonexistent", branchId = "br-manual"),
                 ),
             )
         val original = creditTierDefinition()
         val result = pass.conform(contract, original).definition
-        // No edge was changed because the nextRef didn't match any outbound target.
+        // No edge was changed because the flow target didn't match any outbound target.
         assertEquals(original, result)
     }
 
@@ -300,12 +293,132 @@ class ContractConformancePassTest {
         sequences = emptyList(),
     )
 
+    // Regression for the defect #696's spike found: a signal end event the model got RIGHT was
+    // stamped back to BpmnNoneEventDefinition, because the contract could only say NORMAL and
+    // Normal resolves unconditionally. Nothing in the suite caught it — the run stayed green and
+    // the signal semantics simply vanished.
+    @Test
+    fun `leaves a correctly-signalled end event untouched`() {
+        val result = pass.conform(signalContract(), signalDefinition())
+
+        val end = result.definition.nodes.filterIsInstance<BpmnEndEvent>().single()
+        assertEquals(
+            BpmnSignalEventDefinition("Signal_1"),
+            end.eventDefinition,
+            "a contract-declared signal end event must survive conformance unchanged",
+        )
+        assertTrue(
+            result.corrections.none { it.elementId == "end-broadcast" },
+            "no correction may be reported for an end event that already matches the contract",
+        )
+    }
+
+    @Test
+    fun `stamps a signal end event the model left as a plain end`() {
+        val definition = signalDefinition(endEventDefinition = BpmnNoneEventDefinition)
+
+        val result = pass.conform(signalContract(), definition)
+
+        val end = result.definition.nodes.filterIsInstance<BpmnEndEvent>().single()
+        assertEquals(BpmnSignalEventDefinition("Signal_1"), end.eventDefinition)
+        assertTrue(result.corrections.any { it.elementId == "end-broadcast" })
+    }
+
+    // Mirrors the ERROR/MESSAGE rule (ADR-685-21): resolution needs a catalogue entry and this
+    // pass never invents one, so an absent catalogue means no stamp rather than a fabricated ref.
+    @Test
+    fun `does not stamp a signal end event when the signal catalogue is empty`() {
+        val definition = signalDefinition(endEventDefinition = BpmnNoneEventDefinition, signals = emptyList())
+
+        val result = pass.conform(signalContract(), definition)
+
+        val end = result.definition.nodes.filterIsInstance<BpmnEndEvent>().single()
+        assertEquals(BpmnNoneEventDefinition, end.eventDefinition)
+        assertTrue(result.corrections.none { it.elementId == "end-broadcast" })
+    }
+
+    @Test
+    fun `stamps an escalation intermediate throw from the escalation catalogue`() {
+        val contract = ProcessContract(
+            id = "c-esc",
+            processName = "Approval chase",
+            summary = "Escalates an overdue approval",
+            start = ContractStart(ContractTrigger.None("approval overdue"), listOf("S1")),
+            activities = listOf(
+                ContractActivity.Service(id = "act-chase", name = "Chase approver", sourceIds = listOf("S1")),
+            ),
+            intermediateThrows = listOf(
+                ContractIntermediateThrow.Escalation(
+                    id = "throw-esc",
+                    name = "Raise escalation",
+                    escalationCode = "APPROVAL_OVERDUE",
+                    sourceIds = listOf("S1"),
+                ),
+            ),
+            endStates = listOf(ContractEndState.Normal("end-done", "Done", sourceIds = listOf("S1"))),
+        )
+        val definition = BpmnDefinition(
+            processId = "P",
+            processName = "Approval chase",
+            nodes = listOf(
+                BpmnStartEvent("StartEvent_1", "Approval overdue"),
+                BpmnIntermediateThrowEvent("throw-esc", "Raise escalation", BpmnNoneEventDefinition),
+                BpmnUserTask("act-chase", "Chase approver"),
+                BpmnEndEvent("end-done", "Done"),
+            ),
+            sequences = listOf(
+                BpmnEdge("Flow_1", "StartEvent_1", "throw-esc"),
+                BpmnEdge("Flow_2", "throw-esc", "act-chase"),
+                BpmnEdge("Flow_3", "act-chase", "end-done"),
+            ),
+            escalations = listOf(BpmnEscalationRef("Escalation_1", "APPROVAL_OVERDUE")),
+        )
+
+        val result = pass.conform(contract, definition)
+
+        val thrown = result.definition.nodes.filterIsInstance<BpmnIntermediateThrowEvent>().single()
+        assertEquals(BpmnEscalationEventDefinition("Escalation_1"), thrown.eventDefinition)
+    }
+
+    private fun signalContract() = ProcessContract(
+        id = "c-signal",
+        processName = "Settlement broadcast",
+        summary = "Broadcasts settlement completion",
+        start = ContractStart(ContractTrigger.None("settlement completes"), listOf("S1")),
+        activities = listOf(ContractActivity.Service(id = "act-settle", name = "Settle trade", sourceIds = listOf("S1"))),
+        endStates = listOf(
+            ContractEndState.Signal(
+                id = "end-broadcast",
+                name = "Settlement broadcast",
+                signalName = "settlement complete",
+                sourceIds = listOf("S1"),
+            ),
+        ),
+    )
+
+    private fun signalDefinition(
+        endEventDefinition: dev.groknull.bpmner.bpmn.BpmnEventDefinition = BpmnSignalEventDefinition("Signal_1"),
+        signals: List<BpmnSignalRef> = listOf(BpmnSignalRef("Signal_1", "settlement complete")),
+    ): BpmnDefinition = BpmnDefinition(
+        processId = "P",
+        processName = "Settlement broadcast",
+        nodes = listOf(
+            BpmnStartEvent("StartEvent_1", "Settlement completes"),
+            BpmnUserTask("act-settle", "Settle trade"),
+            BpmnEndEvent("end-broadcast", "Settlement broadcast", eventDefinition = endEventDefinition),
+        ),
+        sequences = listOf(
+            BpmnEdge("Flow_1", "StartEvent_1", "act-settle"),
+            BpmnEdge("Flow_2", "act-settle", "end-broadcast"),
+        ),
+        signals = signals,
+    )
+
     private fun creditTierContract() = ProcessContract(
         id = "c-credit",
         processName = "Credit-tier routing",
         summary = "Route by credit score.",
-        trigger = "Score received",
-        triggerSourceIds = listOf("ev1"),
+        start = ContractStart(ContractTrigger.None("Score received"), listOf("ev1")),
         activities =
         listOf(
             ContractActivity(id = "Task_fast", name = "Fast-track", sourceIds = listOf("ev1")),
@@ -322,18 +435,23 @@ class ContractConformancePassTest {
                         id = "br-fast",
                         label = "Fast-track",
                         condition = "score >= 750",
-                        nextRef = "Task_fast",
                     ),
                     DefaultBranch(
                         id = "br-manual",
                         label = "Manual review",
-                        nextRef = "Task_manual",
                     ),
                 ),
                 sourceIds = listOf("ev1"),
             ),
         ),
         endStates = listOf(ContractEndState(id = "end-offer", name = "Offer generated", sourceIds = listOf("ev1"))),
+        flows = listOf(
+            ContractFlow.Sequence(from = "start", to = "Gateway_1"),
+            ContractFlow.Branch(from = "Gateway_1", to = "Task_fast", branchId = "br-fast"),
+            ContractFlow.Branch(from = "Gateway_1", to = "Task_manual", branchId = "br-manual"),
+            ContractFlow.Sequence(from = "Task_fast", to = "end-offer"),
+            ContractFlow.Sequence(from = "Task_manual", to = "end-offer"),
+        ),
     )
 
     private fun creditTierDefinition(): BpmnDefinition = BpmnDefinition(

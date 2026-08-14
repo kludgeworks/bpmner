@@ -271,15 +271,15 @@ Detect data object and data store names that include discouraged BPMN type words
 
 ### Purpose
 
-Ensure every sequence flow connects existing BPMN nodes and does not self-reference.
+Detect dangling or self-referencing sequence flows that a V1-clean contract cannot produce — a hit indicates a compiler bug, not a modelling error.
 
 ### Modeller Guidance
 
-Connect each flow to two distinct elements that exist in the process.
+Should never fire on compiler output; a hit is a bug report, not a fix-it.
 
 ### AI Guidance
 
-Validate sequenceFlow sourceRef and targetRef against node ids before returning BPMN.
+Not modeller-facing guidance — a hit here means the compiler emitted an edge its own contract input forbids.
 
 ### Diagnostic Messages
 
@@ -396,7 +396,7 @@ Populate event definitions and catalog refs consistently for every event node.
 
 ### Purpose
 
-Ensure each BPMN definition has at least one start event and one end event.
+Ensure each BPMN definition has at least one start event and one end event (existence only — degree constraints are contract-level, ADR-696-1 V3/V4).
 
 ### Modeller Guidance
 
@@ -678,35 +678,6 @@ Detect message start events that do not have an incoming message flow from anoth
 - **Kind**: `LLM_MODEL_PATCH`
 - **Safety**: `LLM_ONLY`
 
-## evt-start-no-incoming
-
-- **Name**: Start No Incoming
-- **Category**: Event
-- **Severity**: ERROR
-- **Target Elements**: `bpmn:StartEvent`
-
-### Purpose
-
-Enforce BPMN start-event structure.
-
-### Modeller Guidance
-
-Start events initiate the process and must not have incoming sequence flows.
-
-### AI Guidance
-
-Validate that every start event has zero incoming sequence flows.
-
-### Diagnostic Messages
-
-- `default`: Start event must not have incoming sequence flow
-
-### Repair
-
-- **Kind**: `LOCAL_MODEL_FIX`
-- **Safety**: `SAFE_AUTOMATIC`
-- **Handler**: `deleteIncomingFlows`
-
 ## evt-timer-start-events-block-until-time
 
 - **Name**: Timer Start Events Block Until Time
@@ -724,7 +695,7 @@ Use a timer start event only when the process waits for a specific date, duratio
 
 ### AI Guidance
 
-Detect timer start events with no timer expression or with more than one timer expression. General start-event incoming-flow checks are handled by the start-no-incoming rule.
+Detect timer start events with no timer expression or with more than one timer expression. General start-event incoming-flow checks are contract-level (ADR-696-1 V3), not a lint rule.
 
 ### Diagnostic Messages
 

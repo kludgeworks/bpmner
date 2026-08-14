@@ -5,12 +5,14 @@
 
 package dev.groknull.bpmner.authoring
 
+import com.embabel.agent.domain.io.UserInput
 import dev.groknull.bpmner.bpmn.BpmnRequest
 import org.jmolecules.architecture.onion.simplified.ApplicationRing
 
 /**
- * Published `authoring` port: resolves a shell [BpmnRequestDraft] (containing inline prose or
- * file paths) into a fully resolved [BpmnRequest] suitable for the generation pipeline.
+ * Published `authoring` port: resolves a shell [BpmnRequestDraft] (a routing decision plus
+ * optional style-guide content) into a fully resolved [BpmnRequest] suitable for the generation
+ * pipeline.
  *
  * Callers from other modules (e.g. `pipeline`) inject this interface; the implementing bean
  * (`authoring.internal.domain.BpmnRequestResolver`) lives in `authoring.internal.domain` so
@@ -25,8 +27,9 @@ import org.jmolecules.architecture.onion.simplified.ApplicationRing
 @ApplicationRing
 fun interface BpmnRequestResolutionPort {
     /**
-     * Resolves a shell [BpmnRequestDraft] — which may reference inline prose, file paths,
-     * and optional style-guide content — into a validated [BpmnRequest].
+     * Resolves a shell [BpmnRequestDraft] — the routing decision and optional style-guide content —
+     * into a validated [BpmnRequest], reading the process prose from [userInput] unless the draft
+     * routes to a process file.
      */
-    fun resolveShellRequest(draft: BpmnRequestDraft): BpmnRequest
+    fun resolveShellRequest(userInput: UserInput, draft: BpmnRequestDraft): BpmnRequest
 }

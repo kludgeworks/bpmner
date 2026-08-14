@@ -9,13 +9,14 @@ import com.fasterxml.jackson.annotation.JsonClassDescription
 import com.fasterxml.jackson.annotation.JsonPropertyDescription
 import jakarta.validation.constraints.Size
 
-@JsonClassDescription("Draft BPMN generation request extracted from natural-language shell input")
+/**
+ * The routing decision extracted from a shell instruction: where the process prose lives and where
+ * the output goes. It deliberately carries no process prose of its own — when the user describes a
+ * workflow inline, the prose is read straight from the user's input, never round-tripped through
+ * this type.
+ */
+@JsonClassDescription("Routing decision for a BPMN generation request, extracted from shell input")
 data class BpmnRequestDraft(
-    @field:Size(max = MAX_PROCESS_DESCRIPTION_LENGTH)
-    @get:JsonPropertyDescription(
-        "Inline process prose supplied by the user. Set this when the user described the workflow directly.",
-    )
-    val processDescription: String? = null,
     @get:JsonPropertyDescription(
         "Path to a file containing process prose. Set this only when the user explicitly references a process file.",
     )
@@ -29,7 +30,6 @@ data class BpmnRequestDraft(
     val styleGuideFile: String? = null,
 ) {
     companion object {
-        const val MAX_PROCESS_DESCRIPTION_LENGTH = 10_000
         const val MAX_STYLE_GUIDE_LENGTH = 20_000
     }
 }

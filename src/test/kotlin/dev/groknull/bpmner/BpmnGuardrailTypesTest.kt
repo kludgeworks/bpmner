@@ -20,9 +20,11 @@ import dev.groknull.bpmner.contract.ContractActor
 import dev.groknull.bpmner.contract.ContractAssumption
 import dev.groknull.bpmner.contract.ContractDecision
 import dev.groknull.bpmner.contract.ContractEndState
+import dev.groknull.bpmner.contract.ContractFlow
+import dev.groknull.bpmner.contract.ContractStart
+import dev.groknull.bpmner.contract.ContractTrigger
 import dev.groknull.bpmner.contract.ProcessContract
 import dev.groknull.bpmner.readiness.ClarificationQuestion
-import dev.groknull.bpmner.readiness.EvidenceSourceType
 import dev.groknull.bpmner.readiness.ProcessInputAssessment
 import dev.groknull.bpmner.readiness.ReadinessDimension
 import dev.groknull.bpmner.readiness.ReadinessDimensionScore
@@ -116,7 +118,7 @@ class BpmnGuardrailTypesTest {
                 id = "",
                 processName = "",
                 summary = "",
-                trigger = "",
+                start = ContractStart(ContractTrigger.None("")),
                 activities = emptyList(),
                 endStates = emptyList(),
             )
@@ -154,7 +156,6 @@ class BpmnGuardrailTypesTest {
             SourceEvidence(
                 id = "ev1",
                 text = "Ship approved order",
-                sourceType = EvidenceSourceType.ORIGINAL_INPUT,
             ),
         ),
         rationale = "One actor responsibility is underspecified.",
@@ -164,13 +165,13 @@ class BpmnGuardrailTypesTest {
         id = "contract-1",
         processName = "Ship order",
         summary = "Approved orders are packed and shipped.",
-        trigger = "An approved order is received",
-        triggerSourceIds = listOf("ev1"),
+        start = ContractStart(ContractTrigger.None("An approved order is received"), listOf("ev1")),
         activities = validContractActivities(),
         decisions = validContractDecisions(),
         actors = validContractActors(),
         endStates = validContractEndStates(),
         assumptions = validContractAssumptions(),
+        flows = validContractFlows(),
     )
 
     private fun validContractActivities() = listOf(
@@ -212,6 +213,12 @@ class BpmnGuardrailTypesTest {
             name = "Order shipped",
             sourceIds = listOf("ev1"),
         ),
+    )
+
+    private fun validContractFlows() = listOf(
+        ContractFlow.Sequence(from = "start", to = "activity-pack"),
+        ContractFlow.Sequence(from = "activity-pack", to = "decision-stock"),
+        ContractFlow.Branch(from = "decision-stock", to = "end-shipped", branchId = "branch-yes"),
     )
 
     private fun validContractAssumptions() = listOf(

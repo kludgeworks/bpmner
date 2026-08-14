@@ -64,7 +64,7 @@ internal class LlmProcessContractExtractor(
         var previousContract: ProcessContract? = null
         var previousReport: ContractValidationReport? = null
         for (attempt in 1..thresholds.maxExtractionAttempts) {
-            val flat = requestFlatContract(promptRunner, request, assessment, previousIssues)
+            val flat = requestFlatContract(promptRunner, request, assessment, previousIssues, previousContract)
             val contract = try {
                 flat.toSealed()
             } catch (e: IllegalArgumentException) {
@@ -157,6 +157,7 @@ internal class LlmProcessContractExtractor(
         request: BpmnRequest,
         assessment: ProcessInputAssessment,
         previousIssues: String?,
+        previousContract: ProcessContract?,
     ): FlatProcessContract = try {
         eventPublisher.publishOnInvalidLlmReturn("contract") {
             promptRunner
@@ -179,7 +180,10 @@ internal class LlmProcessContractExtractor(
                     ContractExtractionExamples.businessRuleTaskExample,
                 )
                 .withExample(ContractExtractionExamples.SUB_PROCESS_LABEL, ContractExtractionExamples.subProcessExample)
-                .fromTemplate("bpmner/extract_contract", templateModel(request, assessment, previousIssues))
+                .fromTemplate(
+                    "bpmner/extract_contract",
+                    templateModel(request, assessment, previousIssues, previousContract),
+                )
         }
     } catch (e: InvalidLlmReturnFormatException) {
         throw BpmnContractExtractionException(
@@ -197,9 +201,11 @@ internal class LlmProcessContractExtractor(
         request: BpmnRequest,
         assessment: ProcessInputAssessment,
         previousIssues: String?,
+        previousContract: ProcessContract?,
     ): Map<String, Any> = mapOf(
         "maxAssumptions" to thresholds.maxAssumptions,
         "previousIssues" to (previousIssues ?: ""),
+        "previousContract" to (previousContract?.let(markdownRenderer::render) ?: ""),
         "rationale" to assessment.rationale,
         "missingAreas" to assessment.missingAreas.map { it.name },
         "evidence" to assessment.evidence.map {

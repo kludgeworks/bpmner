@@ -24,7 +24,6 @@ class BpmnRequestTest {
                 answerText = "The customer submits an order.",
                 relatedMissingAreas = listOf(ReadinessDimension.START_TRIGGER),
                 relatedDimensions = listOf(ReadinessDimension.START_TRIGGER),
-                evidence = emptyList(),
             ),
         )
 

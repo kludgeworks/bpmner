@@ -9,11 +9,10 @@ package dev.groknull.bpmner.bpmn
  * Whether [this] node is "semantically transparent" — it carries no business meaning of its
  * own and exists only to route flow.
  *
- * Transparent nodes are *collapsed* by the fidelity checker when it tests whether a contract
- * branch's `nextRef` is reachable from the decision's gateway in the generated BPMN. This
- * accepts the legitimate generator pattern `gateway → unnamed-merge → target` (where the
- * generator inserts a synthesised converging join with no business question), without losing
- * the safety net for actually-missing branch flows.
+ * Was used by the fidelity checker's now-deleted branch-target-reachability walk (ADR-696-1,
+ * stage 696-5) to collapse the legitimate generator pattern `gateway → unnamed-merge → target`
+ * without losing the safety net for actually-missing branch flows. No production caller
+ * remains; kept for its test coverage until stage 696-6 deletes the file whole (ADR-696-2).
  *
  * Today only one shape qualifies: an unnamed exclusive- or parallel-gateway node with exactly
  * one outbound edge — a pure converging join.

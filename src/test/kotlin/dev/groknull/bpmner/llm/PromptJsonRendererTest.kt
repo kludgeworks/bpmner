@@ -15,6 +15,8 @@ import dev.groknull.bpmner.contract.ContractBoundaryEvent
 import dev.groknull.bpmner.contract.ContractEndState
 import dev.groknull.bpmner.contract.ContractIteration
 import dev.groknull.bpmner.contract.ContractLoop
+import dev.groknull.bpmner.contract.ContractStart
+import dev.groknull.bpmner.contract.ContractTrigger
 import dev.groknull.bpmner.contract.ProcessContract
 import kotlin.test.Test
 import kotlin.test.assertContains
@@ -34,7 +36,7 @@ class PromptJsonRendererTest {
         id = "contract-round-trip",
         processName = "Round trip",
         summary = "Exercises every activity modifier.",
-        trigger = "Something happens",
+        start = ContractStart(ContractTrigger.None("Something happens")),
         activities = listOf(
             ContractActivity.Service(
                 id = "act-loop",
@@ -55,7 +57,6 @@ class PromptJsonRendererTest {
                         ContractBoundaryEvent(
                             kind = BoundaryEventKind.TIMER,
                             label = "60s timeout",
-                            nextRef = "end-timed-out",
                             detail = "PT60S",
                         ),
                     ),
@@ -89,7 +90,7 @@ class PromptJsonRendererTest {
             id = "contract-bare",
             processName = "Bare",
             summary = "No modifiers set.",
-            trigger = "Something happens",
+            start = ContractStart(ContractTrigger.None("Something happens")),
             activities = listOf(ContractActivity.Service(id = "act-plain", name = "Plain task")),
             endStates = listOf(ContractEndState(id = "end-done", name = "Done")),
         )

@@ -14,7 +14,7 @@ import org.springframework.stereotype.Component
 class ProcessContractMarkdownRenderer {
     fun render(contract: ProcessContract): String = buildString {
         appendLine("# ${contract.processName}")
-        appendLine("Trigger: ${contract.trigger}")
+        appendLine("Trigger: ${contract.start.trigger.description}")
         appendLine()
         appendLine("## Summary")
         appendLine(contract.summary)
@@ -24,6 +24,7 @@ class ProcessContractMarkdownRenderer {
         appendDecisions(contract)
         appendIntermediateThrows(contract)
         appendEndStates(contract)
+        appendFlows(contract)
         appendAssumptions(contract)
     }
 }
@@ -46,7 +47,8 @@ private fun StringBuilder.appendActivities(contract: ProcessContract) {
         contract.activities.forEach { activity ->
             val actor = activity.actorId?.let { " (actor: $it)" }.orEmpty()
             val kindSuffix = activitySuffix(activity)
-            appendLine("- ${activity.id}: ${activity.name}$actor$kindSuffix")
+            val modifiers = modifiersSuffix(activity)
+            appendLine("- ${activity.id}: ${activity.name}$actor$kindSuffix$modifiers")
         }
     }
 }
@@ -60,8 +62,7 @@ private fun StringBuilder.appendDecisions(contract: ProcessContract) {
             appendLine("- ${decision.id}: ${decision.question}$kindSuffix")
             decision.branches.forEach { branch ->
                 val suffix = branchSuffix(branch)
-                val next = branchNextSuffix(branch)
-                appendLine("  - ${branch.id} → \"${branch.label}\"$suffix$next")
+                appendLine("  - ${branch.id} → \"${branch.label}\"$suffix")
             }
         }
     }
@@ -87,6 +88,18 @@ private fun StringBuilder.appendIntermediateThrows(contract: ProcessContract) {
     }
 }
 
+// The total topology (ADR-696-1): every flow the contract states, feeding the outline model
+// that still consumes this markdown projection.
+private fun StringBuilder.appendFlows(contract: ProcessContract) {
+    if (contract.flows.isNotEmpty()) {
+        appendLine()
+        appendLine("## Flows")
+        contract.flows.forEach { flow ->
+            appendLine("- ${flow.from} → ${flow.to}${flowSuffix(flow)}")
+        }
+    }
+}
+
 private fun StringBuilder.appendAssumptions(contract: ProcessContract) {
     if (contract.assumptions.isNotEmpty()) {
         appendLine()
@@ -106,7 +119,10 @@ private fun branchSuffix(branch: ContractBranch): String = when (branch) {
     is EventGatewayBranch -> " on ${branch.triggerKind} \"${branch.triggerDetail}\""
 }
 
-private fun branchNextSuffix(branch: ContractBranch): String = branch.nextRef?.let { " → $it" }.orEmpty()
+private fun flowSuffix(flow: ContractFlow): String = when (flow) {
+    is ContractFlow.Branch -> " [branch: ${flow.branchId}]"
+    is ContractFlow.Sequence -> ""
+}
 
 // Activity-kind suffix for the markdown line. Service carries an explicit [SERVICE] marker
 // because the markdown doubles as a generation-critical LLM prompt input; without it the
@@ -127,6 +143,25 @@ private fun activitySuffix(activity: ContractActivity): String = when (activity)
     is ContractActivity.CallActivity -> " [CALL_ACTIVITY calledElement=\"${activity.calledElement}\"]"
 }
 
+// Activity modifiers (iteration, boundary events, loop) rendered inline. This markdown is now
+// also the corrective extraction prompt's payload (ADR-696-11): the model is told to preserve
+// the previous contract's elements exactly, and a render that hides modifiers reads as a
+// contract that has none — inviting the model to drop them. One bracket per modifier, in the
+// same style activitySuffix and activity_kinds.jinja's worked examples already use.
+private fun modifiersSuffix(activity: ContractActivity): String = buildString {
+    activity.iteration?.let {
+        append(" [ITERATION mode=${it.mode} over=\"${it.collectionDescription}\"]")
+    }
+    activity.boundaryEvents.forEach { boundaryEvent ->
+        append(" [${boundaryEvent.kind} ${boundaryEvent.id} detail=\"${boundaryEvent.detail}\"]")
+    }
+    activity.loop?.let {
+        val condition = it.loopCondition?.let { c -> " condition=\"$c\"" }.orEmpty()
+        val max = it.loopMaximum?.let { m -> " max=$m" }.orEmpty()
+        append(" [LOOP testBefore=${it.testBefore}$condition$max]")
+    }
+}
+
 // End-state-kind suffix for the markdown line. Normal carries an explicit [NORMAL] marker
 // because the markdown doubles as a generation-critical LLM prompt input; without it the
 // generation LLM has no discriminator for the default end-state kind. The four typed kinds
@@ -138,8 +173,13 @@ private fun endStateSuffix(endState: ContractEndState): String = when (endState)
     is ContractEndState.Terminate -> " [TERMINATE]"
     is ContractEndState.Error -> " [ERROR errorCode=\"${endState.errorCode}\"]"
     is ContractEndState.Message -> " [MESSAGE messageName=\"${endState.messageName}\"]"
+    is ContractEndState.Signal -> " [SIGNAL signalName=\"${endState.signalName}\"]"
+    is ContractEndState.Escalation -> " [ESCALATION escalationCode=\"${endState.escalationCode}\"]"
 }
 
 private fun intermediateThrowSuffix(intermediateThrow: ContractIntermediateThrow): String = when (intermediateThrow) {
     is ContractIntermediateThrow.Message -> " [MESSAGE messageName=\"${intermediateThrow.messageName}\"]"
+    is ContractIntermediateThrow.Signal -> " [SIGNAL signalName=\"${intermediateThrow.signalName}\"]"
+    is ContractIntermediateThrow.Escalation ->
+        " [ESCALATION escalationCode=\"${intermediateThrow.escalationCode}\"]"
 }

@@ -123,14 +123,22 @@ internal class BpmnRepairLoop(
             blocking.isEmpty() -> NEAR_CLEAN_SCORE // validated but edge case — treat as near-clean
             else -> maxOf(0.0, 1.0 - blocking.size.toDouble() / (blocking.size + 1))
         }
-        val feedback = if (blocking.isEmpty()) {
-            "No blocking diagnostics"
-        } else {
-            blocking.take(MAX_FEEDBACK_DIAGNOSTICS).joinToString("; ") { d ->
-                d.rule?.let { "[${d.elementId ?: "?"}] $it" } ?: (d.elementId ?: "unknown diagnostic")
-            }
+        return TextFeedback(score, feedbackFor(blocking))
+    }
+
+    /**
+     * Render blocking diagnostics as the corrective-feedback text the model sees. Falls back to
+     * [BpmnDiagnostic.message] — always present — rather than a placeholder string, so a
+     * diagnostic with neither a lint [BpmnDiagnostic.rule] nor an [BpmnDiagnostic.elementId]
+     * (e.g. graph-connectivity errors) still tells the model what to fix instead of leaving it
+     * with no usable signal.
+     */
+    internal fun feedbackFor(blocking: List<BpmnDiagnostic>): String = if (blocking.isEmpty()) {
+        "No blocking diagnostics"
+    } else {
+        blocking.take(MAX_FEEDBACK_DIAGNOSTICS).joinToString("; ") { d ->
+            d.rule?.let { "[${d.elementId ?: "?"}] $it" } ?: d.elementId ?: d.message
         }
-        return TextFeedback(score, feedback)
     }
 
     private fun labelCandidates(eval: BpmnRepairEvaluation): List<BpmnDiagnostic> {

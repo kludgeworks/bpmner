@@ -7,7 +7,6 @@ package dev.groknull.bpmner.contract
 
 import com.embabel.agent.core.NonRetryable
 import com.fasterxml.jackson.annotation.JsonClassDescription
-import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonPropertyDescription
 import com.fasterxml.jackson.annotation.JsonSubTypes
 import com.fasterxml.jackson.annotation.JsonTypeInfo
@@ -41,6 +40,10 @@ data class ContractStart(
     @field:Size(max = 20)
     @get:JsonPropertyDescription("Source ids grounding the trigger in source evidence")
     val sourceIds: List<String> = emptyList(),
+    @field:NotBlank
+    @field:Size(max = 200)
+    @get:JsonPropertyDescription("Stable id for this start event, so `flows` can name it as a source.")
+    val id: String = "start",
 )
 
 @JsonClassDescription("Typed process trigger")
@@ -49,6 +52,7 @@ data class ContractStart(
     JsonSubTypes.Type(value = ContractTrigger.None::class, name = "NONE"),
     JsonSubTypes.Type(value = ContractTrigger.Timer::class, name = "TIMER"),
     JsonSubTypes.Type(value = ContractTrigger.Message::class, name = "MESSAGE"),
+    JsonSubTypes.Type(value = ContractTrigger.Signal::class, name = "SIGNAL"),
 )
 sealed interface ContractTrigger {
     val description: String
@@ -65,6 +69,11 @@ sealed interface ContractTrigger {
 
     data class Message(
         val messageName: String,
+        override val description: String,
+    ) : ContractTrigger
+
+    data class Signal(
+        val signalName: String,
         override val description: String,
     ) : ContractTrigger
 }
@@ -112,44 +121,51 @@ data class ProcessContract(
     @field:Size(max = 50)
     @get:JsonPropertyDescription("Assumptions made while extracting the contract")
     val assumptions: List<ContractAssumption> = emptyList(),
-) {
-    // Backward-compat read-only views over `start` for existing Kotlin callers that still use
-    // the flat `trigger: String` / `triggerSourceIds: List<String>` shape via the secondary
-    // constructor below. JsonIgnore keeps them out of the JSON wire format — without this,
-    // Jackson serialises `trigger` as a duplicate top-level property and round-trip
-    // deserialisation fails with "Unrecognized field 'trigger'".
-    @get:JsonIgnore
-    val trigger: String
-        get() = start.trigger.description
-
-    @get:JsonIgnore
-    val triggerSourceIds: List<String>
-        get() = start.sourceIds
-
-    constructor(
-        id: String,
-        processName: String,
-        summary: String,
-        trigger: String,
-        triggerSourceIds: List<String> = emptyList(),
-        activities: List<ContractActivity>,
-        decisions: List<ContractDecision> = emptyList(),
-        actors: List<ContractActor> = emptyList(),
-        endStates: List<ContractEndState>,
-        intermediateThrows: List<ContractIntermediateThrow> = emptyList(),
-        assumptions: List<ContractAssumption> = emptyList(),
-    ) : this(
-        id = id,
-        processName = processName,
-        summary = summary,
-        start = ContractStart(ContractTrigger.None(trigger), triggerSourceIds),
-        activities = activities,
-        decisions = decisions,
-        actors = actors,
-        endStates = endStates,
-        intermediateThrows = intermediateThrows,
-        assumptions = assumptions,
+    @field:NotEmpty
+    @field:Valid
+    @field:Size(max = 400)
+    @get:JsonPropertyDescription(
+        "Complete process topology: every flow from one element to the next, including branch " +
+            "routing, loop back-edges, and exception paths. Total — nothing downstream infers an " +
+            "edge this list does not state. Order is not significant; edge ids are assigned by " +
+            "graph traversal, not list position.",
     )
+    val flows: List<ContractFlow> = emptyList(),
+)
+
+/**
+ * One edge in the process topology, stated in [ProcessContract.flows].
+ *
+ * Two kinds, matching the sealed pattern every other contract element already uses: they compile
+ * differently downstream (a decision's outgoing edge carries the branch it realises and gets
+ * label/condition/`isDefault` stamped onto it; an ordinary edge does not), so the type says what the
+ * code does and any `when` over it is exhaustive.
+ */
+@JsonClassDescription(
+    "One edge in the process topology. `branchId` is required when `from` is a decision (names " +
+        "which of its declared branches this edge realises) and omitted for every other edge.",
+)
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "kind")
+@JsonSubTypes(
+    JsonSubTypes.Type(value = ContractFlow.Sequence::class, name = "SEQUENCE"),
+    JsonSubTypes.Type(value = ContractFlow.Branch::class, name = "BRANCH"),
+)
+sealed interface ContractFlow {
+    val from: String
+    val to: String
+
+    /** An ordinary step-to-step edge. Its source is never a decision. */
+    data class Sequence(
+        override val from: String,
+        override val to: String,
+    ) : ContractFlow
+
+    /** A decision's outgoing edge, realising exactly one declared branch. */
+    data class Branch(
+        override val from: String,
+        override val to: String,
+        val branchId: String,
+    ) : ContractFlow
 }
 
 /**
@@ -355,14 +371,16 @@ data class ContractIteration(
 )
 
 @JsonClassDescription(
-    "A boundary event attached to an activity: a timeout (TIMER) or caught business error (ERROR) " +
-        "that interrupts the activity and routes the flow to " +
-        "`nextRef`. Realized as a `BpmnBoundaryEvent` on the activity's BPMN task.",
+    "A boundary event attached to an activity: a timeout (TIMER), caught business error (ERROR), " +
+        "raised escalation (ESCALATION), or an asynchronous message from another party (MESSAGE) " +
+        "that interrupts the activity. Its outgoing flow is stated in `flows`, like any other " +
+        "element. Realized as a `BpmnBoundaryEvent` on the activity's BPMN task.",
 )
 data class ContractBoundaryEvent(
     @get:JsonPropertyDescription(
         "Event kind: TIMER (a deadline/duration elapses), ERROR (the activity throws a named " +
-            "business error).",
+            "business error), ESCALATION (a business escalation is raised), MESSAGE (an " +
+            "asynchronous message from another party arrives, e.g. a cancellation).",
     )
     val kind: BoundaryEventKind,
     @field:NotBlank
@@ -372,15 +390,16 @@ data class ContractBoundaryEvent(
     @field:NotBlank
     @field:Size(max = 200)
     @get:JsonPropertyDescription(
-        "Id of the activity, decision, or end state the exception path routes to when this event fires.",
+        "Kind-specific detail, required for every kind: an ISO-8601 duration for TIMER " +
+            "(e.g. \"PT24H\"), a business error code for ERROR (e.g. \"CHARGEBACK\"), an " +
+            "escalation code for ESCALATION (e.g. \"APPROVAL_OVERDUE\"), or a message name for " +
+            "MESSAGE (e.g. \"order cancellation\").",
     )
-    val nextRef: String,
+    val detail: String,
+    @field:NotBlank
     @field:Size(max = 200)
-    @get:JsonPropertyDescription(
-        "Optional kind-specific detail: an ISO-8601 duration for TIMER (e.g. \"PT24H\"), a business " +
-            "error code for ERROR (e.g. \"CHARGEBACK\").",
-    )
-    val detail: String? = null,
+    @get:JsonPropertyDescription("Stable id for this boundary event, so `flows` can name it as a source.")
+    val id: String = "boundary-event",
 )
 
 @JsonClassDescription(
@@ -469,7 +488,7 @@ enum class ContractGatewayKind {
     /**
      * The flow waits for one of several events; the first to fire selects its branch. Maps to
      * `<bpmn:eventBasedGateway>`. Branches are [EventGatewayBranch] — each names the event
-     * (TIMER / MESSAGE) that triggers it rather than carrying a condition.
+     * (TIMER / MESSAGE / SIGNAL) that triggers it rather than carrying a condition.
      */
     EVENT_BASED,
 }
@@ -534,7 +553,6 @@ data class ContractDecision(
 sealed interface ContractBranch {
     val id: String
     val label: String
-    val nextRef: String?
 }
 
 /**
@@ -555,7 +573,6 @@ data class ConditionalBranch(
     override val id: String,
     override val label: String,
     val condition: String,
-    override val nextRef: String? = null,
 ) : ContractBranch
 
 @JsonClassDescription(
@@ -565,7 +582,6 @@ data class ConditionalBranch(
 data class DefaultBranch(
     override val id: String,
     override val label: String,
-    override val nextRef: String? = null,
 ) : ContractBranch
 
 @JsonClassDescription(
@@ -575,7 +591,6 @@ data class DefaultBranch(
 data class UnconditionalBranch(
     override val id: String,
     override val label: String,
-    override val nextRef: String? = null,
 ) : ContractBranch
 
 /**
@@ -586,18 +601,18 @@ data class UnconditionalBranch(
 enum class EventTriggerKind {
     TIMER,
     MESSAGE,
+    SIGNAL,
 }
 
 @JsonClassDescription(
     "Branch of an EVENT_BASED decision — taken when its event fires first. Names the triggering " +
-        "event kind (TIMER / MESSAGE) instead of a condition.",
+        "event kind (TIMER / MESSAGE / SIGNAL) instead of a condition.",
 )
 data class EventGatewayBranch(
     override val id: String,
     override val label: String,
     val triggerKind: EventTriggerKind,
     val triggerDetail: String,
-    override val nextRef: String? = null,
 ) : ContractBranch
 
 @JsonClassDescription("Actor referenced by the extracted process contract")
@@ -620,7 +635,7 @@ data class ContractActor(
  *
  * Mirrors the sealed-subtype pattern used by [ContractTrigger], [ContractBranch],
  * and [ContractActivity]: the `kind` discriminator dispatches
- * to one of four subtypes, each carrying exactly the payload its end-event kind needs.
+ * to one of six subtypes, each carrying exactly the payload its end-event kind needs.
  * Kind / payload coupling is enforced by the type system — [Error] always carries an
  * `errorCode`, [Message] always carries a `messageName`, etc.
  *
@@ -635,16 +650,14 @@ data class ContractActor(
  *    [dev.groknull.bpmner.bpmn.BpmnErrorEventDefinition] + matching `BpmnErrorRef`
  *  - [Message] — point-to-point send on completion →
  *    [dev.groknull.bpmner.bpmn.BpmnMessageEventDefinition] + matching `BpmnMessageRef`
+ *  - [Signal] — broadcast observed by any listener →
+ *    [dev.groknull.bpmner.bpmn.BpmnSignalEventDefinition] + matching `BpmnSignalRef`
+ *  - [Escalation] — raises a business escalation to an enclosing scope →
+ *    [dev.groknull.bpmner.bpmn.BpmnEscalationEventDefinition] + matching `BpmnEscalationRef`
  *
- * Signal- and escalation-throwing end events (mapping to
- * [dev.groknull.bpmner.bpmn.BpmnSignalEventDefinition] /
- * [dev.groknull.bpmner.bpmn.BpmnEscalationEventDefinition]) are a supported BPMN generation
- * construct but have no dedicated [ContractEndState] kind — the contract-extraction vocabulary
- * stays at these four end states until a source description needs the distinction.
- *
- * Field naming follows the convention from [ContractTrigger]: Message carries a human-readable
- * name (extracted from prose; mapped to a catalogue id at generation time), and Error carries
- * the BPMN-spec matching code.
+ * Field naming follows the convention from [ContractTrigger]: Message and Signal carry a
+ * human-readable name (extracted from prose; mapped to a catalogue id at generation time), and
+ * Error and Escalation carry the BPMN-spec matching code.
  *
  * The companion `invoke` keeps existing flat-constructor call sites compiling by
  * defaulting to [Normal] — the most common end-state kind in practice.
@@ -656,6 +669,8 @@ data class ContractActor(
     JsonSubTypes.Type(value = ContractEndState.Terminate::class, name = "TERMINATE"),
     JsonSubTypes.Type(value = ContractEndState.Error::class, name = "ERROR"),
     JsonSubTypes.Type(value = ContractEndState.Message::class, name = "MESSAGE"),
+    JsonSubTypes.Type(value = ContractEndState.Signal::class, name = "SIGNAL"),
+    JsonSubTypes.Type(value = ContractEndState.Escalation::class, name = "ESCALATION"),
 )
 sealed interface ContractEndState {
     val id: String
@@ -701,6 +716,28 @@ sealed interface ContractEndState {
         override val sourceIds: List<String> = emptyList(),
     ) : ContractEndState
 
+    @JsonClassDescription(
+        "Signal end — broadcast observed by any listening process. Maps to BpmnEndEvent with " +
+            "SignalEventDefinition.",
+    )
+    data class Signal(
+        override val id: String,
+        override val name: String,
+        val signalName: String,
+        override val sourceIds: List<String> = emptyList(),
+    ) : ContractEndState
+
+    @JsonClassDescription(
+        "Escalation end — raises a business escalation to an enclosing scope. Maps to " +
+            "BpmnEndEvent with EscalationEventDefinition.",
+    )
+    data class Escalation(
+        override val id: String,
+        override val name: String,
+        val escalationCode: String,
+        override val sourceIds: List<String> = emptyList(),
+    ) : ContractEndState
+
     companion object {
         // Convenience factory: lets existing call sites that don't specify a kind keep working
         // (`ContractEndState("id", "name")` → Normal). Most end states are NORMAL in practice;
@@ -724,8 +761,16 @@ val ContractEndState.kindName: String
             is ContractEndState.Terminate -> "TERMINATE"
             is ContractEndState.Error -> "ERROR"
             is ContractEndState.Message -> "MESSAGE"
+            is ContractEndState.Signal -> "SIGNAL"
+            is ContractEndState.Escalation -> "ESCALATION"
         }
 
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "kind")
+@JsonSubTypes(
+    JsonSubTypes.Type(value = ContractIntermediateThrow.Message::class, name = "MESSAGE"),
+    JsonSubTypes.Type(value = ContractIntermediateThrow.Signal::class, name = "SIGNAL"),
+    JsonSubTypes.Type(value = ContractIntermediateThrow.Escalation::class, name = "ESCALATION"),
+)
 sealed interface ContractIntermediateThrow {
     val id: String
     val name: String
@@ -737,12 +782,28 @@ sealed interface ContractIntermediateThrow {
         val messageName: String,
         override val sourceIds: List<String> = emptyList(),
     ) : ContractIntermediateThrow
+
+    data class Signal(
+        override val id: String,
+        override val name: String,
+        val signalName: String,
+        override val sourceIds: List<String> = emptyList(),
+    ) : ContractIntermediateThrow
+
+    data class Escalation(
+        override val id: String,
+        override val name: String,
+        val escalationCode: String,
+        override val sourceIds: List<String> = emptyList(),
+    ) : ContractIntermediateThrow
 }
 
 val ContractIntermediateThrow.kindName: String
     get() =
         when (this) {
             is ContractIntermediateThrow.Message -> "MESSAGE"
+            is ContractIntermediateThrow.Signal -> "SIGNAL"
+            is ContractIntermediateThrow.Escalation -> "ESCALATION"
         }
 
 @JsonClassDescription("Assumption made while extracting the process contract")

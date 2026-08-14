@@ -14,7 +14,5 @@ import org.springframework.modulith.ApplicationModule
  * lifecycle logging. The author-facing progress stream is owned by `pipeline`'s `RunUpdate`
  * anti-corruption layer, not by this module.
  */
-// bpmn.GenerationMode is referenced via BpmnRequest.mode at bytecode level — no direct
-// import; verify() confirms this grant is load-bearing (removal fails ApplicationModules.verify()).
 @ApplicationModule
 internal object TelemetryModule

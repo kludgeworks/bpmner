@@ -8,12 +8,10 @@ package dev.groknull.bpmner
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import dev.groknull.bpmner.readiness.ClarificationQuestion
-import dev.groknull.bpmner.readiness.EvidenceSourceType
 import dev.groknull.bpmner.readiness.ReadinessDimension
 import dev.groknull.bpmner.readiness.SourceEvidence
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
@@ -98,7 +96,7 @@ class BpmnGuardrailTypesJacksonTest {
     }
 
     @Test
-    fun `SourceEvidence deserialises cleanly when sourceType is omitted entirely`() {
+    fun `SourceEvidence deserialises with only the text supplied`() {
         val json =
             """
             {
@@ -108,12 +106,11 @@ class BpmnGuardrailTypesJacksonTest {
 
         val evidence: SourceEvidence = objectMapper.readValue(json)
 
-        assertNull(evidence.sourceType)
         assertTrue(evidence.id.isEmpty())
     }
 
     @Test
-    fun `SourceEvidence still deserialises a supplied sourceType`() {
+    fun `SourceEvidence ignores a property it does not model`() {
         val json =
             """
             {
@@ -124,6 +121,6 @@ class BpmnGuardrailTypesJacksonTest {
 
         val evidence: SourceEvidence = objectMapper.readValue(json)
 
-        assertEquals(EvidenceSourceType.ORIGINAL_INPUT, evidence.sourceType)
+        assertEquals("The customer submits an order.", evidence.text)
     }
 }

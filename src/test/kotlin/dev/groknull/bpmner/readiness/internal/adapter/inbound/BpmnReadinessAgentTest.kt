@@ -15,7 +15,6 @@ import dev.groknull.bpmner.readiness.BpmnReadinessAssessmentException
 import dev.groknull.bpmner.readiness.BpmnReadinessConfig
 import dev.groknull.bpmner.readiness.BpmnReadinessThresholdsConfig
 import dev.groknull.bpmner.readiness.ClarificationQuestion
-import dev.groknull.bpmner.readiness.EvidenceSourceType
 import dev.groknull.bpmner.readiness.ProcessInputAssessment
 import dev.groknull.bpmner.readiness.ReadinessDimension
 import dev.groknull.bpmner.readiness.ReadinessDimensionScore
@@ -87,8 +86,8 @@ class BpmnReadinessAgentTest {
                 ReadinessDimensionScore(it, 60, "Rationale")
             },
             evidence = listOf(
-                SourceEvidence(text = "Some evidence", sourceType = EvidenceSourceType.ORIGINAL_INPUT),
-                SourceEvidence(id = "existing-ev", text = "Other evidence", sourceType = EvidenceSourceType.ORIGINAL_INPUT),
+                SourceEvidence(text = "Some evidence"),
+                SourceEvidence(id = "existing-ev", text = "Other evidence"),
             ),
             clarificationQuestions = listOf(
                 ClarificationQuestion("", "What starts it?"),
