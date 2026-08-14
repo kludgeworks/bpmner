@@ -225,7 +225,12 @@ internal class BpmnContractValidator {
     // "unreachable from start", it is the subprocess's entry point.
     private fun validateReachability(contract: ProcessContract): List<ContractValidationIssue> = buildList {
         val checkable = contract.flowAddressableIds() - contract.subprocessMemberIds()
-        val outAdjacency = contract.flows.groupBy { it.from }.mapValues { (_, v) -> v.map { it.to } }
+        val outAdjacency =
+            (contract.flows.map { it.from to it.to } + contract.attachmentEdges())
+                .groupBy({ it.first }, { it.second })
+        // V8 walks flows only. ADR-696-10 point 5: an attachment edge here would run backwards — it
+        // would let a *host* count as reaching an end state via its boundary event's handler,
+        // masking a dead-end on the host's own outgoing path.
         val inAdjacency = contract.flows.groupBy { it.to }.mapValues { (_, v) -> v.map { it.from } }
 
         val reachableFromStart = bfs(contract.start.id, outAdjacency)
@@ -342,10 +347,13 @@ internal class BpmnContractValidator {
     private fun validateSubprocessConnectivity(contract: ProcessContract): List<ContractValidationIssue> = buildList {
         val subProcesses = contract.activities.filterIsInstance<ContractActivity.SubProcess>()
         subProcesses.forEach { subProcess ->
-            val members = subProcess.containedActivityIds.toSet()
-            val interior = contract.flows.filter { it.from in members && it.to in members }
-            val interiorAdjacency = interior.groupBy { it.from }.mapValues { (_, v) -> v.map { it.to } }
-            val hasInternalPredecessor = interior.map { it.to }.toSet()
+            val memberActivityIds = subProcess.containedActivityIds.toSet()
+            val members = memberActivityIds + contract.boundaryEventIdsOf(memberActivityIds)
+            val interior =
+                (contract.flows.map { it.from to it.to } + contract.attachmentEdges())
+                    .filter { it.first in members && it.second in members }
+            val interiorAdjacency = interior.groupBy({ it.first }, { it.second })
+            val hasInternalPredecessor = interior.map { it.second }.toSet()
             val entryPoints = members - hasInternalPredecessor
             val reachable = entryPoints.flatMap { bfs(it, interiorAdjacency) }.toSet()
             (members - reachable).forEach { unreached ->
@@ -833,10 +841,23 @@ private fun ProcessContract.flowAddressableIds(): Set<String> = buildSet {
     activities.forEach { activity -> activity.boundaryEvents.forEach { add(it.id) } }
 }
 
-private fun ProcessContract.subprocessMemberIds(): Set<String> =
-    activities.filterIsInstance<ContractActivity.SubProcess>()
-        .flatMap { it.containedActivityIds }
-        .toSet()
+// ADR-696-10: a boundary event is reached through the activity it is attached to, never by a flow
+// into it — V5 forbids one. Forward reachability walks these edges alongside the flows.
+private fun ProcessContract.attachmentEdges(): List<Pair<String, String>> =
+    activities.flatMap { host -> host.boundaryEvents.map { host.id to it.id } }
+
+private fun ProcessContract.boundaryEventIdsOf(activityIds: Set<String>): Set<String> =
+    activities.filter { it.id in activityIds }.flatMap { it.boundaryEvents }.map { it.id }.toSet()
+
+// ADR-696-10: a boundary event is contained wherever its host is, so a boundary event attached to a
+// subprocess member is itself a member.
+private fun ProcessContract.subprocessMemberIds(): Set<String> {
+    val memberActivityIds =
+        activities.filterIsInstance<ContractActivity.SubProcess>()
+            .flatMap { it.containedActivityIds }
+            .toSet()
+    return memberActivityIds + boundaryEventIdsOf(memberActivityIds)
+}
 
 private fun ContractIntermediateThrow.invalidPayloadField(): String? = when (this) {
     is ContractIntermediateThrow.Message -> "messageName".takeIf { messageName.isBlank() }

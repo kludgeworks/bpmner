@@ -5,9 +5,12 @@
 
 package dev.groknull.bpmner.contract.internal.domain
 
+import dev.groknull.bpmner.bpmn.BoundaryEventKind
+import dev.groknull.bpmner.contract.ActivityModifiers
 import dev.groknull.bpmner.contract.ConditionalBranch
 import dev.groknull.bpmner.contract.ContractActivity
 import dev.groknull.bpmner.contract.ContractAssumption
+import dev.groknull.bpmner.contract.ContractBoundaryEvent
 import dev.groknull.bpmner.contract.ContractDecision
 import dev.groknull.bpmner.contract.ContractEndState
 import dev.groknull.bpmner.contract.ContractFlow
@@ -738,6 +741,166 @@ class BpmnContractValidatorTest {
         assertTrue(validator.validate(contract).issues.any { it.code == ContractValidationCode.DUPLICATE_FLOW })
     }
 
+    // ADR-696-10: a boundary event inherits its host's position in the graph — reached when the
+    // host is reached, contained where the host is contained, with only its degree its own.
+
+    @Test
+    fun `ADR-696-10 - a contract with a boundary event on a reachable host is valid`() {
+        val contract = boundaryEventContract()
+        val report = validator.validate(contract)
+        assertTrue(report.isValid, "expected boundary event contract to be valid, got ${report.issues}")
+    }
+
+    @Test
+    fun `ADR-696-10 - the handler path behind a boundary event is not reported unreachable`() {
+        val report = validator.validate(boundaryEventContract())
+        val unreachable = report.issues.filter { it.code == ContractValidationCode.ELEMENT_UNREACHABLE_FROM_START }
+        assertTrue(unreachable.isEmpty(), "expected no unreachable elements, got $unreachable")
+    }
+
+    @Test
+    fun `ADR-696-10 - a boundary event on an unreachable host is still reported`() {
+        val base = linearContract()
+        val contract = base.copy(
+            activities = base.activities + ContractActivity.Service(
+                id = "act-orphan",
+                name = "Orphan activity",
+                sourceIds = sources,
+                modifiers = ActivityModifiers(
+                    boundaryEvents = listOf(
+                        ContractBoundaryEvent(
+                            kind = BoundaryEventKind.TIMER,
+                            label = "Timeout",
+                            detail = "PT1H",
+                            id = "be-orphan-timeout",
+                        ),
+                    ),
+                ),
+            ),
+            // act-orphan has no incoming flow — its host, and therefore its boundary event, is
+            // unreachable. The fix must not excuse either.
+            flows = base.flows + ContractFlow.Sequence(from = "be-orphan-timeout", to = "end-approved"),
+        )
+        val unreachable = validator.validate(contract).issues
+            .filter { it.code == ContractValidationCode.ELEMENT_UNREACHABLE_FROM_START }
+            .map { it.targetId }
+        assertTrue("act-orphan" in unreachable, "expected the unreachable host to be reported: $unreachable")
+        assertTrue("be-orphan-timeout" in unreachable, "expected the boundary event to still be reported: $unreachable")
+    }
+
+    @Test
+    fun `ADR-696-10 point 5 - a host whose own path dead-ends still fails V8 despite a live boundary handler`() {
+        // act-deadend's own outgoing path leads only to act-stuck, which has no outgoing flow — a
+        // real dead end. Its boundary event's handler DOES reach an end. V8 must not let that
+        // attachment excuse the host: inAdjacency walks flows only, never attachment edges.
+        val base = linearContract()
+        val contract = base.copy(
+            activities = base.activities + listOf(
+                ContractActivity.Service(
+                    id = "act-deadend",
+                    name = "Dead end activity",
+                    sourceIds = sources,
+                    modifiers = ActivityModifiers(
+                        boundaryEvents = listOf(
+                            ContractBoundaryEvent(
+                                kind = BoundaryEventKind.ERROR,
+                                label = "Processing failed",
+                                detail = "PROCESSING_FAILED",
+                                id = "be-deadend-error",
+                            ),
+                        ),
+                    ),
+                ),
+                ContractActivity(id = "act-stuck", name = "Stuck activity", sourceIds = sources),
+                ContractActivity(id = "act-handle-deadend-error", name = "Handle failure", sourceIds = sources),
+            ),
+            flows = base.flows + listOf(
+                ContractFlow.Sequence(from = "activity-receive", to = "act-deadend"),
+                ContractFlow.Sequence(from = "act-deadend", to = "act-stuck"),
+                ContractFlow.Sequence(from = "be-deadend-error", to = "act-handle-deadend-error"),
+                ContractFlow.Sequence(from = "act-handle-deadend-error", to = "end-approved"),
+            ),
+        )
+        val cannotReachEnd = validator.validate(contract).issues
+            .filter { it.code == ContractValidationCode.ELEMENT_CANNOT_REACH_END_STATE }
+            .map { it.targetId }
+        assertTrue(
+            "act-deadend" in cannotReachEnd,
+            "attachment must not let a dead-end host pass V8 via its boundary handler: $cannotReachEnd",
+        )
+    }
+
+    @Test
+    fun `V11 - a boundary event on a subprocess member routed to a sibling member passes`() {
+        assertFalse(
+            validator.validate(subprocessMemberBoundaryEventContract(routeOutsideSubprocess = false)).issues.any {
+                it.code == ContractValidationCode.FLOW_CROSSES_SUBPROCESS_BOUNDARY
+            },
+        )
+    }
+
+    @Test
+    fun `V11 - a boundary event on a subprocess member routed outside the subprocess fails`() {
+        assertTrue(
+            validator.validate(subprocessMemberBoundaryEventContract(routeOutsideSubprocess = true)).issues.any {
+                it.code == ContractValidationCode.FLOW_CROSSES_SUBPROCESS_BOUNDARY
+            },
+        )
+    }
+
+    @Test
+    fun `V12 - a subprocess member reachable only via a sibling's boundary event is not unreachable`() {
+        val contract = subprocessMemberBoundaryEventContract(routeOutsideSubprocess = false)
+        val unreachable = validator.validate(contract).issues
+            .filter { it.code == ContractValidationCode.SUBPROCESS_MEMBER_UNREACHABLE }
+            .map { it.targetId }
+        assertTrue("act-followup" !in unreachable, "expected act-followup reachable via attachment: $unreachable")
+    }
+
+    @Test
+    fun `V12 - a member cycle with no entry point is still unreachable`() {
+        // A closed 2-cycle has no member with zero internal predecessors, so neither of its two
+        // members counts as an entry point (mirrors the existing V12 test's cycle case) — the
+        // attachment seeding from ADR-696-10 must not accidentally make this pair reachable.
+        val base = subprocessMemberBoundaryEventContract(routeOutsideSubprocess = false)
+        val subAssess = base.activities.single { it.id == "sub-assess" } as ContractActivity.SubProcess
+        val contract = base.copy(
+            activities = base.activities.map { activity ->
+                if (activity.id == "sub-assess") {
+                    subAssess.copy(
+                        containedActivityIds = subAssess.containedActivityIds + listOf("act-stranded-a", "act-stranded-b"),
+                    )
+                } else {
+                    activity
+                }
+            } + listOf(
+                ContractActivity(id = "act-stranded-a", name = "Stranded A", sourceIds = sources),
+                ContractActivity(id = "act-stranded-b", name = "Stranded B", sourceIds = sources),
+            ),
+            flows = base.flows + listOf(
+                ContractFlow.Sequence(from = "act-stranded-a", to = "act-stranded-b"),
+                ContractFlow.Sequence(from = "act-stranded-b", to = "act-stranded-a"),
+            ),
+        )
+        val unreachable = validator.validate(contract).issues
+            .filter { it.code == ContractValidationCode.SUBPROCESS_MEMBER_UNREACHABLE }
+            .map { it.targetId }
+        assertEquals(setOf("act-stranded-a", "act-stranded-b"), unreachable.toSet())
+    }
+
+    @Test
+    fun `V5 - a boundary event with an incoming flow still fails, unchanged by ADR-696-10`() {
+        val base = boundaryEventContract()
+        val contract = base.copy(
+            flows = base.flows + ContractFlow.Sequence(from = "act-handle-timeout", to = "be-charge-timeout"),
+        )
+        assertTrue(
+            validator.validate(contract).issues.any {
+                it.code == ContractValidationCode.BOUNDARY_EVENT_HAS_INCOMING_FLOW
+            },
+        )
+    }
+
     private fun linearContract(): ProcessContract = ProcessContract(
         id = "contract-linear",
         processName = "Submit application",
@@ -823,6 +986,133 @@ class BpmnContractValidatorTest {
                 ContractFlow.Branch(from = "decision-eligible", to = "activity-review", branchId = "branch-yes"),
                 ContractFlow.Branch(from = "decision-eligible", to = "end-rejected", branchId = "branch-no"),
                 ContractFlow.Sequence(from = "activity-review", to = "end-approved"),
+            ),
+        )
+    }
+
+    // ADR-696-10's positive fixture: exercises every element kind `flowAddressableIds()`
+    // enumerates (start, activity, decision, end state, intermediate throw, boundary event) plus
+    // a subprocess, all satisfying V1-V13 at once. A boundary event on act-charge routes through
+    // an intermediate throw to its own handler and end state; a decision branches into a
+    // subprocess or straight to a failure end state.
+    // act-charge carries the boundary event; extracted so boundaryEventContract() stays under
+    // detekt's LongMethod limit.
+    private fun chargeActivityWithTimeoutBoundary(): ContractActivity = ContractActivity.Service(
+        id = "act-charge",
+        name = "Charge payment",
+        sourceIds = sources,
+        modifiers = ActivityModifiers(
+            boundaryEvents = listOf(
+                ContractBoundaryEvent(
+                    kind = BoundaryEventKind.TIMER,
+                    label = "24h timeout",
+                    detail = "PT24H",
+                    id = "be-charge-timeout",
+                ),
+            ),
+        ),
+    )
+
+    private fun boundaryEventContract(): ProcessContract = ProcessContract(
+        id = "contract-boundary-event",
+        processName = "Charge payment with timeout escalation",
+        summary = "A payment is charged; a stalled charge escalates while fulfilment proceeds separately.",
+        start = ContractStart(ContractTrigger.None("A payment charge is requested"), sources),
+        activities = listOf(
+            chargeActivityWithTimeoutBoundary(),
+            ContractActivity(id = "act-handle-timeout", name = "Handle timeout", sourceIds = sources),
+            ContractActivity.SubProcess(
+                id = "sub-fulfil",
+                name = "Fulfil order",
+                containedActivityIds = listOf("act-pack", "act-ship"),
+                sourceIds = sources,
+            ),
+            ContractActivity(id = "act-pack", name = "Pack order", sourceIds = sources),
+            ContractActivity(id = "act-ship", name = "Ship order", sourceIds = sources),
+        ),
+        decisions = listOf(
+            ContractDecision(
+                id = "dec-charge-outcome",
+                question = "Did the charge succeed?",
+                branches = listOf(
+                    ConditionalBranch(id = "branch-charged", label = "Charged", condition = "charge succeeded"),
+                    ConditionalBranch(id = "branch-failed", label = "Failed", condition = "charge failed"),
+                ),
+                sourceIds = sources,
+            ),
+        ),
+        endStates = listOf(
+            ContractEndState(id = "end-fulfilled", name = "Order fulfilled", sourceIds = sources),
+            ContractEndState(id = "end-timeout-handled", name = "Timeout handled", sourceIds = sources),
+            ContractEndState(id = "end-failed", name = "Charge failed", sourceIds = sources),
+        ),
+        intermediateThrows = listOf(
+            ContractIntermediateThrow.Signal(
+                id = "throw-notify",
+                name = "Notify operations",
+                signalName = "charge-timeout",
+                sourceIds = sources,
+            ),
+        ),
+        flows = listOf(
+            ContractFlow.Sequence(from = "start", to = "act-charge"),
+            ContractFlow.Sequence(from = "act-charge", to = "dec-charge-outcome"),
+            ContractFlow.Branch(from = "dec-charge-outcome", to = "sub-fulfil", branchId = "branch-charged"),
+            ContractFlow.Branch(from = "dec-charge-outcome", to = "end-failed", branchId = "branch-failed"),
+            ContractFlow.Sequence(from = "sub-fulfil", to = "end-fulfilled"),
+            ContractFlow.Sequence(from = "act-pack", to = "act-ship"),
+            ContractFlow.Sequence(from = "be-charge-timeout", to = "throw-notify"),
+            ContractFlow.Sequence(from = "throw-notify", to = "act-handle-timeout"),
+            ContractFlow.Sequence(from = "act-handle-timeout", to = "end-timeout-handled"),
+        ),
+    )
+
+    // Subprocess "sub-assess" contains activity-review (with a boundary event) and act-followup.
+    // `routeOutsideSubprocess = false` routes the handler to its sibling member (valid: V11
+    // passes, V12's member closure makes act-followup reachable via attachment); `true` routes it
+    // to the top-level end state instead (invalid: crosses the subprocess boundary).
+    private fun subprocessMemberBoundaryEventContract(routeOutsideSubprocess: Boolean): ProcessContract {
+        val base = linearContract()
+        val review = base.activities.single { it.id == "activity-review" } as ContractActivity.Service
+        return base.copy(
+            activities = base.activities.map { activity ->
+                if (activity.id == "activity-review") {
+                    review.copy(
+                        modifiers = ActivityModifiers(
+                            boundaryEvents = listOf(
+                                ContractBoundaryEvent(
+                                    kind = BoundaryEventKind.ERROR,
+                                    label = "Review failed",
+                                    detail = "REVIEW_FAILED",
+                                    id = "be-review-failed",
+                                ),
+                            ),
+                        ),
+                    )
+                } else {
+                    activity
+                }
+            } + listOf(
+                ContractActivity(id = "act-followup", name = "Follow up on failure", sourceIds = sources),
+                ContractActivity.SubProcess(
+                    id = "sub-assess",
+                    name = "Assess",
+                    containedActivityIds = listOf("activity-review", "act-followup"),
+                    sourceIds = sources,
+                ),
+            ),
+            // The outer flow enters and exits through sub-assess's own id (V11) — activity-review
+            // is the subprocess's internal entry point, with no incoming flow of its own (V12).
+            // Members are excluded from V6, so act-followup needs no further outgoing flow.
+            flows = listOf(
+                ContractFlow.Sequence(from = "start", to = "activity-receive"),
+                ContractFlow.Sequence(from = "activity-receive", to = "sub-assess"),
+                ContractFlow.Sequence(from = "sub-assess", to = "end-approved"),
+                if (routeOutsideSubprocess) {
+                    ContractFlow.Sequence(from = "be-review-failed", to = "end-approved")
+                } else {
+                    ContractFlow.Sequence(from = "be-review-failed", to = "act-followup")
+                },
             ),
         )
     }
