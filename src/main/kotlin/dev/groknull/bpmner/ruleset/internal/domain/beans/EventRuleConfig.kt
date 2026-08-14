@@ -6,9 +6,6 @@
 package dev.groknull.bpmner.ruleset.internal.domain.beans
 
 import dev.groknull.bpmner.bpmn.BpmnRule
-import dev.groknull.bpmner.bpmn.RepairKind
-import dev.groknull.bpmner.bpmn.RepairMetadata
-import dev.groknull.bpmner.bpmn.RepairSafety
 import dev.groknull.bpmner.bpmn.RuleCategory
 import dev.groknull.bpmner.bpmn.RuleSeverity
 import dev.groknull.bpmner.ruleset.internal.domain.compositeRule
@@ -199,33 +196,12 @@ internal class EventRuleConfig {
     )
 
     @Bean
-    fun evtStartNoIncoming(nlp: BpmnNlp): BpmnRule = primitiveRule(
-        name = "Start No Incoming",
-        category = RuleCategory.Event,
-        intent = "Enforce BPMN start-event structure.",
-        forModellers = "Start events initiate the process and must not have incoming sequence flows.",
-        forAI = "Validate that every start event has zero incoming sequence flows.",
-        targetElements = listOf(BPMN_START_EVENT),
-        errorMessages = mapOf(
-            "default" to "Start event must not have incoming sequence flow",
-        ),
-        check = ConnectivityCheckConfig(mode = ConnectivityMode.NO_INCOMING),
-        nlp = nlp,
-        severity = RuleSeverity.ERROR,
-        repair = RepairMetadata(
-            kind = RepairKind.LOCAL_MODEL_FIX,
-            safety = RepairSafety.SAFE_AUTOMATIC,
-            handler = "deleteIncomingFlows",
-        ),
-    )
-
-    @Bean
     fun evtTimerStartEventsBlockUntilTime(nlp: BpmnNlp): BpmnRule = primitiveRule(
         name = "Timer Start Events Block Until Time",
         category = RuleCategory.Event,
         intent = "Ensure timer start events define the time condition that starts the process.",
         forModellers = "Use a timer start event only when the process waits for a specific date, duration, or cycle before starting.",
-        forAI = "Detect timer start events with no timer expression or with more than one timer expression. General start-event incoming-flow checks are handled by the start-no-incoming rule.",
+        forAI = "Detect timer start events with no timer expression or with more than one timer expression. General start-event incoming-flow checks are contract-level (ADR-696-1 V3), not a lint rule.",
         targetElements = listOf(BPMN_START_EVENT),
         errorMessages = mapOf(
             "default" to "Timer start event must define exactly one timer expression",

@@ -21,6 +21,10 @@ import org.springframework.stereotype.Component
  * the definition, and edges whose source and target are identical (self-references). Ports
  * `BpmnDefinitionValidator.validateEdges` with byte-identical messages.
  *
+ * A dangling edge is unreachable from a contract that satisfies V1 (ADR-696-1), so a hit here
+ * signals a compiler bug rather than a modeller or LLM mistake — that is what makes the rule
+ * worth keeping rather than a duplicate of the contract-level check.
+ *
  * `elementId` is the edge id when present, `null` when the edge id is blank — matching the
  * legacy validator's behavior of inlining `"<blank>"` into the message but not pretending
  * the edge has a stable id.
@@ -33,9 +37,11 @@ internal class DanglingEdgeRule : BpmnRule {
         name = "Dangling Edges",
         slug = "dangling-edges",
         category = RuleCategory.Definition,
-        intent = "Ensure every sequence flow connects existing BPMN nodes and does not self-reference.",
-        forModellers = "Connect each flow to two distinct elements that exist in the process.",
-        forAI = "Validate sequenceFlow sourceRef and targetRef against node ids before returning BPMN.",
+        intent = "Detect dangling or self-referencing sequence flows that a V1-clean contract " +
+            "cannot produce — a hit indicates a compiler bug, not a modelling error.",
+        forModellers = "Should never fire on compiler output; a hit is a bug report, not a fix-it.",
+        forAI = "Not modeller-facing guidance — a hit here means the compiler emitted an edge " +
+            "its own contract input forbids.",
         targetElements = listOf("bpmn:SequenceFlow"),
         errorMessages =
         mapOf(
