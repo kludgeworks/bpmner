@@ -385,11 +385,16 @@ public data class FlatContractStart(
 public data class FlatContractFlow(
     @field:NotBlank
     @field:Size(max = 200)
-    @get:JsonPropertyDescription("Source element id: a start, activity, decision, or intermediate throw.")
+    @get:JsonPropertyDescription(
+        "Source element id: a start, activity, decision, intermediate throw, or boundary event.",
+    )
     val from: String,
     @field:NotBlank
     @field:Size(max = 200)
-    @get:JsonPropertyDescription("Target element id: an activity, decision, end state, or intermediate throw.")
+    @get:JsonPropertyDescription(
+        "Target element id: an activity, decision, end state, or intermediate throw. Never a " +
+            "boundary event — it is a source only, reached by attachment to its activity, not by an edge.",
+    )
     val to: String,
     @field:Size(max = 200)
     @get:JsonPropertyDescription(

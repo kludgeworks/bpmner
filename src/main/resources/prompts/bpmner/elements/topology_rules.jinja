@@ -1,5 +1,10 @@
 Topology rules:
 - `flows` states the complete process topology: every edge from one element to the next, including branch routing, loop back-edges, and exception paths. It is TOTAL — state every edge in the process, not just non-sequential ones. Nothing downstream infers an edge `flows` does not state.
 - Each edge's `from`/`to` must resolve to an id declared elsewhere in the contract (`start`, an activity, a decision, an end state, an intermediate throw, or a boundary event).
-- A decision's outgoing edges each set `branchId` to the id of the branch they realise; every other edge omits `branchId`.
+- Degree rules — every element in `flows` must satisfy exactly one of these:
+  - `start`: no incoming edge, exactly one outgoing edge.
+  - an end state: at least one incoming edge, no outgoing edge.
+  - a boundary event: no incoming edge, ever — it is reached by attachment to its activity, not by a flow. Exactly one outgoing edge (its exception path).
+  - every other element (activity, decision, intermediate throw): at least one incoming and at least one outgoing edge.
+- A decision's outgoing edges each set `branchId` to the id of the branch they realise; every other edge omits `branchId`. If a path is taken when none of the decision's other declared branches apply, that path is itself a branch — declare a DEFAULT branch for it and set that branch's id as `branchId`. A decision never has an edge with no `branchId`.
 - When the source describes an iterative process (retry / repair / poll / until / while), add an edge whose `to` is the id of the activity the iteration loops back to.
