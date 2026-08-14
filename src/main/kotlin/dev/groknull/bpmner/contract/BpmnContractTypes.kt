@@ -371,14 +371,16 @@ data class ContractIteration(
 )
 
 @JsonClassDescription(
-    "A boundary event attached to an activity: a timeout (TIMER) or caught business error (ERROR) " +
+    "A boundary event attached to an activity: a timeout (TIMER), caught business error (ERROR), " +
+        "raised escalation (ESCALATION), or an asynchronous message from another party (MESSAGE) " +
         "that interrupts the activity. Its outgoing flow is stated in `flows`, like any other " +
         "element. Realized as a `BpmnBoundaryEvent` on the activity's BPMN task.",
 )
 data class ContractBoundaryEvent(
     @get:JsonPropertyDescription(
         "Event kind: TIMER (a deadline/duration elapses), ERROR (the activity throws a named " +
-            "business error).",
+            "business error), ESCALATION (a business escalation is raised), MESSAGE (an " +
+            "asynchronous message from another party arrives, e.g. a cancellation).",
     )
     val kind: BoundaryEventKind,
     @field:NotBlank
@@ -389,8 +391,9 @@ data class ContractBoundaryEvent(
     @field:Size(max = 200)
     @get:JsonPropertyDescription(
         "Kind-specific detail, required for every kind: an ISO-8601 duration for TIMER " +
-            "(e.g. \"PT24H\"), a business error code for ERROR (e.g. \"CHARGEBACK\"), or an " +
-            "escalation code for ESCALATION (e.g. \"APPROVAL_OVERDUE\").",
+            "(e.g. \"PT24H\"), a business error code for ERROR (e.g. \"CHARGEBACK\"), an " +
+            "escalation code for ESCALATION (e.g. \"APPROVAL_OVERDUE\"), or a message name for " +
+            "MESSAGE (e.g. \"order cancellation\").",
     )
     val detail: String,
     @field:NotBlank

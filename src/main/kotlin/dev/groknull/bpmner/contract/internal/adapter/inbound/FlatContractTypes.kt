@@ -164,14 +164,16 @@ public data class FlatContractIteration(
 )
 
 @JsonClassDescription(
-    "A boundary event on an activity: a timeout (TIMER), caught business error (ERROR), or raised " +
-        "escalation (ESCALATION) that interrupts the activity. Its outgoing flow is stated in " +
-        "`flows`, like any other element.",
+    "A boundary event on an activity: a timeout (TIMER), caught business error (ERROR), raised " +
+        "escalation (ESCALATION), or an asynchronous message from another party (MESSAGE, e.g. a " +
+        "cancellation) that interrupts the activity. Its outgoing flow is stated in `flows`, like " +
+        "any other element.",
 )
 public data class FlatContractBoundaryEvent(
     @get:JsonPropertyDescription(
         "Event kind: TIMER (a deadline/duration elapses), ERROR (the activity throws a named " +
-            "business error), ESCALATION (the activity raises a business escalation).",
+            "business error), ESCALATION (the activity raises a business escalation), MESSAGE " +
+            "(an asynchronous message from another party arrives).",
     )
     val kind: BoundaryEventKind,
     @field:NotBlank
@@ -181,7 +183,8 @@ public data class FlatContractBoundaryEvent(
     @field:Size(max = 200)
     @get:JsonPropertyDescription(
         "Optional kind-specific detail: an ISO-8601 duration for TIMER (e.g. \"PT24H\"), a business " +
-            "error code for ERROR (e.g. \"CHARGEBACK\"), or an escalation code for ESCALATION.",
+            "error code for ERROR (e.g. \"CHARGEBACK\"), an escalation code for ESCALATION, or a " +
+            "message name for MESSAGE.",
     )
     val detail: String? = null,
     @field:NotBlank

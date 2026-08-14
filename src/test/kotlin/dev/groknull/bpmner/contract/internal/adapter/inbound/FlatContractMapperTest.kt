@@ -200,6 +200,30 @@ class FlatContractMapperTest {
         )
     }
 
+    // ADR-696-9's recurrence guard, boundary-event instance (ADR-696-11): a kind with no case
+    // here is untested by construction. This is what would have caught ESCALATION being missed
+    // twice in 696-4 — the same pattern the end-state and intermediate-throw round-trips below use.
+    @Test
+    fun `every BoundaryEventKind round-trips with its kind-specific detail`() {
+        val cases: List<Pair<FlatContractBoundaryEvent, ContractBoundaryEvent>> = listOf(
+            flatBoundaryEvent(BoundaryEventKind.TIMER, "be-timer", detail = "PT24H") to
+                ContractBoundaryEvent(BoundaryEventKind.TIMER, "Label", "PT24H", id = "be-timer"),
+            flatBoundaryEvent(BoundaryEventKind.ERROR, "be-error", detail = "CHARGEBACK") to
+                ContractBoundaryEvent(BoundaryEventKind.ERROR, "Label", "CHARGEBACK", id = "be-error"),
+            flatBoundaryEvent(BoundaryEventKind.ESCALATION, "be-escalation", detail = "APPROVAL_OVERDUE") to
+                ContractBoundaryEvent(BoundaryEventKind.ESCALATION, "Label", "APPROVAL_OVERDUE", id = "be-escalation"),
+            flatBoundaryEvent(BoundaryEventKind.MESSAGE, "be-message", detail = "order cancellation") to
+                ContractBoundaryEvent(BoundaryEventKind.MESSAGE, "Label", "order cancellation", id = "be-message"),
+        )
+        assertEquals(
+            BoundaryEventKind.entries.size,
+            cases.size,
+            "every BoundaryEventKind needs a case here — a new kind must not slip through untested",
+        )
+
+        cases.forEach { (flat, expected) -> assertEquals(expected, flat.toSealed()) }
+    }
+
     @Test
     fun `activity loop round-trips to ContractLoop`() {
         val flat = FlatContractActivity(
@@ -586,6 +610,17 @@ class FlatContractMapperTest {
         decisionName = decisionName,
         messageName = messageName,
         calledElement = calledElement,
+    )
+
+    private fun flatBoundaryEvent(
+        kind: BoundaryEventKind,
+        id: String,
+        detail: String?,
+    ): FlatContractBoundaryEvent = FlatContractBoundaryEvent(
+        kind = kind,
+        label = "Label",
+        detail = detail,
+        id = id,
     )
 
     private fun flatEnd(

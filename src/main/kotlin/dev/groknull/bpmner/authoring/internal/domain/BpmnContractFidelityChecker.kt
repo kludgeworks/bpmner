@@ -444,6 +444,7 @@ internal class BpmnContractFidelityChecker : BpmnContractFidelityPort {
         BoundaryEventKind.TIMER -> eventDefinition is BpmnTimerEventDefinition
         BoundaryEventKind.ERROR -> eventDefinition is BpmnErrorEventDefinition
         BoundaryEventKind.ESCALATION -> eventDefinition is BpmnEscalationEventDefinition
+        BoundaryEventKind.MESSAGE -> eventDefinition is BpmnMessageEventDefinition
     }
 
     /**
