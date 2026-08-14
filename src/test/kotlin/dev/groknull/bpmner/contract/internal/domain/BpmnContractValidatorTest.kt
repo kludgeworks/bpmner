@@ -294,12 +294,17 @@ class BpmnContractValidatorTest {
         assertTrue(codes.contains(ContractValidationCode.UNCONDITIONAL_BRANCH_ON_INCLUSIVE))
     }
 
+    // #703: this is the shape `fulfilment-with-optional-extras` needs — two optional add-ons and a
+    // "neither applied" path. The validator has always permitted it (INCLUSIVE routes through the
+    // same validateConditionalDecision as EXCLUSIVE); branch_kinds.jinja told the model DEFAULT was
+    // legal only on EXCLUSIVE, so the model emitted an unlabelled edge instead and V10 rejected it.
+    // Asserted as fully valid, not merely free of two codes: a positive fixture is what catches a
+    // regression here, and the weaker form would still pass if some unrelated rule started firing.
     @Test
-    fun `inclusive decision with conditional branches and default branch is valid`() {
-        val branchingContract = branchingContract()
-        val originalDecision = branchingContract.decisions.first()
+    fun `inclusive decision with conditional branches and a default branch is valid`() {
+        val branching = branchingContract()
         val decision =
-            originalDecision.copy(
+            branching.decisions.first().copy(
                 kind = ContractGatewayKind.INCLUSIVE,
                 branches =
                 listOf(
@@ -308,15 +313,25 @@ class BpmnContractValidatorTest {
                     DefaultBranch(id = "br-none", label = "Skip add-ons"),
                 ),
             )
-        val contract = branchingContract.copy(decisions = listOf(decision))
-        val report = validator.validate(contract)
-        // No INCLUSIVE-specific error codes should fire — default flows are valid on
-        // inclusive decisions, and conditional branches are the expected branch shape.
-        assertFalse(
-            report.issues.any { it.code == ContractValidationCode.UNCONDITIONAL_BRANCH_ON_INCLUSIVE },
+        val contract = branching.copy(
+            decisions = listOf(decision),
+            flows = listOf(
+                ContractFlow.Sequence(from = "start", to = "activity-receive"),
+                ContractFlow.Sequence(from = "activity-receive", to = "decision-eligible"),
+                ContractFlow.Branch(from = "decision-eligible", to = "activity-review", branchId = "br-wrap"),
+                ContractFlow.Branch(from = "decision-eligible", to = "activity-review", branchId = "br-insert"),
+                // The bypass: taken when neither add-on applies, routed by its own DEFAULT branch
+                // rather than as an unlabelled edge.
+                ContractFlow.Branch(from = "decision-eligible", to = "end-approved", branchId = "br-none"),
+                ContractFlow.Sequence(from = "activity-review", to = "end-approved"),
+            ),
         )
-        assertFalse(
-            report.issues.any { it.code == ContractValidationCode.DEFAULT_BRANCH_ON_PARALLEL },
+
+        val report = validator.validate(contract)
+
+        assertTrue(
+            report.isValid,
+            "an INCLUSIVE decision with a DEFAULT bypass branch must be valid; got ${report.issues}",
         )
     }
 
@@ -845,6 +860,47 @@ class BpmnContractValidatorTest {
             validator.validate(subprocessMemberBoundaryEventContract(routeOutsideSubprocess = true)).issues.any {
                 it.code == ContractValidationCode.FLOW_CROSSES_SUBPROCESS_BOUNDARY
             },
+        )
+    }
+
+    // #704: the repair a boundary event is given must be one it can perform. "Route through the
+    // subprocess's own id" is impossible for an element reached by attachment rather than by a
+    // flow, and the model followed it literally — inventing a subprocess to route through and
+    // adding a violation on every attempt until its budget ran out.
+    @Test
+    fun `V11 - the crossing diagnostic prescribes a repair the offending element can perform`() {
+        val fromBoundaryEvent = validator.validate(subprocessMemberBoundaryEventContract(routeOutsideSubprocess = true))
+            .issues.single { it.code == ContractValidationCode.FLOW_CROSSES_SUBPROCESS_BOUNDARY }
+        assertTrue(
+            "attach the boundary event to the subprocess itself" in fromBoundaryEvent.message,
+            "a boundary event must be told a repair it can perform; got: ${fromBoundaryEvent.message}",
+        )
+        assertFalse(
+            "route through the subprocess's own id" in fromBoundaryEvent.message,
+            "a boundary event has no edge to reroute; got: ${fromBoundaryEvent.message}",
+        )
+
+        // An ordinary activity-to-activity crossing keeps the original advice, which is correct
+        // for it — the discrimination must not blanket-replace the message.
+        val base = linearContract()
+        val ordinaryCrossing = base.copy(
+            activities = base.activities + ContractActivity.SubProcess(
+                id = "sub-assess",
+                name = "Assess",
+                containedActivityIds = listOf("activity-review"),
+                sourceIds = sources,
+            ),
+            flows = listOf(
+                ContractFlow.Sequence(from = "start", to = "activity-receive"),
+                ContractFlow.Sequence(from = "activity-receive", to = "activity-review"),
+                ContractFlow.Sequence(from = "activity-review", to = "end-approved"),
+            ),
+        )
+        val fromActivity = validator.validate(ordinaryCrossing).issues
+            .first { it.code == ContractValidationCode.FLOW_CROSSES_SUBPROCESS_BOUNDARY }
+        assertTrue(
+            "route through the subprocess's own id" in fromActivity.message,
+            "an ordinary edge keeps the reroute advice; got: ${fromActivity.message}",
         )
     }
 

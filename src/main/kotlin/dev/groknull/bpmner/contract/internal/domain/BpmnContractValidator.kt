@@ -328,18 +328,31 @@ internal class BpmnContractValidator {
     private fun validateSubprocessBoundary(contract: ProcessContract): List<ContractValidationIssue> = buildList {
         val memberIds = contract.subprocessMemberIds()
         if (memberIds.isEmpty()) return@buildList
+        val boundaryEventIds = contract.allBoundaryEventIds()
         contract.flows.forEach { flow ->
             if ((flow.from in memberIds) != (flow.to in memberIds)) {
                 add(
                     errorIssue(
                         code = ContractValidationCode.FLOW_CROSSES_SUBPROCESS_BOUNDARY,
                         message = "flow from '${flow.from}' to '${flow.to}' crosses a subprocess boundary" +
-                            " through a member id directly — route through the subprocess's own id instead",
+                            " through a member id directly — ${crossingRepair(flow.from in boundaryEventIds)}",
                         targetId = flow.from,
                     ),
                 )
             }
         }
+    }
+
+    // #704: "route through the subprocess's own id" is the right repair for an ordinary edge and an
+    // impossible one for a boundary event, which is reached by attachment to its host rather than by
+    // a flow — there is no edge to reroute. Left undiscriminated, the model followed it literally
+    // and invented a subprocess to route through, adding violations on every attempt.
+    private fun crossingRepair(fromIsBoundaryEvent: Boolean): String = if (fromIsBoundaryEvent) {
+        "a boundary event's handler runs inside whatever contains its host, so route it to a member " +
+            "of the same subprocess, or attach the boundary event to the subprocess itself instead " +
+            "of to one of its members"
+    } else {
+        "route through the subprocess's own id instead"
     }
 
     // V12: subprocess interior is connected — every member is reachable, via flows between
@@ -848,6 +861,9 @@ private fun ProcessContract.attachmentEdges(): List<Pair<String, String>> =
 
 private fun ProcessContract.boundaryEventIdsOf(activityIds: Set<String>): Set<String> =
     activities.filter { it.id in activityIds }.flatMap { it.boundaryEvents }.map { it.id }.toSet()
+
+private fun ProcessContract.allBoundaryEventIds(): Set<String> =
+    activities.flatMap { it.boundaryEvents }.map { it.id }.toSet()
 
 // ADR-696-10: a boundary event is contained wherever its host is, so a boundary event attached to a
 // subprocess member is itself a member.
