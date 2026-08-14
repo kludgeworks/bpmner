@@ -81,7 +81,12 @@ class ExtractContractTemplateTest {
         assertTrue(prompt.contains("catch-all"))
         assertTrue(prompt.contains("for every other case"))
         assertTrue(prompt.contains("At most one DEFAULT per decision"))
-        assertTrue(prompt.contains("CONDITIONAL and DEFAULT only on EXCLUSIVE decisions"))
+        // #703: this previously asserted "CONDITIONAL and DEFAULT only on EXCLUSIVE decisions",
+        // pinning a rule the validator does not enforce — BpmnContractValidator routes INCLUSIVE
+        // through the same validateConditionalDecision as EXCLUSIVE, so both branch kinds are legal
+        // there. The assertion made the divergence self-defending: correcting the prompt looked
+        // like breaking a test.
+        assertTrue(prompt.contains("CONDITIONAL and DEFAULT on EXCLUSIVE and INCLUSIVE decisions"))
         assertTrue(prompt.contains("UNCONDITIONAL only on PARALLEL decisions"))
     }
 
