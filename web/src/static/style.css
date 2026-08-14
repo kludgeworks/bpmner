@@ -294,6 +294,30 @@ button:disabled:hover {
 	cursor: default;
 }
 
+.bpmn-icon-size-reset::before {
+	content: "\e800";
+}
+
+.bpmn-icon-plus::before {
+	content: "\e802";
+}
+
+.bpmn-icon-minus::before {
+	content: "\e803";
+}
+
+.bpmn-icon-download::before {
+	content: "\e87f";
+}
+
+.bpmn-icon-picture::before {
+	content: "\e880";
+}
+
+.studio-canvas .bjs-powered-by {
+	bottom: calc(var(--space-4) + 56px);
+}
+
 /* --------------------------------------------------------------------------
  * Stage rail
  * ------------------------------------------------------------------------ */
