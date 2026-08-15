@@ -168,6 +168,19 @@ bpmner_node_test(
 )
 
 bpmner_node_test(
+    name = "control_icons_test",
+    srcs = WEB_SRCS + WEB_TEST_SRCS,
+    entry_point = "test/control-icons.test.ts",
+    extra_data = [
+        "src/static/bpmn-font/css/bpmn.css",
+        "src/static/index.html",
+        "src/static/style.css",
+        "//src:preview_template",
+    ],
+    deps = WEB_TS_DEPS,
+)
+
+bpmner_node_test(
     name = "diagram_export_test",
     srcs = WEB_SRCS + WEB_TEST_SRCS,
     entry_point = "test/diagram-export.test.ts",

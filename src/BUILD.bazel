@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: MIT
 
 load("@aspect_bazel_lib//lib:expand_template.bzl", "expand_template")
+load("@aspect_rules_js//js:defs.bzl", "js_library")
 load("@rules_java//java:defs.bzl", "java_library")
 load("@rules_kotlin//kotlin:core.bzl", "kt_compiler_plugin", "kt_plugin_cfg")
 load("@rules_kotlin//kotlin:jvm.bzl", "kt_jvm_binary", "kt_jvm_library")
@@ -42,6 +43,15 @@ java_library(
     name = "web_static_resources",
     resource_strip_prefix = "web/src",
     resources = ["//web:static_assets"],
+)
+
+# Exposed so //web:control_icons_test can assert on the shipped preview markup
+# directly (issue #698 regression guard) rather than on a copy of it. rules_js
+# requires a js_library here: data files must be copied to bin by a target in
+# their own package.
+js_library(
+    name = "preview_template",
+    srcs = ["main/resources/preview/preview-template.html"],
 )
 
 java_library(
