@@ -200,9 +200,8 @@ class FlatContractMapperTest {
         )
     }
 
-    // ADR-696-9's recurrence guard, boundary-event instance (ADR-696-11): a kind with no case
-    // here is untested by construction. This is what would have caught ESCALATION being missed
-    // twice in 696-4 — the same pattern the end-state and intermediate-throw round-trips below use.
+    // Exhaustiveness guard: a kind with no case here is untested by construction. Same pattern
+    // as the end-state and intermediate-throw round-trips below.
     @Test
     fun `every BoundaryEventKind round-trips with its kind-specific detail`() {
         val cases: List<Pair<FlatContractBoundaryEvent, ContractBoundaryEvent>> = listOf(
@@ -351,9 +350,8 @@ class FlatContractMapperTest {
         assertTrue("messageName" in messageEx.message.orEmpty())
     }
 
-    // EventTriggerKind is not mapped to a BpmnEventDefinition anywhere yet — the compiler stage
-    // (ADR-696-2 step 4) is what will consume it — so no exhaustive `when` guards this enum.
-    // Cover every value here instead, or a new kind lands unexercised.
+    // EventTriggerKind is not mapped to a BpmnEventDefinition anywhere, so no exhaustive `when`
+    // guards this enum. Cover every value here instead, or a new kind lands unexercised.
     @Test
     fun `every EventTriggerKind round-trips on an event-gateway branch`() {
         EventTriggerKind.entries.forEach { trigger ->

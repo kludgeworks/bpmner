@@ -45,9 +45,8 @@ internal class BpmnContractValidator {
         return ContractValidationReport(issues = issues)
     }
 
-    // V1-V13 (ADR-696-1): total-topology validation over `flows`, decidable and total — no
-    // reachability heuristic, no "probably meant". Replaces the deleted branch/boundary-event
-    // target field and its validateReferences checker; V1 is its strictly stronger successor.
+    // V1-V13: total-topology validation over `flows`. Every rule decides on the stated graph
+    // alone — no reachability heuristic, and no edge inferred that `flows` does not state.
     private fun validateFlows(contract: ProcessContract): List<ContractValidationIssue> = buildList {
         addAll(validateFlowEndpoints(contract)) // V1, V2
         addAll(validateDegreeConstraints(contract)) // V3, V4, V5, V6
@@ -228,9 +227,9 @@ internal class BpmnContractValidator {
         val outAdjacency =
             (contract.flows.map { it.from to it.to } + contract.attachmentEdges())
                 .groupBy({ it.first }, { it.second })
-        // V8 walks flows only. ADR-696-10 point 5: an attachment edge here would run backwards — it
-        // would let a *host* count as reaching an end state via its boundary event's handler,
-        // masking a dead-end on the host's own outgoing path.
+        // V8 walks flows only. An attachment edge here would run backwards: it would let a host
+        // count as reaching an end state through its boundary event's handler, masking a dead end
+        // on the host's own outgoing path.
         val inAdjacency = contract.flows.groupBy { it.to }.mapValues { (_, v) -> v.map { it.from } }
 
         val reachableFromStart = bfs(contract.start.id, outAdjacency)
@@ -328,18 +327,31 @@ internal class BpmnContractValidator {
     private fun validateSubprocessBoundary(contract: ProcessContract): List<ContractValidationIssue> = buildList {
         val memberIds = contract.subprocessMemberIds()
         if (memberIds.isEmpty()) return@buildList
+        val boundaryEventIds = contract.activities.flatMap { it.boundaryEvents }.map { it.id }.toSet()
         contract.flows.forEach { flow ->
             if ((flow.from in memberIds) != (flow.to in memberIds)) {
                 add(
                     errorIssue(
                         code = ContractValidationCode.FLOW_CROSSES_SUBPROCESS_BOUNDARY,
                         message = "flow from '${flow.from}' to '${flow.to}' crosses a subprocess boundary" +
-                            " through a member id directly — route through the subprocess's own id instead",
+                            " through a member id directly — ${crossingRepair(flow.from in boundaryEventIds)}",
                         targetId = flow.from,
                     ),
                 )
             }
         }
+    }
+
+    // Rerouting through the subprocess's own id is available to an ordinary edge but not to a
+    // boundary event, which is reached by attachment to its host rather than by a flow and so has
+    // no edge to reroute. Its two repairs are to keep the handler inside the subprocess, or to
+    // attach the event to the subprocess itself.
+    private fun crossingRepair(fromIsBoundaryEvent: Boolean): String = if (fromIsBoundaryEvent) {
+        "a boundary event's handler runs inside whatever contains its host, so route it to a member " +
+            "of the same subprocess, or attach the boundary event to the subprocess itself instead " +
+            "of to one of its members"
+    } else {
+        "route through the subprocess's own id instead"
     }
 
     // V12: subprocess interior is connected — every member is reachable, via flows between
@@ -841,16 +853,16 @@ private fun ProcessContract.flowAddressableIds(): Set<String> = buildSet {
     activities.forEach { activity -> activity.boundaryEvents.forEach { add(it.id) } }
 }
 
-// ADR-696-10: a boundary event is reached through the activity it is attached to, never by a flow
-// into it — V5 forbids one. Forward reachability walks these edges alongside the flows.
+// A boundary event is reached through the activity it is attached to, never by a flow into it —
+// V5 forbids one. Forward reachability walks these edges alongside the flows.
 private fun ProcessContract.attachmentEdges(): List<Pair<String, String>> =
     activities.flatMap { host -> host.boundaryEvents.map { host.id to it.id } }
 
 private fun ProcessContract.boundaryEventIdsOf(activityIds: Set<String>): Set<String> =
     activities.filter { it.id in activityIds }.flatMap { it.boundaryEvents }.map { it.id }.toSet()
 
-// ADR-696-10: a boundary event is contained wherever its host is, so a boundary event attached to a
-// subprocess member is itself a member.
+// A boundary event is contained wherever its host is, so one attached to a subprocess member is
+// itself a member.
 private fun ProcessContract.subprocessMemberIds(): Set<String> {
     val memberActivityIds =
         activities.filterIsInstance<ContractActivity.SubProcess>()

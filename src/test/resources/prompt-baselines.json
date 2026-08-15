@@ -1,36 +1,36 @@
 {
 	"version": 1,
-	"_doc": "Char-count baseline for each LLM-facing payload. PromptSizeProbeTest derives ceiling as chars \u00d7 1.15 in code; there is no manual ceiling here. On growth past ceiling: trim the prompt. On shrinkage below 'chars': run `bazel run //src/test:update_prompt_baselines` to rewrite this file, then commit. Each entry carries 'updatedBy' (PR or issue ref) and 'reason' for audit trail; the updater stamps 'auto' / dated 'regenerated' when an entry changes, leaving you to refine those fields before committing.",
+	"_doc": "Char-count baseline for each LLM-facing payload. PromptSizeProbeTest derives ceiling as chars × 1.15 in code; there is no manual ceiling here. On growth past ceiling: trim the prompt. On shrinkage below 'chars': run `bazel run //src/test:update_prompt_baselines` to rewrite this file, then commit. Each entry carries 'updatedBy' (PR or issue ref) and 'reason' for audit trail; the updater stamps 'auto' / dated 'regenerated' when an entry changes, leaving you to refine those fields before committing.",
 	"baselines": {
 		"contractPrompt": {
-			"chars": 11565,
-			"updatedBy": "auto",
-			"reason": "regenerated 2026-07-11"
+			"chars": 13518,
+			"updatedBy": "#703",
+			"reason": "epic #696 stated the flow degree rules, the DEFAULT bypass rule, and the MESSAGE boundary kind in the extraction prompt; #703 corrected the branch-kind/decision-kind rule to match the validator"
 		},
 		"contractFullPayload": {
-			"chars": 35630,
-			"updatedBy": "696",
-			"reason": "signal/escalation vocabulary widened the contract schema (#696)"
+			"chars": 38999,
+			"updatedBy": "#703",
+			"reason": "same as contractPrompt, plus the widened ContractBoundaryEvent/FlatContractFlow schema descriptions (ADR-696-11)"
 		},
 		"generationPrompt": {
-			"chars": 16052,
-			"updatedBy": "690",
-			"reason": "JSON contract transport (Stage C, epic #685)"
+			"chars": 16267,
+			"updatedBy": "#696",
+			"reason": "contract markdown projection now renders activity modifiers (boundary events, iteration, loop) — previously omitted entirely"
 		},
 		"generationFullPayload": {
-			"chars": 36117,
-			"updatedBy": "690",
-			"reason": "JSON contract transport (Stage C, epic #685)"
+			"chars": 36332,
+			"updatedBy": "#696",
+			"reason": "same as generationPrompt"
 		},
 		"alignmentPrompt": {
-			"chars": 3952,
-			"updatedBy": "690",
-			"reason": "JSON contract + BPMN-summary transport (Stage C, epic #685)"
+			"chars": 3962,
+			"updatedBy": "#696",
+			"reason": "contract JSON carries the widened boundary-event vocabulary"
 		},
 		"alignmentFullPayload": {
-			"chars": 5965,
-			"updatedBy": "690",
-			"reason": "JSON contract + BPMN-summary transport (Stage C, epic #685)"
+			"chars": 5975,
+			"updatedBy": "#696",
+			"reason": "same as alignmentPrompt"
 		},
 		"readinessPrompt": {
 			"chars": 4976,

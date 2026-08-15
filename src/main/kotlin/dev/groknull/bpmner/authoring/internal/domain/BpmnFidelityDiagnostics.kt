@@ -67,10 +67,8 @@ enum class BpmnFidelityCode {
      * A ContractActivity's `boundaryEvents` disagree with the `BpmnBoundaryEvent` nodes attached
      * to the BPMN task realising it: an entry is missing, present-but-undeclared, or realised
      * with the wrong `eventDefinition` kind. Catches the failure mode where the generator drops
-     * a boundary timeout or error catch — previously unchecked (R2, ADR-685-16/17, epic #685);
-     * passable only once the generation prompt carries the contract's `boundaryEvents` as JSON.
-     * Routing (where the boundary event leads) is checked upstream, on the contract itself
-     * (V1/V5, ADR-696-1) — not here.
+     * a boundary timeout or error catch. Routing — where the boundary event leads — is checked
+     * upstream on the contract itself (V1/V5), not here.
      */
     ACTIVITY_BOUNDARY_EVENT_MISMATCH,
 

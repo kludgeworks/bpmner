@@ -13,7 +13,7 @@ import dev.groknull.bpmner.bpmn.BpmnTask
 import dev.groknull.bpmner.contract.ProcessContract
 
 /**
- * R5 (ADR-685-26), outline side: a corrective outline retry may not silently shrink the BPMN it
+ * Outline side of retry conservation: a corrective outline retry may not silently shrink the BPMN it
  * already realised. The comparison is scoped to *contract-realised* node ids (the unified-id
  * convention) — synthesised routing nodes (`StartEvent_1`, `Gateway_join_1`) and all edges are the
  * model's own topology call and are deliberately excluded, or every legitimate retry would be

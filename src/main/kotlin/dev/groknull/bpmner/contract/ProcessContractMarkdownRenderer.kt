@@ -88,8 +88,8 @@ private fun StringBuilder.appendIntermediateThrows(contract: ProcessContract) {
     }
 }
 
-// The total topology (ADR-696-1): every flow the contract states, feeding the outline model
-// that still consumes this markdown projection.
+// The total topology: every flow the contract states, feeding the outline model that consumes
+// this markdown projection.
 private fun StringBuilder.appendFlows(contract: ProcessContract) {
     if (contract.flows.isNotEmpty()) {
         appendLine()
@@ -143,11 +143,10 @@ private fun activitySuffix(activity: ContractActivity): String = when (activity)
     is ContractActivity.CallActivity -> " [CALL_ACTIVITY calledElement=\"${activity.calledElement}\"]"
 }
 
-// Activity modifiers (iteration, boundary events, loop) rendered inline. This markdown is now
-// also the corrective extraction prompt's payload (ADR-696-11): the model is told to preserve
-// the previous contract's elements exactly, and a render that hides modifiers reads as a
-// contract that has none — inviting the model to drop them. One bracket per modifier, in the
-// same style activitySuffix and activity_kinds.jinja's worked examples already use.
+// Activity modifiers (iteration, boundary events, loop) rendered inline, one bracket each, in
+// the style activitySuffix uses. This markdown is also the corrective extraction prompt's
+// payload, where the model is asked to preserve the previous contract exactly — a render that
+// omitted modifiers would read as a contract that has none.
 private fun modifiersSuffix(activity: ContractActivity): String = buildString {
     activity.iteration?.let {
         append(" [ITERATION mode=${it.mode} over=\"${it.collectionDescription}\"]")

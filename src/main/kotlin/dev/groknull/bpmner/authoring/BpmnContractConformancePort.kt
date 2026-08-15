@@ -12,7 +12,7 @@ import org.jmolecules.architecture.onion.simplified.ApplicationRing
 /**
  * Published `authoring` port: deterministically stamps every BPMN attribute the source
  * [ProcessContract] fully determines onto a generated [BpmnDefinition] — the contract's value
- * always wins, so the pass corrects rather than rejects (R3, ADR-685-19/-21/-25).
+ * always wins, so the pass corrects rather than rejects.
  *
  * Callers from other modules (e.g. `repair`) inject this interface; the implementing bean
  * ([dev.groknull.bpmner.authoring.internal.domain.ContractConformancePass]) lives in

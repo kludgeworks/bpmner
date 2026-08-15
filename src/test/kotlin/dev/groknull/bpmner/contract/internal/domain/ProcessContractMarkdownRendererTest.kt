@@ -226,8 +226,8 @@ class ProcessContractMarkdownRendererTest {
 
     @Test
     fun `renders activity modifiers — boundary events, iteration, and loop`() {
-        // ADR-696-11: this markdown is now the corrective extraction prompt's payload, so a
-        // modifier the render hides is a modifier the model is told (wrongly) to preserve.
+        // This markdown is the corrective extraction prompt's payload, so a modifier the render
+        // hides is a modifier the model is told to preserve without being shown it.
         val sources = listOf("ev1")
         val contract = ProcessContract(
             id = "contract-modifiers",

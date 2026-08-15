@@ -24,7 +24,7 @@ import org.springframework.stereotype.Component
  * #216 parity test sees the same output.
  *
  * Existence-only: whether those events have the right in/out degree is the contract's job
- * (ADR-696-1 V3/V4), not this rule's — this stays narrow to "a start/end event exists at all".
+ * (contract-level V3/V4), not this rule's — this stays narrow to "a start/end event exists at all".
  *
  * Diagnostics are process-scoped — no specific `elementId` is set.
  */
@@ -37,7 +37,7 @@ internal class RequiredEventsRule : BpmnRule {
         slug = "required-events",
         category = RuleCategory.Definition,
         intent = "Ensure each BPMN definition has at least one start event and one end event " +
-            "(existence only — degree constraints are contract-level, ADR-696-1 V3/V4).",
+            "(existence only — degree constraints are contract-level, V3/V4).",
         forModellers = "Model a clear process start and completion point.",
         forAI = "Include at least one START_EVENT and one END_EVENT in every generated definition.",
         targetElements = listOf("bpmn:StartEvent", "bpmn:EndEvent"),

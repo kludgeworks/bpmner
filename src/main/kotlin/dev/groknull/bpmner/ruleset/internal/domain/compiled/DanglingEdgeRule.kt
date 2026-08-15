@@ -21,7 +21,7 @@ import org.springframework.stereotype.Component
  * the definition, and edges whose source and target are identical (self-references). Ports
  * `BpmnDefinitionValidator.validateEdges` with byte-identical messages.
  *
- * A dangling edge is unreachable from a contract that satisfies V1 (ADR-696-1), so a hit here
+ * A dangling edge is unreachable from a contract that satisfies V1, so a hit here
  * signals a compiler bug rather than a modeller or LLM mistake — that is what makes the rule
  * worth keeping rather than a duplicate of the contract-level check.
  *
