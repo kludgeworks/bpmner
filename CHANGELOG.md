@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.6.0](https://github.com/kludgeworks/bpmner/compare/bpmner-v0.5.0...bpmner-v0.6.0) (2026-08-15)
+
+
+### Features
+
+* make BPMN generation reliable ([#695](https://github.com/kludgeworks/bpmner/issues/695)) ([f8f9a18](https://github.com/kludgeworks/bpmner/commit/f8f9a183f9370055b4cdd8365498c54092f34c7a))
+* make the contract a total graph (epic [#696](https://github.com/kludgeworks/bpmner/issues/696)) ([c6a95e3](https://github.com/kludgeworks/bpmner/commit/c6a95e36f5d543325697fa0b02f2ac3711377a3b)), closes [#474](https://github.com/kludgeworks/bpmner/issues/474) [#700](https://github.com/kludgeworks/bpmner/issues/700) [#701](https://github.com/kludgeworks/bpmner/issues/701)
+* **web:** enable editable BPMN canvases ([#699](https://github.com/kludgeworks/bpmner/issues/699)) ([a1f47d6](https://github.com/kludgeworks/bpmner/commit/a1f47d638e47894bba7e9d0e32ba90d98fd6e73b))
+
+
+### Bug Fixes
+
+* correct two diagnostics that could not be satisfied ([#703](https://github.com/kludgeworks/bpmner/issues/703), [#704](https://github.com/kludgeworks/bpmner/issues/704)) ([#705](https://github.com/kludgeworks/bpmner/issues/705)) ([e4f34f7](https://github.com/kludgeworks/bpmner/commit/e4f34f771ddf87c5f050eaa2f9fcaf3117c7306b))
+
 ## [0.5.0](https://github.com/kludgeworks/bpmner/compare/bpmner-v0.4.1...bpmner-v0.5.0) (2026-08-10)
 
 
