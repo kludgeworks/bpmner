@@ -67,6 +67,7 @@ WEB_TS_DEPS = [
     "//:node_modules/axe-core",
     "//:node_modules/bpmn-js",
     "//:node_modules/jsdom",
+    "//:node_modules/preact",
 ]
 
 bpmner_ts_configs()
@@ -166,12 +167,50 @@ bpmner_node_test(
     deps = WEB_TS_DEPS,
 )
 
+bpmner_node_test(
+    name = "control_icons_test",
+    srcs = WEB_SRCS + WEB_TEST_SRCS,
+    entry_point = "test/control-icons.test.ts",
+    extra_data = [
+        "src/static/bpmn-font/css/bpmn.css",
+        "src/static/index.html",
+        "src/static/style.css",
+        "//src:preview_template",
+    ],
+    deps = WEB_TS_DEPS,
+)
+
+bpmner_node_test(
+    name = "diagram_export_test",
+    srcs = WEB_SRCS + WEB_TEST_SRCS,
+    entry_point = "test/diagram-export.test.ts",
+    external = [
+        "../src/diagram-export",
+        "jsdom",
+    ],
+    extra_data = [":diagram_export_module"],
+    deps = WEB_TS_DEPS,
+)
+
 esbuild(
     name = "canvas_viewport_module",
     srcs = WEB_SRCS,
     entry_point = "src/canvas-viewport.ts",
     format = "cjs",
     output = "dist/src/canvas-viewport.js",
+    platform = "node",
+    sourcemap = "inline",
+    sources_content = True,
+    target = "es2022",
+    deps = WEB_TS_DEPS,
+)
+
+esbuild(
+    name = "diagram_export_module",
+    srcs = WEB_SRCS,
+    entry_point = "src/diagram-export.ts",
+    format = "cjs",
+    output = "dist/src/diagram-export.js",
     platform = "node",
     sourcemap = "inline",
     sources_content = True,

@@ -3,14 +3,21 @@
  * SPDX-License-Identifier: MIT
  */
 
-import BpmnViewer from "bpmn-js"
+import BpmnModeler from "bpmn-js/lib/Modeler"
+import {
+	bindZoomControls,
+	type CanvasViewport,
+	fitInitialViewport,
+	setZoomControlsEnabled,
+} from "./canvas-viewport"
+import {
+	bindDiagramExports,
+	type DiagramExportControls,
+	setDiagramExportControlsEnabled,
+} from "./diagram-export"
 import { formatError, parsePreviewXml } from "./preview-helpers"
 
-type BpmnCanvas = {
-	zoom: (mode: "fit-viewport") => void
-}
-
-const viewer = new BpmnViewer({
+const modeler = new BpmnModeler({
 	container: "#canvas",
 })
 
@@ -34,14 +41,37 @@ function showError(error: unknown): void {
 	errorElement.style.display = "block"
 }
 
+const canvasEl = requiredElement<HTMLElement>("canvas")
+const zoomInBtn = requiredElement<HTMLButtonElement>("zoom-in-btn")
+const zoomOutBtn = requiredElement<HTMLButtonElement>("zoom-out-btn")
+const zoomResetBtn = requiredElement<HTMLButtonElement>("zoom-reset-btn")
+const exportControls: DiagramExportControls = {
+	xml: requiredElement<HTMLElement>("download-diagram-btn"),
+	svg: requiredElement<HTMLElement>("download-svg-btn"),
+}
+
+function setCanvasLoaded(loaded: boolean): void {
+	canvasEl.inert = !loaded
+	canvasEl.classList.toggle("canvas--disabled", !loaded)
+	setZoomControlsEnabled(zoomInBtn, zoomOutBtn, zoomResetBtn, loaded)
+	setDiagramExportControlsEnabled(exportControls, loaded)
+}
+
+setCanvasLoaded(false)
+bindDiagramExports(modeler, exportControls)
+
 try {
-	await viewer.importXML(previewXml())
-	const canvas = viewer.get("canvas") as BpmnCanvas
-	const fitViewport = (): void => canvas.zoom("fit-viewport")
-	// Fit once layout has settled (the container may still be sizing on first paint),
-	// and re-fit whenever the window is resized so the whole diagram stays visible.
+	await modeler.importXML(previewXml())
+	const canvasViewport = modeler.get("canvas") as CanvasViewport
+	const fitViewport = (): void => {
+		fitInitialViewport(canvasViewport)
+	}
 	requestAnimationFrame(fitViewport)
 	window.addEventListener("resize", fitViewport)
+
+	bindZoomControls(canvasViewport, zoomInBtn, zoomOutBtn, zoomResetBtn)
+	requestAnimationFrame(() => setCanvasLoaded(true))
 } catch (error) {
+	setCanvasLoaded(false)
 	showError(error)
 }

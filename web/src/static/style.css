@@ -148,32 +148,6 @@ body {
 	height: 100%;
 }
 
-.canvas-controls {
-	position: absolute;
-	top: var(--space-3);
-	right: var(--space-3);
-	z-index: 2;
-	display: flex;
-	gap: var(--space-1);
-}
-
-.canvas-control {
-	width: 32px;
-	height: 32px;
-	margin: 0;
-	padding: 0;
-	font-size: 18px;
-	line-height: 1;
-	color: var(--ink);
-	background: var(--paper);
-	border: 1px solid var(--ink-12);
-}
-
-.canvas-control:hover {
-	color: var(--paper);
-	background: var(--oxide);
-}
-
 /* --------------------------------------------------------------------------
  * Panels
  * ------------------------------------------------------------------------ */
@@ -253,6 +227,72 @@ button:disabled {
 
 button:disabled:hover {
 	background: var(--ink);
+}
+
+.io-zoom-controls {
+	position: absolute;
+	/* Cleared above the bpmn.io watermark (bottom: 15px), which the bpmn-js
+	   license requires stay visible and unoverlapped by other UI. */
+	bottom: calc(var(--space-4) + 40px);
+	right: var(--space-4);
+	z-index: 2;
+}
+
+.io-import-export {
+	position: absolute;
+	bottom: var(--space-4);
+	left: var(--space-4);
+	z-index: 2;
+}
+
+.io-control-list {
+	margin: 0;
+	padding: 5px;
+	list-style: none;
+	background: #fafafa;
+	border: 1px solid #e0e0e0;
+}
+
+.io-control-list li {
+	display: block;
+}
+
+.io-control-list.io-horizontal {
+	display: flex;
+}
+
+.io-control-list button,
+.io-control-list a {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 22px;
+	height: 22px;
+	margin: 0;
+	padding: 0;
+	border: 0;
+	border-radius: 0;
+	color: #222;
+	background: transparent;
+	text-decoration: none;
+	cursor: pointer;
+}
+
+.io-control-list button:hover:not(:disabled),
+.io-control-list a:hover:not([aria-disabled="true"]) {
+	background: #e0e0e0;
+}
+
+.io-control-list hr {
+	margin: 4px 0;
+	border: 0;
+	border-top: 1px solid #e0e0e0;
+}
+
+.io-control-list a[aria-disabled="true"] {
+	opacity: 0.5;
+	pointer-events: none;
+	cursor: default;
 }
 
 /* --------------------------------------------------------------------------
@@ -468,6 +508,10 @@ button:disabled:hover {
 	background: var(--paper);
 	border: 1px solid var(--ink-12);
 	border-radius: var(--radius-sm);
+}
+
+.canvas--disabled {
+	pointer-events: none;
 }
 
 /* --------------------------------------------------------------------------

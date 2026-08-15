@@ -56,24 +56,49 @@ describe("canvas viewport", () => {
 
 	it("enables controls only after the initial fit", () => {
 		const dom = new JSDOM(
-			'<button id="in" type="button"></button><button id="out" type="button"></button>',
+			'<button id="in" type="button"></button><button id="out" type="button"></button><button id="reset" type="button"></button>',
 		)
 		const zoomInButton = dom.window.document.querySelector("#in")
 		const zoomOutButton = dom.window.document.querySelector("#out")
+		const zoomResetButton = dom.window.document.querySelector("#reset")
 		assert.ok(zoomInButton instanceof dom.window.HTMLButtonElement)
 		assert.ok(zoomOutButton instanceof dom.window.HTMLButtonElement)
+		assert.ok(zoomResetButton instanceof dom.window.HTMLButtonElement)
 		const { canvas, calls } = fakeCanvas()
 
-		bindZoomControls(canvas, zoomInButton, zoomOutButton)
-		setZoomControlsEnabled(zoomInButton, zoomOutButton, false)
+		bindZoomControls(canvas, zoomInButton, zoomOutButton, zoomResetButton)
+		setZoomControlsEnabled(zoomInButton, zoomOutButton, zoomResetButton, false)
 		zoomInButton.click()
 		assert.deepEqual(calls, [])
 
-		setZoomControlsEnabled(zoomInButton, zoomOutButton, true)
+		setZoomControlsEnabled(zoomInButton, zoomOutButton, zoomResetButton, true)
 		zoomInButton.click()
 		zoomOutButton.click()
 		assert.equal(calls[0]?.[0], 1.2)
 		assert.ok(Math.abs(Number(calls[1]?.[0]) - 1) < Number.EPSILON)
+	})
+
+	it("binds the zoom reset button to fit viewport", () => {
+		const dom = new JSDOM(
+			'<button id="in" type="button"></button><button id="out" type="button"></button><button id="reset" type="button"></button>',
+		)
+		const zoomInButton = dom.window.document.querySelector("#in")
+		const zoomOutButton = dom.window.document.querySelector("#out")
+		const zoomResetButton = dom.window.document.querySelector("#reset")
+		assert.ok(zoomInButton instanceof dom.window.HTMLButtonElement)
+		assert.ok(zoomOutButton instanceof dom.window.HTMLButtonElement)
+		assert.ok(zoomResetButton instanceof dom.window.HTMLButtonElement)
+		const { canvas, calls } = fakeCanvas()
+
+		bindZoomControls(canvas, zoomInButton, zoomOutButton, zoomResetButton)
+		setZoomControlsEnabled(zoomInButton, zoomOutButton, zoomResetButton, false)
+		assert.ok(zoomResetButton.disabled)
+
+		setZoomControlsEnabled(zoomInButton, zoomOutButton, zoomResetButton, true)
+		assert.ok(!zoomResetButton.disabled)
+
+		zoomResetButton.click()
+		assert.deepEqual(calls, [["fit-viewport", true]])
 	})
 
 	it("clamps zoom to the diagram navigation range", () => {

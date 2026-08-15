@@ -15,18 +15,22 @@ export function bindZoomControls(
 	canvas: CanvasViewport,
 	zoomInButton: HTMLButtonElement,
 	zoomOutButton: HTMLButtonElement,
+	zoomResetButton: HTMLButtonElement,
 ): void {
 	zoomInButton.addEventListener("click", () => zoomBy(canvas, ZOOM_FACTOR))
 	zoomOutButton.addEventListener("click", () => zoomBy(canvas, 1 / ZOOM_FACTOR))
+	zoomResetButton.addEventListener("click", () => fitInitialViewport(canvas))
 }
 
 export function setZoomControlsEnabled(
 	zoomInButton: HTMLButtonElement,
 	zoomOutButton: HTMLButtonElement,
+	zoomResetButton: HTMLButtonElement,
 	enabled: boolean,
 ): void {
 	zoomInButton.disabled = !enabled
 	zoomOutButton.disabled = !enabled
+	zoomResetButton.disabled = !enabled
 }
 
 /**
