@@ -504,12 +504,6 @@ class BpmnContractFidelityCheckerTest {
         },
     )
 
-    // The BRANCH_FLOW_MISSING and BRANCH_NEXT_REF_UNRESOLVED tests formerly here (missing branch
-    // flow, transparent-join walk in its three shapes, named/multi-outbound/task obstructions,
-    // and nextRef resolution) tested `verifyBranchTargetsAndFlows`, deleted whole with
-    // `ContractBranch.nextRef` (ADR-696-1, stage 696-5) — the contract now states every branch's
-    // target directly in `flows`, so there is nothing left to walk to or resolve at this stage.
-
     @Test
     fun `gateway with too few outbound flows flagged as GATEWAY_BRANCH_COUNT_INSUFFICIENT`() {
         // Definition has the gateway but only one outbound (collapsed branches)
@@ -866,9 +860,9 @@ class BpmnContractFidelityCheckerTest {
     @Test
     @Suppress("LongMethod") // inline definition fixture stays cohesive; splitting hides assertions
     fun `a decision whose branches converge through an intervening activity is valid`() {
-        // This shape — a branch's target reached via real intervening work rather than
-        // directly — is exactly what #696 was filed over: the deleted nextRef-based branch-flow
-        // check used to misread it as a dropped edge. No such check remains to misfire.
+        // A branch's target reached via real intervening work rather than directly. The
+        // contract states the target in `flows`, so no check at this stage reads it as a
+        // dropped edge.
         val sources = listOf("ev1")
         val contract =
             ProcessContract(

@@ -216,7 +216,7 @@ class BpmnSummarizerTest {
 
     @Test
     fun `a looping task and its boundary event summarise with the modifier fields populated`() {
-        // R2 (ADR-685-16, epic #685): alignment's BPMN-side view must carry the fields
+        // Alignment's BPMN-side view must carry the fields
         // generation can drop, or the safety net can't see what was dropped. This pins the
         // summarizer's contribution to that fix.
         val definition =

@@ -59,6 +59,7 @@ internal object ContractExtractionExamples {
     private const val ACT_SEND_CONFIRM = "act-send-confirmation"
     private const val ACT_ARCHIVE = "act-archive"
     private const val ACT_NOTIFY_MANAGER = "act-notify-manager"
+    private const val DEC_NOTIFICATIONS = "dec-notifications"
     private const val END_NORMAL = "end-complete"
     private const val END_MESSAGE = "end-invoice-sent"
     private const val THROW_BILLING = "throw-billing-notification"
@@ -279,7 +280,7 @@ internal object ContractExtractionExamples {
             ),
             decisions = listOf(
                 FlatContractDecision(
-                    id = "dec-notifications",
+                    id = DEC_NOTIFICATIONS,
                     question = "Which notifications apply?",
                     kind = ContractGatewayKind.INCLUSIVE,
                     branches = listOf(
@@ -308,9 +309,9 @@ internal object ContractExtractionExamples {
                 ),
             ),
             flows = listOf(
-                FlatContractFlow(from = "start", to = "dec-notifications"),
-                FlatContractFlow(from = "dec-notifications", to = ACT_SEND_CONFIRM, branchId = "br-customer"),
-                FlatContractFlow(from = "dec-notifications", to = ACT_NOTIFY_MANAGER, branchId = "br-manager"),
+                FlatContractFlow(from = "start", to = DEC_NOTIFICATIONS),
+                FlatContractFlow(from = DEC_NOTIFICATIONS, to = ACT_SEND_CONFIRM, branchId = "br-customer"),
+                FlatContractFlow(from = DEC_NOTIFICATIONS, to = ACT_NOTIFY_MANAGER, branchId = "br-manager"),
                 FlatContractFlow(from = ACT_SEND_CONFIRM, to = END_NORMAL),
                 FlatContractFlow(from = ACT_NOTIFY_MANAGER, to = END_NORMAL),
             ),

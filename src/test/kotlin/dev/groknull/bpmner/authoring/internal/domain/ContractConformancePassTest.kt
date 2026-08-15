@@ -293,10 +293,9 @@ class ContractConformancePassTest {
         sequences = emptyList(),
     )
 
-    // Regression for the defect #696's spike found: a signal end event the model got RIGHT was
-    // stamped back to BpmnNoneEventDefinition, because the contract could only say NORMAL and
-    // Normal resolves unconditionally. Nothing in the suite caught it — the run stayed green and
-    // the signal semantics simply vanished.
+    // A correct signal end event must survive the pass. Normal resolves unconditionally, so a
+    // kind the resolver does not handle is silently stamped back to BpmnNoneEventDefinition and
+    // the semantics vanish with the run still green.
     @Test
     fun `leaves a correctly-signalled end event untouched`() {
         val result = pass.conform(signalContract(), signalDefinition())
@@ -324,7 +323,7 @@ class ContractConformancePassTest {
         assertTrue(result.corrections.any { it.elementId == "end-broadcast" })
     }
 
-    // Mirrors the ERROR/MESSAGE rule (ADR-685-21): resolution needs a catalogue entry and this
+    // Mirrors the ERROR/MESSAGE rule: resolution needs a catalogue entry and this
     // pass never invents one, so an absent catalogue means no stamp rather than a fabricated ref.
     @Test
     fun `does not stamp a signal end event when the signal catalogue is empty`() {

@@ -8,7 +8,7 @@ package dev.groknull.bpmner.contract.internal.domain
 import dev.groknull.bpmner.contract.ProcessContract
 
 /**
- * R5 (ADR-685-26): a corrective retry may not silently shrink the contract. Compares attempt
+ * A corrective retry may not silently shrink the contract. Compares attempt
  * *N* against attempt *N+1* and reports any element or populated modifier field that attempt
  * *N* had but *N+1* lost, unless the diagnostic that drove the retry ([named]) pointed at it —
  * a targeted correction is allowed to change what it was asked to change.

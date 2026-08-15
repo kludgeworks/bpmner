@@ -73,13 +73,10 @@ import org.springframework.stereotype.Component
  * 3. [BpmnFidelityCode.GATEWAY_BRANCH_COUNT_INSUFFICIENT] — the gateway exists but emits
  *    fewer outbound flows than the decision has branches.
  *
- * `BRANCH_NEXT_REF_UNRESOLVED` and `BRANCH_FLOW_MISSING` — checks keyed on the branch's own
- * (now deleted) target field — were removed with it (ADR-696-1, stage 696-5): the contract now
- * states every branch's target directly in `flows`, so there is nothing left to resolve or walk
- * to at this stage.
+ * Branch targets are not checked here: the contract states every branch's target directly in
+ * `flows`, so there is nothing to resolve or walk to at this stage.
  *
- * Relocated from `authoring` root package to `authoring.internal.domain` as part of S9
- * (ADR-009 (port-fronting) disposition a). Cross-module callers inject [BpmnContractFidelityPort] instead.
+ * Cross-module callers inject [BpmnContractFidelityPort] rather than this class.
  */
 @Component
 @Suppress("TooManyFunctions", "LargeClass") // per-contract-element private helpers (Activity / EndState / Decision / Lane)
@@ -216,10 +213,9 @@ internal class BpmnContractFidelityChecker : BpmnContractFidelityPort {
         }
     }
 
-    // Independent of the branch's own target field: compares the rendered gateway's outbound
-    // edge count against the contract's declared branch count. The contract states the target
-    // of every branch directly (`flows`, ADR-696-1), so this check no longer needs a
-    // discriminator to say whether the missing edge(s) are determined — they always are now.
+    // Compares the rendered gateway's outbound edge count against the contract's declared branch
+    // count. Every branch's target is determined by `flows`, so a shortfall is always a dropped
+    // edge and needs no discriminator.
     private fun verifyOutboundBranchCount(
         decision: ContractDecision,
         gateway: BpmnNode,
@@ -390,13 +386,11 @@ internal class BpmnContractFidelityChecker : BpmnContractFidelityPort {
      * own, so matching is by kind alone.
      *
      * Routing (where the boundary event's single outbound edge leads) is **not** checked here —
-     * that is V1/V5's job on the contract itself (ADR-696-1), the earlier artifact that can be
-     * wrong. This file is deleted whole in stage 696-6; a `flows`-aware rewrite of the routing
-     * check here would be built only to be thrown away.
+     * that is V1/V5's job on the contract itself, the earlier artifact that can be wrong.
      *
      * Deliberately does not compare `label` (free text) or `detail` (an ISO-8601 duration for
      * TIMER, a catalogue business-error code for ERROR resolved indirectly via `errorRef`):
-     * ADR-685-17 reserves ERROR-severity fidelity checks for values that change the diagram's
+     * ERROR-severity fidelity checks are reserved for values that change the diagram's
      * meaning — presence and kind — not prose.
      */
     private fun checkActivityBoundaryEvents(

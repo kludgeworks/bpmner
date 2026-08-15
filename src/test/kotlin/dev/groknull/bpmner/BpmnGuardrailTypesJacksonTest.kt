@@ -16,7 +16,7 @@ import kotlin.test.assertTrue
 
 /**
  * `@JsonAlias` coverage for [ReadinessDimension], the single enum now used for both readiness
- * dimensions and missing/gap areas (#611 deleted the parallel `MissingProcessArea` type).
+ * dimensions and missing/gap areas.
  *
  * The readiness LLM regularly emits a plausible synonym for a dimension name — see the failing
  * run `logs/bpmner-20260521-013529-906.log` where the model returned `"START_STATES"` and

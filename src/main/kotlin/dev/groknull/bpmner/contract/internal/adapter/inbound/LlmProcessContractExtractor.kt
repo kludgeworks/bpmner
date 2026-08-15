@@ -58,7 +58,7 @@ internal class LlmProcessContractExtractor(
                 .withPromptContributor(PromptContributor.fixed(request.styleGuideContribution()))
 
         var previousIssues: String? = null
-        // R5 (ADR-685-26): the diagnostic behind the *previous* attempt's feedback and the
+        // The diagnostic behind the *previous* attempt's feedback and the
         // contract it produced, so a conserving retry can be told what it dropped without being
         // asked to.
         var previousContract: ProcessContract? = null
@@ -112,7 +112,7 @@ internal class LlmProcessContractExtractor(
         )
     }
 
-    // R5 (ADR-685-26): drops relative to the previous attempt, scoped to ids the driving
+    // Drops relative to the previous attempt, scoped to ids the driving
     // diagnostic did not name. Empty on attempt 1 (no previous attempt to compare against).
     private fun detectConservationDrops(
         contract: ProcessContract,

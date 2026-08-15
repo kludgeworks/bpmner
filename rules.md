@@ -396,7 +396,7 @@ Populate event definitions and catalog refs consistently for every event node.
 
 ### Purpose
 
-Ensure each BPMN definition has at least one start event and one end event (existence only — degree constraints are contract-level, ADR-696-1 V3/V4).
+Ensure each BPMN definition has at least one start event and one end event (existence only — degree constraints are contract-level, V3/V4).
 
 ### Modeller Guidance
 
@@ -695,7 +695,7 @@ Use a timer start event only when the process waits for a specific date, duratio
 
 ### AI Guidance
 
-Detect timer start events with no timer expression or with more than one timer expression. General start-event incoming-flow checks are contract-level (ADR-696-1 V3), not a lint rule.
+Detect timer start events with no timer expression or with more than one timer expression. General start-event incoming-flow checks are contract-level, not a lint rule.
 
 ### Diagnostic Messages
 

@@ -90,7 +90,7 @@ internal class LlmBpmnProcessGenerator(
         val promptRunner = config.generator.promptRunner(context)
 
         var previousFailure: String? = null
-        // R5 (ADR-685-26): the previous attempt, so a conserving retry can be told what it
+        // The previous attempt, so a conserving retry can be told what it
         // dropped from a surviving successful outline without being asked to.
         var previousAttempt: OutlineAttempt? = null
         for (attempt in 1..config.maxOutlineAttempts) {
@@ -127,7 +127,7 @@ internal class LlmBpmnProcessGenerator(
         )
     }
 
-    // R5 (ADR-685-26): drops relative to the previous attempt, scoped to ids the driving
+    // Drops relative to the previous attempt, scoped to ids the driving
     // fidelity diagnostic did not name. Empty on attempt 1 (no previous attempt to compare
     // against) — `named` comes only from the ERROR issues that drove the retry, matching
     // `OutlineAttempt.violations`.

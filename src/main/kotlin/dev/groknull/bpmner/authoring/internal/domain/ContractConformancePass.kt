@@ -54,11 +54,11 @@ import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 
 /**
- * R3 (ADR-685-19/-21): deterministically stamps every BPMN attribute the source [ProcessContract]
+ * Deterministically stamps every BPMN attribute the source [ProcessContract]
  * fully determines onto a generated [BpmnDefinition] — the contract's value always wins, so this
- * pass corrects rather than rejects and never fails the stage (ADR-685-22).
+ * pass corrects rather than rejects and never fails the stage.
  *
- * Seven stamps (ADR-685-21's bucket — `ACTIVITY_TASK_KIND_MISMATCH` is structural, not
+ * Seven stamps (`ACTIVITY_TASK_KIND_MISMATCH` is structural, not
  * stamped here: see its exclusion note below):
  * 1. Default-branch edge: `isDefault = true`, condition cleared.
  * 2. Every branch's edge label: `edge.name = branch.label`.
@@ -90,8 +90,7 @@ internal class ContractConformancePass : BpmnContractConformancePort {
         val associationsById = definition.associations.associateBy { it.id }.toMutableMap()
         val corrections = mutableListOf<ContractCorrection>()
         val artifacts = AnnotationArtifacts(annotationsById, associationsById, corrections)
-        // branchId is contract-wide unique (V9/V13, ADR-696-1), so this needs computing once,
-        // not once per decision.
+        // branchId is contract-wide unique (V9/V13), so this is computed once, not per decision.
         val branchTargets = contract.flows.filterIsInstance<ContractFlow.Branch>().associate { it.branchId to it.to }
 
         contract.decisions.forEach { decision ->
@@ -118,11 +117,9 @@ internal class ContractConformancePass : BpmnContractConformancePort {
         return BpmnConformance(corrected, corrections.toList())
     }
 
-    // Stamps 1 (default flow) and 2 (edge label), generalised from the one DefaultBranch a
-    // decision may carry to every branch: the branch→edge matching itself (target-id equality,
-    // single-outbound fallback when a branch has no matching flow) is unchanged from the
-    // predecessor DefaultFlowAssigner — only where the target id comes from has changed, from
-    // the branch's own deleted target field (ADR-696-1) to the `ContractFlow.Branch` naming
+    // Stamps 1 (default flow) and 2 (edge label), for every branch a decision carries. A branch
+    // matches its edge by target-id equality, falling back to the single outbound edge when the
+    // branch has no matching flow; the target id comes from the `ContractFlow.Branch` naming
     // this branchId.
     private fun stampBranches(
         decision: ContractDecision,
@@ -363,7 +360,7 @@ internal class ContractConformancePass : BpmnContractConformancePort {
 
     // Stamp 5. Best-effort: NORMAL/TERMINATE need no catalogue lookup and are always stampable;
     // ERROR/MESSAGE/SIGNAL/ESCALATION can only be stamped when a matching catalogue entry already
-    // exists in the definition — this pass never invents one (ADR-685-21 non-goal).
+    // exists in the definition — this pass never invents one.
     private fun stampEndState(
         endState: ContractEndState,
         definition: BpmnDefinition,

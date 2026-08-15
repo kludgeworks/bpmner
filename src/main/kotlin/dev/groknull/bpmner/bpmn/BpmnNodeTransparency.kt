@@ -9,12 +9,9 @@ package dev.groknull.bpmner.bpmn
  * Whether [this] node is "semantically transparent" — it carries no business meaning of its
  * own and exists only to route flow.
  *
- * Was used by the fidelity checker's now-deleted branch-target-reachability walk (ADR-696-1,
- * stage 696-5) to collapse the legitimate generator pattern `gateway → unnamed-merge → target`
- * without losing the safety net for actually-missing branch flows. No production caller
- * remains; kept for its test coverage until stage 696-6 deletes the file whole (ADR-696-2).
+ * Currently unused by production code; retained with its tests.
  *
- * Today only one shape qualifies: an unnamed exclusive- or parallel-gateway node with exactly
+ * Only one shape qualifies: an unnamed exclusive- or parallel-gateway node with exactly
  * one outbound edge — a pure converging join.
  *
  * The `when` covers every canonical [BpmnNode] subtype plus [BpmnUnrecognizedNode]; since

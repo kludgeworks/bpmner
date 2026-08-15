@@ -11,24 +11,20 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 /**
- * ADR-696-9's recurrence guard, scheduled by ADR-696-11 after three misses found by reasoning
- * rather than by a test (`EventTriggerKind.SIGNAL` in 696-4, V5 ∧ V7 in ADR-696-10,
- * `BoundaryEventKind.MESSAGE` in ADR-696-11).
+ * Parity guard between the BPMN the emitter can produce and the vocabulary the contract can
+ * authorise.
  *
  * For every BPMN event-definition kind the emitter ([FlatBpmnEventDefinitionKind]) can produce,
  * the contract must be able to authorise it via *some* element (a start trigger, an end state, or
  * an intermediate throw) — or the kind sits in [excluded] with a stated reason. `bpmn-profile.md`
  * is never an input to this comparison: it is hand-written prose that has claimed support for
- * constructs the contract could not authorise for as long as they were unsupported. This compares
- * emitter code against contract code directly, same as `rules.md` is generated from live bean
- * metadata rather than the other way round (ADR-008).
+ * constructs the contract could not authorise. This compares emitter code against contract code
+ * directly, the same direction in which `rules.md` is generated from live bean metadata.
  *
- * This test is deliberately coarse — "authorised somewhere in the contract", not "authorised on
- * every element type the emitter allows it on". [BoundaryEventKind]'s own exhaustiveness is
- * guarded separately, in `FlatContractMapperTest`'s boundary-event round-trip: `MESSAGE` was
- * already authorised here (via `ContractTrigger.Message` / `ContractEndState.Message` /
- * `ContractIntermediateThrow.Message`) before ADR-696-11, so this test alone would not have caught
- * that boundary events specifically lacked it. The two guards are complementary, not redundant.
+ * Deliberately coarse — "authorised somewhere in the contract", not "authorised on every element
+ * type the emitter allows it on". A kind can pass here while a single element type still lacks it,
+ * so per-element exhaustiveness is guarded separately: [BoundaryEventKind]'s lives in
+ * `FlatContractMapperTest`'s boundary-event round-trip. The two guards are complementary.
  */
 internal class EmitterContractVocabularyParityTest {
 
@@ -49,15 +45,15 @@ internal class EmitterContractVocabularyParityTest {
 
     /**
      * Every [FlatBpmnEventDefinitionKind] the contract deliberately cannot authorise, with the
-     * reason it stays excluded. ADR-696-9, amended 2026-08-14: the reason cites the BPMN
-     * conformance tier the construct sits in, never a sample count — a tier stays true; a count
-     * expires the moment someone writes the next fixture.
+     * reason it stays excluded. Each reason cites the BPMN conformance tier the construct sits
+     * in, never a sample count: a tier stays true, where a count expires the moment someone
+     * writes the next fixture.
      */
     private val excluded = mapOf(
         FlatBpmnEventDefinitionKind.COMPENSATE to
             "below the Analytic conformance subclass (Common Executable only); degrades " +
             "gracefully — prose describing an undo extracts as an ordinary activity, never a " +
-            "failed run. ADR-696-9.",
+            "failed run.",
     )
 
     @Test

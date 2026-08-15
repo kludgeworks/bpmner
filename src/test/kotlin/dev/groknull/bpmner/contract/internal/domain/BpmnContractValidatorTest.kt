@@ -294,12 +294,9 @@ class BpmnContractValidatorTest {
         assertTrue(codes.contains(ContractValidationCode.UNCONDITIONAL_BRANCH_ON_INCLUSIVE))
     }
 
-    // #703: this is the shape `fulfilment-with-optional-extras` needs — two optional add-ons and a
-    // "neither applied" path. The validator has always permitted it (INCLUSIVE routes through the
-    // same validateConditionalDecision as EXCLUSIVE); branch_kinds.jinja told the model DEFAULT was
-    // legal only on EXCLUSIVE, so the model emitted an unlabelled edge instead and V10 rejected it.
-    // Asserted as fully valid, not merely free of two codes: a positive fixture is what catches a
-    // regression here, and the weaker form would still pass if some unrelated rule started firing.
+    // An INCLUSIVE decision may carry a DEFAULT branch for the path taken when none of its
+    // conditions hold; it routes through the same checks as EXCLUSIVE. Asserted as fully valid
+    // rather than as the absence of two codes, so an unrelated rule firing on this shape fails.
     @Test
     fun `inclusive decision with conditional branches and a default branch is valid`() {
         val branching = branchingContract()
@@ -599,10 +596,6 @@ class BpmnContractValidatorTest {
         assertFalse(codes.contains(ContractValidationCode.SUBPROCESS_MEMBER_SHARED))
     }
 
-    // The four `nextRef`-hallucination/resolution tests formerly here tested a field and a code
-    // that no longer exist (ADR-696-1, stage 696-5 commit 3) — V1-V13's own tests, below, cover
-    // the successor behaviour.
-
     @Test
     fun `V1 - a flow endpoint that resolves to no declared element fails FLOW_ENDPOINT_NOT_FOUND`() {
         val contract = linearContract().copy(
@@ -756,25 +749,25 @@ class BpmnContractValidatorTest {
         assertTrue(validator.validate(contract).issues.any { it.code == ContractValidationCode.DUPLICATE_FLOW })
     }
 
-    // ADR-696-10: a boundary event inherits its host's position in the graph — reached when the
-    // host is reached, contained where the host is contained, with only its degree its own.
+    // A boundary event inherits its host's position in the graph: reached when the host is
+    // reached, contained where the host is contained, with only its degree its own.
 
     @Test
-    fun `ADR-696-10 - a contract with a boundary event on a reachable host is valid`() {
+    fun `a contract with a boundary event on a reachable host is valid`() {
         val contract = boundaryEventContract()
         val report = validator.validate(contract)
         assertTrue(report.isValid, "expected boundary event contract to be valid, got ${report.issues}")
     }
 
     @Test
-    fun `ADR-696-10 - the handler path behind a boundary event is not reported unreachable`() {
+    fun `the handler path behind a boundary event is not reported unreachable`() {
         val report = validator.validate(boundaryEventContract())
         val unreachable = report.issues.filter { it.code == ContractValidationCode.ELEMENT_UNREACHABLE_FROM_START }
         assertTrue(unreachable.isEmpty(), "expected no unreachable elements, got $unreachable")
     }
 
     @Test
-    fun `ADR-696-10 - a boundary event on an unreachable host is still reported`() {
+    fun `a boundary event on an unreachable host is still reported`() {
         val base = linearContract()
         val contract = base.copy(
             activities = base.activities + ContractActivity.Service(
@@ -804,7 +797,7 @@ class BpmnContractValidatorTest {
     }
 
     @Test
-    fun `ADR-696-10 point 5 - a host whose own path dead-ends still fails V8 despite a live boundary handler`() {
+    fun `a host whose own path dead-ends still fails V8 despite a live boundary handler`() {
         // act-deadend's own outgoing path leads only to act-stuck, which has no outgoing flow — a
         // real dead end. Its boundary event's handler DOES reach an end. V8 must not let that
         // attachment excuse the host: inAdjacency walks flows only, never attachment edges.
@@ -863,10 +856,9 @@ class BpmnContractValidatorTest {
         )
     }
 
-    // #704: the repair a boundary event is given must be one it can perform. "Route through the
-    // subprocess's own id" is impossible for an element reached by attachment rather than by a
-    // flow, and the model followed it literally — inventing a subprocess to route through and
-    // adding a violation on every attempt until its budget ran out.
+    // The repair a diagnostic names must be one its target can perform. A boundary event is
+    // reached by attachment rather than by a flow, so it has no edge to reroute through the
+    // subprocess's own id.
     @Test
     fun `V11 - the crossing diagnostic prescribes a repair the offending element can perform`() {
         val fromBoundaryEvent = validator.validate(subprocessMemberBoundaryEventContract(routeOutsideSubprocess = true))
@@ -917,7 +909,7 @@ class BpmnContractValidatorTest {
     fun `V12 - a member cycle with no entry point is still unreachable`() {
         // A closed 2-cycle has no member with zero internal predecessors, so neither of its two
         // members counts as an entry point (mirrors the existing V12 test's cycle case) — the
-        // attachment seeding from ADR-696-10 must not accidentally make this pair reachable.
+        // attachment seeding must not accidentally make this pair reachable.
         val base = subprocessMemberBoundaryEventContract(routeOutsideSubprocess = false)
         val subAssess = base.activities.single { it.id == "sub-assess" } as ContractActivity.SubProcess
         val contract = base.copy(
@@ -945,7 +937,7 @@ class BpmnContractValidatorTest {
     }
 
     @Test
-    fun `V5 - a boundary event with an incoming flow still fails, unchanged by ADR-696-10`() {
+    fun `V5 - a boundary event with an incoming flow fails`() {
         val base = boundaryEventContract()
         val contract = base.copy(
             flows = base.flows + ContractFlow.Sequence(from = "act-handle-timeout", to = "be-charge-timeout"),
@@ -955,6 +947,17 @@ class BpmnContractValidatorTest {
                 it.code == ContractValidationCode.BOUNDARY_EVENT_HAS_INCOMING_FLOW
             },
         )
+    }
+
+    @Test
+    fun `V5 - a boundary event with two outgoing flows fails`() {
+        val base = boundaryEventContract()
+        val contract = base.copy(
+            flows = base.flows + ContractFlow.Sequence(from = "be-charge-timeout", to = "end-timeout-handled"),
+        )
+        val issue = validator.validate(contract).issues
+            .single { it.code == ContractValidationCode.BOUNDARY_EVENT_OUTGOING_COUNT_WRONG }
+        assertEquals("be-charge-timeout", issue.targetId)
     }
 
     private fun linearContract(): ProcessContract = ProcessContract(
@@ -1046,7 +1049,7 @@ class BpmnContractValidatorTest {
         )
     }
 
-    // ADR-696-10's positive fixture: exercises every element kind `flowAddressableIds()`
+    // Positive fixture: exercises every element kind `flowAddressableIds()`
     // enumerates (start, activity, decision, end state, intermediate throw, boundary event) plus
     // a subprocess, all satisfying V1-V13 at once. A boundary event on act-charge routes through
     // an intermediate throw to its own handler and end state; a decision branches into a

@@ -85,11 +85,9 @@ class LiveLlmFullPipelineSmokeTest {
     }
 
     /**
-     * Acceptance harness for R2 (ADR-685-16/17, epic #685): reproduces the run that motivated
-     * the epic's rescoping. Before Stage C, this contract's two timer boundary events —
-     * extracted correctly, then discarded by the hand-written markdown projection — burned the
-     * full `createOutline` corrective budget and terminated `OUTLINE_FAILED`. Offline gates
-     * cannot decide this; only a live run can.
+     * Acceptance harness for boundary-event fidelity through the full pipeline: this contract's
+     * two timer boundary events must survive extraction and outline generation into the rendered
+     * BPMN. Offline gates cannot decide this; only a live run can.
      */
     @Test
     fun `pipeline clears outline generation on the first attempt with both timer boundary events from payment-processing prose`(
@@ -161,7 +159,7 @@ class LiveLlmFullPipelineSmokeTest {
                 "credit balance" in normalized ||
                 // A generic 400 invalid_request_error is deliberately NOT treated as skippable —
                 // a malformed request or a genuine prompt/schema regression surfaces the same
-                // code, and this smoke test is the harness that must catch exactly that (#690).
+                // code, and this smoke test is the harness that must catch exactly that.
                 // Only the two explicit, non-quota-adjacent request-size phrasings some providers
                 // use for "your request was too big" are recognized here.
                 "request too large" in normalized ||

@@ -84,8 +84,7 @@ enum class ContractValidationCode {
     /** A call activity declares no `calledElement`; it must name the process it invokes. */
     CALL_ACTIVITY_MISSING_TARGET,
 
-    // V1-V13 (ADR-696-1): total-topology validation over ProcessContract.flows, replacing the
-    // deleted branch/boundary-event target fields and their weaker predecessor check.
+    // V1-V13: total-topology validation over ProcessContract.flows.
 
     /** V1: a flow's `from` or `to` does not resolve to any declared element. */
     FLOW_ENDPOINT_NOT_FOUND,
