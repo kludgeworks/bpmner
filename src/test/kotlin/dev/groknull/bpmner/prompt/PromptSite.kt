@@ -7,7 +7,7 @@ package dev.groknull.bpmner.prompt
 
 import com.embabel.common.ai.converters.FilteringJacksonOutputConverter
 import com.embabel.common.textio.template.JinjavaTemplateRenderer
-import com.fasterxml.jackson.databind.ObjectMapper
+import tools.jackson.databind.ObjectMapper
 import java.util.function.Predicate
 
 /**

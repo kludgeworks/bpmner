@@ -5,9 +5,11 @@
 
 package dev.groknull.bpmner.ruleset
 
+import dev.groknull.bpmner.EmbabelShellTestConfiguration
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.context.annotation.Import
 import org.springframework.modulith.test.ApplicationModuleTest
 import org.springframework.modulith.test.ApplicationModuleTest.BootstrapMode
 import org.springframework.test.context.TestPropertySource
@@ -23,6 +25,7 @@ import org.springframework.test.context.TestPropertySource
  * API keys are stubbed so no live LLM call is made at startup.
  */
 @ApplicationModuleTest(mode = BootstrapMode.DIRECT_DEPENDENCIES, verifyAutomatically = false)
+@Import(EmbabelShellTestConfiguration::class)
 @TestPropertySource(
     properties = [
         "embabel.agent.platform.models.anthropic.api-key=test-key",

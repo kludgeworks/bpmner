@@ -45,19 +45,19 @@ class SmokeResultRecorder :
 
     override fun testFailed(
         context: ExtensionContext,
-        cause: Throwable,
+        cause: Throwable?,
     ) = record(
         context,
         outcome = "fail",
-        category = smokeCategoryFor(cause),
-        message = cause.message,
+        category = cause?.let(::smokeCategoryFor) ?: "infra",
+        message = cause?.message,
         cause = cause,
     )
 
     override fun testAborted(
         context: ExtensionContext,
-        cause: Throwable,
-    ) = record(context, outcome = "skip", category = "infra", message = cause.message)
+        cause: Throwable?,
+    ) = record(context, outcome = "skip", category = "infra", message = cause?.message)
 
     override fun testDisabled(
         context: ExtensionContext,

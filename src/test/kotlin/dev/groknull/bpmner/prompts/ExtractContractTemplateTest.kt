@@ -9,7 +9,6 @@ package dev.groknull.bpmner.prompts
 
 import com.embabel.common.ai.converters.FilteringJacksonOutputConverter
 import com.embabel.common.textio.template.JinjavaTemplateRenderer
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import dev.groknull.bpmner.bpmn.BpmnRequest
 import dev.groknull.bpmner.contract.FlatContractTestFixtures
 import dev.groknull.bpmner.contract.internal.BpmnContractThresholdsConfig
@@ -18,6 +17,7 @@ import dev.groknull.bpmner.readiness.ProcessInputAssessment
 import dev.groknull.bpmner.readiness.ReadinessDimension
 import dev.groknull.bpmner.readiness.ReadinessVerdict
 import dev.groknull.bpmner.readiness.SourceEvidence
+import tools.jackson.module.kotlin.jacksonObjectMapper
 import java.util.function.Predicate
 import kotlin.test.Test
 import kotlin.test.assertFalse

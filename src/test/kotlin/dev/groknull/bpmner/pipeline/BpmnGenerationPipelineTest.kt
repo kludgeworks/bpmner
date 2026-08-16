@@ -12,8 +12,6 @@ import com.embabel.agent.core.Goal
 import com.embabel.agent.core.ProcessOptions
 import com.embabel.agent.spi.common.Constants
 import com.embabel.agent.test.integration.EmbabelMockitoIntegrationTest
-import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.module.kotlin.readValue
 import dev.groknull.bpmner.alignment.AlignmentFindings
 import dev.groknull.bpmner.authoring.BpmnGenerationStatus
 import dev.groknull.bpmner.authoring.BpmnResult
@@ -36,6 +34,7 @@ import org.springframework.test.context.TestPropertySource
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.xmlunit.assertj.XmlAssert
 import org.xmlunit.assertj.XmlAssert.assertThat
+import tools.jackson.databind.ObjectMapper
 import java.time.Duration
 
 /**
@@ -78,7 +77,7 @@ class BpmnGenerationPipelineTest : EmbabelMockitoIntegrationTest() {
     private inline fun <reified T> loadFixtureObject(name: String): T {
         val json = BpmnGenerationPipelineTest::class.java.getResource("/parity/$name")?.readText()
             ?: error("Fixture not found: /parity/$name")
-        return objectMapper.readValue(json)
+        return objectMapper.readValue(json, T::class.java)
     }
 
     private fun loadContractFixtureObject(name: String): Any {

@@ -5,6 +5,7 @@
 
 package dev.groknull.bpmner.conformance
 
+import dev.groknull.bpmner.EmbabelShellTestConfiguration
 import dev.groknull.bpmner.TestBpmnFixtures
 import dev.groknull.bpmner.bpmn.BpmnDefinition
 import dev.groknull.bpmner.bpmn.BpmnElementIndex
@@ -27,6 +28,7 @@ import org.junit.jupiter.api.Test
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.`when`
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.context.annotation.Import
 import org.springframework.modulith.test.ApplicationModuleTest
 import org.springframework.modulith.test.ApplicationModuleTest.BootstrapMode
 import org.springframework.test.context.TestPropertySource
@@ -43,6 +45,7 @@ import org.springframework.test.context.TestPropertySource
  * made at startup. (S7 — ADR-006 Decisions 1; ARCHITECTURE §5 S7, G8; S4 — config dissolution)
  */
 @ApplicationModuleTest(mode = BootstrapMode.DIRECT_DEPENDENCIES, verifyAutomatically = false)
+@Import(EmbabelShellTestConfiguration::class)
 @TestPropertySource(
     properties = [
         "embabel.agent.platform.models.anthropic.api-key=test-key",

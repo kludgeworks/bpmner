@@ -5,8 +5,6 @@
 
 package dev.groknull.bpmner.llm
 
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import com.fasterxml.jackson.module.kotlin.readValue
 import dev.groknull.bpmner.bpmn.BoundaryEventKind
 import dev.groknull.bpmner.bpmn.MultiInstanceMode
 import dev.groknull.bpmner.contract.ActivityModifiers
@@ -18,6 +16,9 @@ import dev.groknull.bpmner.contract.ContractLoop
 import dev.groknull.bpmner.contract.ContractStart
 import dev.groknull.bpmner.contract.ContractTrigger
 import dev.groknull.bpmner.contract.ProcessContract
+import tools.jackson.databind.json.JsonMapper
+import tools.jackson.module.kotlin.kotlinModule
+import tools.jackson.module.kotlin.readValue
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
@@ -29,7 +30,7 @@ import kotlin.test.assertFalse
  * `@JsonSubTypes` entry, a stray `@JsonIgnore`, an inclusion setting that eats a value).
  */
 class PromptJsonRendererTest {
-    private val objectMapper = jacksonObjectMapper()
+    private val objectMapper = JsonMapper.builder().addModule(kotlinModule()).build()
     private val renderer = PromptJsonRenderer(objectMapper)
 
     private val contractWithAllModifiers = ProcessContract(

@@ -6,6 +6,7 @@
 package dev.groknull.bpmner.bpmn
 
 import com.fasterxml.jackson.annotation.JsonClassDescription
+import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonPropertyDescription
 import com.fasterxml.jackson.annotation.JsonSubTypes
 import com.fasterxml.jackson.annotation.JsonTypeInfo
@@ -89,7 +90,7 @@ data class BpmnDefinition(
     // Document-level BPMNDI diagram count surfaced by the XML parser. Not serialized for LLM
     // round-trip: defaulted to 0, no @JsonPropertyDescription, so Jackson treats it as a
     // benign extra field on serialize and an unknown field on deserialize (skipped).
-    @field:com.fasterxml.jackson.annotation.JsonIgnore
+    @field:JsonIgnore
     val diagramCount: Int = 0,
 ) {
 

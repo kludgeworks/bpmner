@@ -6,14 +6,14 @@
 package dev.groknull.bpmner.llm
 
 import com.embabel.common.ai.converters.FilteringJacksonOutputConverter
-import com.fasterxml.jackson.databind.JsonNode
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import dev.groknull.bpmner.alignment.AlignmentFindings
 import dev.groknull.bpmner.authoring.AuthoringTestFixtures
 import dev.groknull.bpmner.authoring.BpmnRequestDraft
 import dev.groknull.bpmner.contract.FlatContractTestFixtures
 import dev.groknull.bpmner.readiness.ProcessInputAssessment
 import dev.groknull.bpmner.repair.RepairTestFixtures
+import tools.jackson.databind.JsonNode
+import tools.jackson.module.kotlin.jacksonObjectMapper
 import java.util.function.Predicate
 import kotlin.test.Test
 import kotlin.test.assertFalse
@@ -83,9 +83,9 @@ internal class NativeStructuredOutputSchemaShapeTest {
         // Mirrors BpmnLlmRepairApplier.kt's `.creating(BpmnRepairPatch::class.java)
         // .withoutProperties("node", "edge")` for the repair-label role.
         val json = FilteringJacksonOutputConverter(
-            clazz = RepairTestFixtures.BPMN_REPAIR_PATCH_CLASS,
-            objectMapper = objectMapper,
-            fieldFilter = { field -> field.name != "node" && field.name != "edge" },
+            RepairTestFixtures.BPMN_REPAIR_PATCH_CLASS,
+            objectMapper,
+            Predicate { field -> field.name != "node" && field.name != "edge" },
         ).jsonSchema
         val schema = objectMapper.readTree(json)
         assertNoCombinators(schema, "label-only BpmnRepairPatch")

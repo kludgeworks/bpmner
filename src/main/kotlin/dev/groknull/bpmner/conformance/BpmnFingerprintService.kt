@@ -5,15 +5,15 @@
 
 package dev.groknull.bpmner.conformance
 
-import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import dev.groknull.bpmner.bpmn.BpmnDefinition
 import org.springframework.stereotype.Component
+import tools.jackson.databind.ObjectMapper
+import tools.jackson.module.kotlin.jacksonObjectMapper
 import java.security.MessageDigest
 
 @Component
 class BpmnFingerprintService {
-    private val objectMapper: ObjectMapper = jacksonObjectMapper().findAndRegisterModules()
+    private val objectMapper: ObjectMapper = jacksonObjectMapper()
 
     fun serializeDefinition(definition: BpmnDefinition): String {
         return objectMapper.writeValueAsString(definition)

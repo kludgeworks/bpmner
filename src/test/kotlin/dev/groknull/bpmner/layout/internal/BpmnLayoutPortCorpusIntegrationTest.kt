@@ -5,6 +5,7 @@
 
 package dev.groknull.bpmner.layout.internal
 
+import dev.groknull.bpmner.EmbabelShellTestConfiguration
 import dev.groknull.bpmner.bpmn.BpmnDefinition
 import dev.groknull.bpmner.conformance.ValidatedBpmnXml
 import dev.groknull.bpmner.layout.internal.adapter.inbound.BpmnLayoutAgent
@@ -14,6 +15,7 @@ import org.junit.jupiter.api.Assertions.assertDoesNotThrow
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.context.annotation.Import
 import org.springframework.modulith.test.ApplicationModuleTest
 import org.springframework.modulith.test.ApplicationModuleTest.BootstrapMode
 import org.springframework.test.context.TestPropertySource
@@ -28,6 +30,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean
  * exercised separately in `BpmnLayoutAgentTest`.
  */
 @ApplicationModuleTest(mode = BootstrapMode.DIRECT_DEPENDENCIES, verifyAutomatically = false)
+@Import(EmbabelShellTestConfiguration::class)
 @TestPropertySource(
     properties = [
         "embabel.agent.platform.models.anthropic.api-key=test-key",

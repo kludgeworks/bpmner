@@ -6,20 +6,20 @@
 package dev.groknull.bpmner.llm
 
 import com.fasterxml.jackson.annotation.JsonInclude
-import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.databind.ObjectWriter
 import org.springframework.stereotype.Component
+import tools.jackson.databind.ObjectWriter
+import tools.jackson.databind.json.JsonMapper
 
 /**
  * Serialises a domain object for an LLM prompt: compact JSON, nulls and empty
- * collections omitted. Derives its writer from the platform [ObjectMapper] via
- * `copy()` rather than mutating it, so the structured-output wire format used
- * elsewhere is unaffected.
+ * collections omitted. Rebuilds its writer from the platform [ObjectMapper] rather than mutating
+ * it, so the structured-output wire format used elsewhere is unaffected.
  */
 @Component
-class PromptJsonRenderer(objectMapper: ObjectMapper) {
-    private val writer: ObjectWriter = objectMapper.copy()
-        .setDefaultPropertyInclusion(JsonInclude.Include.NON_EMPTY)
+class PromptJsonRenderer(objectMapper: JsonMapper) {
+    private val writer: ObjectWriter = objectMapper.rebuild()
+        .changeDefaultPropertyInclusion { it.withValueInclusion(JsonInclude.Include.NON_EMPTY) }
+        .build()
         .writer()
 
     fun render(value: Any): String = writer.writeValueAsString(value)

@@ -9,7 +9,6 @@ import com.embabel.agent.api.annotation.Action
 import com.embabel.agent.core.ActionRetryPolicy
 import com.embabel.agent.core.support.InvalidLlmReturnFormatException
 import com.embabel.agent.test.unit.FakeOperationContext
-import com.fasterxml.jackson.databind.ObjectMapper
 import dev.groknull.bpmner.bpmn.BpmnRequest
 import dev.groknull.bpmner.readiness.BpmnReadinessAssessmentException
 import dev.groknull.bpmner.readiness.BpmnReadinessConfig
@@ -22,6 +21,7 @@ import dev.groknull.bpmner.readiness.ReadinessVerdict
 import dev.groknull.bpmner.readiness.SourceEvidence
 import org.mockito.Mockito.mock
 import org.springframework.context.ApplicationEventPublisher
+import tools.jackson.databind.json.JsonMapper
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
@@ -37,7 +37,7 @@ class BpmnReadinessAgentTest {
             BpmnReadinessConfig(),
             BpmnReadinessThresholdsConfig(),
             eventPublisher,
-            ObjectMapper(),
+            JsonMapper(),
         )
 
         val result =

@@ -5,11 +5,13 @@
 
 package dev.groknull.bpmner.layout
 
+import dev.groknull.bpmner.EmbabelShellTestConfiguration
 import dev.groknull.bpmner.ruleset.RuleEngine
 import dev.groknull.bpmner.ruleset.RuleRegistry
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.context.annotation.Import
 import org.springframework.modulith.test.ApplicationModuleTest
 import org.springframework.modulith.test.ApplicationModuleTest.BootstrapMode
 import org.springframework.test.context.TestPropertySource
@@ -30,6 +32,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean
  * (S7 — ADR-009 (bootstrap tiers); ARCHITECTURE §5 S7)
  */
 @ApplicationModuleTest(mode = BootstrapMode.DIRECT_DEPENDENCIES, verifyAutomatically = false)
+@Import(EmbabelShellTestConfiguration::class)
 @TestPropertySource(
     properties = [
         "embabel.agent.platform.models.anthropic.api-key=test-key",
