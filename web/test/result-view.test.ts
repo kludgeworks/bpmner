@@ -109,13 +109,11 @@ describe("result view", () => {
 		// The merged OUTLINE+DRAFT row runs from the contract update to the draft update, so it
 		// spans 30s to 56s and is the longest stage in this run.
 		assert.deepEqual(timings[0], {
-			label: "Reading your description",
+			label: "Read",
 			ms: 12_000,
 			share: 12 / 26,
 		})
-		const outline = timings.find(
-			(timing) => timing.label === "Working out the flow",
-		)
+		const outline = timings.find((timing) => timing.label === "Flow")
 		assert.equal(outline?.ms, 26_000)
 		assert.equal(outline?.share, 1, "the longest stage fills the track")
 	})

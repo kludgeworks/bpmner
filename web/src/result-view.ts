@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: MIT
  */
 
-import { type Occurrence, type RunState, rowLabel } from "./run-model"
+import { type Occurrence, type RunState, shortLabel } from "./run-model"
 import type { RunUpdate } from "./run-update"
 
 /**
@@ -62,7 +62,7 @@ export function buildTimings(state: RunState): Timing[] {
 	const timings = state.occurrences
 		.filter((row) => row.ended !== undefined)
 		.map((row) => ({
-			label: rowLabel(row),
+			label: shortLabel(row),
 			ms: (row.ended as number) - row.started,
 		}))
 	const longest = timings.reduce((max, timing) => Math.max(max, timing.ms), 0)

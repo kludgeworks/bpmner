@@ -129,7 +129,7 @@ function announce(text: string): void {
 
 function showView(view: keyof typeof views): void {
 	for (const [name, element] of Object.entries(views)) {
-		element.classList.toggle("hidden", name !== view)
+		element.hidden = name !== view
 	}
 }
 
@@ -194,10 +194,10 @@ function beginRun(description: string): void {
 	state = startRun(0)
 	runDesc.textContent = description
 	telemetryLog.replaceChildren()
-	clarifyRegion.classList.add("hidden")
+	clarifyRegion.hidden = true
 	clarifyRegion.replaceChildren()
-	streamBanner.classList.add("hidden")
-	canvasStatus.classList.add("hidden")
+	streamBanner.hidden = true
+	canvasStatus.hidden = true
 	setCanvasReady(false)
 	modeler.clear()
 	showView("run")
@@ -255,7 +255,7 @@ function connect(url: string): void {
 		// is a real disconnect.
 		if (sawTerminal) return
 		streamBannerText.textContent = "Connection lost — reconnecting…"
-		streamBanner.classList.remove("hidden")
+		streamBanner.hidden = false
 		appendTelemetry(
 			telemetryLog,
 			"client",
@@ -287,7 +287,9 @@ function onUpdate(update: RunUpdate): void {
 			elapsed(),
 			describeReconnect(state.ignored),
 		)
-		setTimeout(() => streamBanner.classList.add("hidden"), 2_600)
+		setTimeout(() => {
+			streamBanner.hidden = true
+		}, 2_600)
 	}
 
 	if (isTerminal(update)) {
@@ -318,7 +320,7 @@ function showClarify(update: RunUpdate): void {
 				},
 			)
 			if (response.status === 202) {
-				clarifyRegion.classList.add("hidden")
+				clarifyRegion.hidden = true
 				clarifyRegion.replaceChildren()
 				if (pausedAt !== null) {
 					pausedFor += Date.now() - pausedAt
@@ -335,14 +337,14 @@ function showClarify(update: RunUpdate): void {
 				return
 			}
 			if (response.status === 404) {
-				clarifyRegion.classList.add("hidden")
+				clarifyRegion.hidden = true
 				clarifyRegion.replaceChildren()
 				showRunGone()
 				return
 			}
 			if (response.status === 409) {
 				// The run is no longer parked; the stream carries on without this answer.
-				clarifyRegion.classList.add("hidden")
+				clarifyRegion.hidden = true
 				clarifyRegion.replaceChildren()
 				appendTelemetry(
 					telemetryLog,
@@ -362,7 +364,7 @@ function showClarify(update: RunUpdate): void {
 		}
 	}
 
-	clarifyRegion.classList.remove("hidden")
+	clarifyRegion.hidden = false
 	renderClarifyForm(clarifyRegion, base, submit)
 	announce(`Clarification ${base.round} of ${base.maxRounds}: ${base.prompt}`)
 }
@@ -395,7 +397,7 @@ async function finish(update: RunUpdate): Promise<void> {
 
 	const body = document.querySelector(".result-body") as HTMLElement | null
 	if (body) body.dataset.empty = String(empty)
-	emptyResult.classList.toggle("hidden", !empty)
+	emptyResult.hidden = !empty
 
 	renderSummary(resultSections, state)
 
@@ -443,7 +445,7 @@ async function loadDiagram(retried = false): Promise<void> {
 		}
 		if (outcome !== "ok") {
 			canvasStatus.textContent = "Diagram unavailable"
-			canvasStatus.classList.remove("hidden")
+			canvasStatus.hidden = false
 			return
 		}
 		const xml = await response.text()
@@ -453,7 +455,7 @@ async function loadDiagram(retried = false): Promise<void> {
 		)
 		if (imported.status !== "drawn") {
 			canvasStatus.textContent = "Diagram unavailable"
-			canvasStatus.classList.remove("hidden")
+			canvasStatus.hidden = false
 			return
 		}
 		canvasEl.classList.add("canvas--entrance")
@@ -463,7 +465,7 @@ async function loadDiagram(retried = false): Promise<void> {
 		})
 	} catch {
 		canvasStatus.textContent = "Diagram unavailable"
-		canvasStatus.classList.remove("hidden")
+		canvasStatus.hidden = false
 	}
 }
 
@@ -474,7 +476,7 @@ const GONE_WHY =
 function showEmptyResult(title: string, why: string): void {
 	const body = document.querySelector(".result-body") as HTMLElement | null
 	if (body) body.dataset.empty = "true"
-	emptyResult.classList.remove("hidden")
+	emptyResult.hidden = false
 	emptyTitle.textContent = title
 	emptyWhy.textContent = why
 	showView("result")

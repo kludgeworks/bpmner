@@ -17,12 +17,13 @@ import { describe, it } from "node:test"
  * rather than a hand-maintained fixture, so the assertion cannot drift from what is served.
  */
 
-const CONTROL_IDS = [
-	"zoom-reset-btn",
-	"zoom-in-btn",
-	"zoom-out-btn",
-	"download-diagram-btn",
-	"download-svg-btn",
+/** Icon-only controls: with no text, a failed glyph leaves a blank button. */
+const ICON_CONTROL_IDS = ["zoom-reset-btn", "zoom-in-btn", "zoom-out-btn"]
+
+/** The studio's export controls carry their own text, so they need no icon at all. */
+const LABELLED_CONTROLS: Array<[string, string]> = [
+	["download-diagram-btn", "BPMN 2.0 XML"],
+	["download-svg-btn", "SVG"],
 ]
 
 /** Glyph names with no counterpart in the vendored bpmn-font. */
@@ -42,7 +43,7 @@ function assertControlsUseInlineSvg(html: string, label: string): void {
 		PHANTOM_GLYPHS,
 		`${label} still references a canvas-control glyph class`,
 	)
-	for (const id of CONTROL_IDS) {
+	for (const id of ICON_CONTROL_IDS) {
 		assert.match(
 			html,
 			new RegExp(`id="${id}"[\\s\\S]{0,400}?<svg`),
@@ -57,6 +58,19 @@ describe("canvas control icons render as inline SVG", () => {
 			readArtifact("web/src/static/index.html"),
 			"web/src/static/index.html",
 		)
+	})
+
+	it("studio export controls are labelled with text", () => {
+		const html = readArtifact("web/src/static/index.html")
+		for (const [id, label] of LABELLED_CONTROLS) {
+			assert.match(
+				html,
+				new RegExp(
+					`id="${id}"[\\s\\S]{0,400}?${label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`,
+				),
+				`export control #${id} has no visible label`,
+			)
+		}
 	})
 
 	it("standalone preview template", () => {

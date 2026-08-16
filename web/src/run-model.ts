@@ -433,3 +433,29 @@ export function groupRows(rows: DisplayRow[]): {
 	}
 	return { groups, tail }
 }
+
+/**
+ * The short form used where a full sentence has no room — the summary's timing column is 78px
+ * wide, which truncates "Identifying steps and decisions" to "Identifying ste…".
+ */
+export function shortLabel(row: DisplayRow): string {
+	switch (row.phase) {
+		case "READINESS":
+			return row.again ? "Re-read" : "Read"
+		case "AWAITING_INPUT":
+			return "Clarify"
+		case "CONTRACT":
+			return "Identify"
+		case "OUTLINE":
+		case "DRAFT":
+			return "Flow"
+		case "VALIDATION":
+			return "Validate"
+		case "LAYOUT":
+			return "Position"
+		case "ALIGNMENT":
+			return "Compare"
+		case "FINISHED":
+			return "Finish"
+	}
+}

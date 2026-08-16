@@ -14,6 +14,7 @@ import {
 	type RunState,
 	rowFacts,
 	rowLabel,
+	shortLabel,
 	startRun,
 } from "../src/run-model"
 import type { ArtifactState, RunPhase, RunUpdate } from "../src/run-update"
@@ -384,6 +385,26 @@ describe("run model", () => {
 		assert.deepEqual(
 			groups[0].rows.map((row) => row.projected === true),
 			[false, false, false, true],
+		)
+	})
+
+	it("shortens a label for the column a full sentence cannot fit", () => {
+		assert.equal(
+			shortLabel({ phase: "CONTRACT", state: "done", started: 0 }),
+			"Identify",
+		)
+		assert.equal(
+			shortLabel({ phase: "OUTLINE", state: "done", started: 0 }),
+			"Flow",
+		)
+		assert.equal(
+			shortLabel({
+				phase: "READINESS",
+				state: "done",
+				started: 0,
+				again: true,
+			}),
+			"Re-read",
 		)
 	})
 })

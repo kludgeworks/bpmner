@@ -68,8 +68,12 @@ body {
 	background: var(--paper);
 }
 
-.hidden {
-	display: none;
+/*
+ * `!important` on the native attribute rather than a bare class: a class-based rule loses the
+ * cascade to any later same-specificity `display` declaration, and every view sets its own.
+ */
+[hidden] {
+	display: none !important;
 }
 
 .visually-hidden {
@@ -154,6 +158,7 @@ body {
  * ------------------------------------------------------------------------ */
 .view-compose {
 	display: flex;
+	align-items: center;
 	justify-content: center;
 	padding: var(--space-6) var(--space-6) 92px;
 	overflow-y: auto;
@@ -183,7 +188,19 @@ body {
 
 .compose-field textarea {
 	width: 100%;
+	padding: var(--space-4);
+	font-size: 15px;
+	line-height: 1.6;
+	border-color: var(--ink-25);
 	resize: none;
+}
+
+.compose-field textarea::placeholder {
+	color: var(--ink-25);
+}
+
+.compose-field textarea:focus {
+	border-color: var(--ink);
 }
 
 .compose-count {
@@ -206,6 +223,36 @@ body {
 .compose-actions {
 	display: flex;
 	gap: var(--space-2);
+}
+
+.btn-primary {
+	width: auto;
+	margin-top: 0;
+	padding: 11px var(--space-5);
+	color: var(--paper);
+	background: var(--ink);
+	border: 1px solid var(--ink);
+}
+
+.btn-primary:hover:not(:disabled) {
+	background: var(--oxide);
+	border-color: var(--oxide);
+}
+
+.btn-outline {
+	width: auto;
+	margin-top: 0;
+	padding: 7px var(--space-3);
+	font-size: 12px;
+	color: var(--ink);
+	background: transparent;
+	border: 1px solid var(--ink-25);
+}
+
+.btn-outline:hover {
+	color: var(--paper);
+	background: var(--ink);
+	border-color: var(--ink);
 }
 
 /* --------------------------------------------------------------------------
@@ -365,9 +412,13 @@ body {
 
 .result-meta {
 	margin: 0;
+	max-width: 260px;
+	overflow: hidden;
 	font-family: var(--font-mono);
 	font-size: 11px;
 	color: var(--ink-45);
+	text-overflow: ellipsis;
+	white-space: nowrap;
 }
 
 .result-body {
@@ -562,13 +613,6 @@ button:disabled:hover {
 	z-index: 2;
 }
 
-.io-import-export {
-	position: absolute;
-	bottom: var(--space-4);
-	left: var(--space-4);
-	z-index: 2;
-}
-
 .io-control-list {
 	margin: 0;
 	padding: 5px;
@@ -681,7 +725,29 @@ button:disabled:hover {
 }
 
 .pipeline-step[data-state="active"] .pipeline-step-dot {
+	position: relative;
 	background: var(--oxide);
+}
+
+.pipeline-step[data-state="active"] .pipeline-step-dot::after {
+	content: "";
+	position: absolute;
+	inset: -5px;
+	border: 1px solid var(--oxide);
+	border-radius: 50%;
+	animation: pipeline-ping 1.8s ease-out infinite;
+}
+
+@keyframes pipeline-ping {
+	0% {
+		transform: scale(0.6);
+		opacity: 0.9;
+	}
+
+	100% {
+		transform: scale(1.25);
+		opacity: 0;
+	}
 }
 
 .pipeline-step[data-state="repeat"] .pipeline-step-dot {
@@ -875,6 +941,11 @@ button:disabled:hover {
 	transform: rotate(180deg);
 }
 
+.summary-exports {
+	display: flex;
+	gap: var(--space-2);
+}
+
 .summary-section {
 	display: flex;
 	flex-direction: column;
@@ -982,5 +1053,9 @@ button:disabled:hover {
 @media (prefers-reduced-motion: reduce) {
 	.summary-chev {
 		transition: none;
+	}
+
+	.pipeline-step[data-state="active"] .pipeline-step-dot::after {
+		animation: none;
 	}
 }

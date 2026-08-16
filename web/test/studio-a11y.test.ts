@@ -52,8 +52,8 @@ describe("studio DOM accessibility (axe-core)", () => {
 		// Populate the dynamic regions with real component output, and reveal every view: axe
 		// skips hidden subtrees, so one view at a time would leave most of the studio unchecked.
 		for (const view of doc.querySelectorAll(".view"))
-			view.classList.remove("hidden")
-		required(doc, "clarify-region").classList.remove("hidden")
+			(view as HTMLElement).hidden = false
+		required(doc, "clarify-region").hidden = false
 		renderPipeline(
 			required(doc, "pipeline"),
 			applyUpdate(

@@ -91,7 +91,8 @@
 				<!-- 02 · Run ----------------------------------------------------------- -->
 				<section
 					id="view-run"
-					class="view view-run hidden"
+					class="view view-run"
+					hidden
 					aria-label="Generation progress"
 				>
 					<header class="run-head">
@@ -105,14 +106,14 @@
 						</div>
 					</header>
 
-					<div id="stream-banner" class="stream-banner hidden" role="status">
+					<div id="stream-banner" class="stream-banner" role="status" hidden>
 						<span id="stream-banner-text"></span>
 					</div>
 
 					<div class="run-body">
 						<section class="run-pipeline" aria-label="Pipeline">
 							<div id="now-running" class="now-running"></div>
-							<div id="clarify-region" class="hidden"></div>
+							<div id="clarify-region" hidden></div>
 							<ol id="pipeline" class="pipeline"></ol>
 						</section>
 
@@ -134,7 +135,8 @@
 				<!-- 03 · Result -------------------------------------------------------- -->
 				<section
 					id="view-result"
-					class="view view-result hidden"
+					class="view view-result"
+					hidden
 					aria-label="Generated diagram"
 				>
 					<header class="result-head">
@@ -154,8 +156,8 @@
 					<div class="result-body">
 						<div class="canvas-region">
 							<div id="canvas"></div>
-							<div id="canvas-status" class="canvas-status hidden"></div>
-							<div id="empty-result" class="empty-result hidden">
+							<div id="canvas-status" class="canvas-status" hidden></div>
+							<div id="empty-result" class="empty-result" hidden>
 								<p class="tag">Nothing to render</p>
 								<p id="empty-title" class="empty-title"></p>
 								<p id="empty-why" class="empty-why"></p>
@@ -239,63 +241,6 @@
 									</li>
 								</ul>
 							</div>
-							<div class="io-import-export">
-								<ul
-									class="io-export io-control io-control-list io-horizontal"
-									aria-label="Diagram export actions"
-								>
-									<li>
-										<button
-											id="download-diagram-btn"
-											type="button"
-											aria-disabled="true"
-											title="Download as BPMN 2.0 file"
-											aria-label="Download as BPMN 2.0 file"
-										>
-											<svg
-												viewBox="0 0 24 24"
-												width="14"
-												height="14"
-												fill="none"
-												stroke="currentColor"
-												stroke-width="2"
-												stroke-linecap="round"
-												stroke-linejoin="round"
-												aria-hidden="true"
-											>
-												<path d="M12 3v12" />
-												<path d="M7 10l5 5 5-5" />
-												<path d="M4 19h16" />
-											</svg>
-										</button>
-									</li>
-									<li>
-										<button
-											id="download-svg-btn"
-											type="button"
-											aria-disabled="true"
-											title="Download as SVG image"
-											aria-label="Download as SVG image"
-										>
-											<svg
-												viewBox="0 0 24 24"
-												width="14"
-												height="14"
-												fill="none"
-												stroke="currentColor"
-												stroke-width="2"
-												stroke-linecap="round"
-												stroke-linejoin="round"
-												aria-hidden="true"
-											>
-												<rect x="3" y="3" width="18" height="18" rx="2" />
-												<circle cx="8.5" cy="8.5" r="1.5" />
-												<path d="M21 15l-5-5L5 21" />
-											</svg>
-										</button>
-									</li>
-								</ul>
-							</div>
 						</div>
 
 						<aside
@@ -314,6 +259,27 @@
 								<span class="visually-hidden">Run summary</span>
 								<span class="summary-chev" aria-hidden="true">›</span>
 							</button>
+							<section class="summary-section">
+								<h3 class="summary-title">Export</h3>
+								<div class="summary-exports">
+									<button
+										id="download-diagram-btn"
+										type="button"
+										class="btn-outline"
+										aria-disabled="true"
+									>
+										BPMN 2.0 XML
+									</button>
+									<button
+										id="download-svg-btn"
+										type="button"
+										class="btn-outline"
+										aria-disabled="true"
+									>
+										SVG
+									</button>
+								</div>
+							</section>
 							<div id="result-sections" class="summary-sections"></div>
 						</aside>
 					</div>

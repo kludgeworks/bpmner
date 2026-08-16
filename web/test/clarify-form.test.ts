@@ -130,7 +130,7 @@ describe("buildClarifyFormHtml — inline error", () => {
 // ---------------------------------------------------------------------------
 
 function makeContainer(selectedOption?: string) {
-	const classes = new Set<string>(["hidden"])
+	const classes = new Set<string>()
 	const listeners: Array<{
 		selector: string
 		type: string
@@ -139,6 +139,7 @@ function makeContainer(selectedOption?: string) {
 
 	const el = {
 		innerHTML: "",
+		hidden: true,
 		classList: {
 			add: (c: string) => classes.add(c),
 			remove: (c: string) => classes.delete(c),
@@ -170,12 +171,14 @@ function makeContainer(selectedOption?: string) {
 	return { el: el as unknown as HTMLElement, classes, listeners }
 }
 
-describe("renderClarifyForm — removes hidden class and sets innerHTML", () => {
-	it("renders HTML and removes hidden", () => {
-		const { el, classes } = makeContainer()
+describe("renderClarifyForm — reveals the card and sets innerHTML", () => {
+	it("renders HTML and clears the hidden attribute", () => {
+		// Visibility rides the native `hidden` attribute: a class-based rule loses the cascade
+		// to any later same-specificity `display` declaration.
+		const { el } = makeContainer()
 		renderClarifyForm(el, makeState(), () => {})
 
-		assert.ok(!classes.has("hidden"), "should not be hidden after render")
+		assert.equal(el.hidden, false, "should not be hidden after render")
 		assert.ok(el.innerHTML.length > 0, "innerHTML should be non-empty")
 	})
 })
