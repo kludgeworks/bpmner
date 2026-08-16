@@ -19,3 +19,6 @@ management:
         # Actuator's web-exposure default is `health` only; `prometheus` must be listed
         # explicitly for /actuator/prometheus to be reachable (see docs/operator-guide.md).
         include: health,prometheus
+
+bpmner:
+  target-language: EN

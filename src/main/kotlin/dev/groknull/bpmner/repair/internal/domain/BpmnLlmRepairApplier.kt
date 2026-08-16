@@ -16,7 +16,7 @@ import com.embabel.chat.AssistantMessage
 import com.embabel.chat.UserMessage
 import com.embabel.common.ai.prompt.PromptContributor
 import dev.groknull.bpmner.bpmn.BpmnDefinition
-import dev.groknull.bpmner.bpmn.styleGuideContribution
+import dev.groknull.bpmner.bpmn.promptContributions
 import dev.groknull.bpmner.conformance.BpmnDiagnostic
 import dev.groknull.bpmner.llm.publishOnInvalidLlmReturn
 import dev.groknull.bpmner.repair.BpmnRepairConfig
@@ -125,7 +125,7 @@ internal class BpmnLlmRepairApplier(
         operationContext: OperationContext,
         actor: Actor<Persona>,
     ): PromptRunner {
-        val styleContribution = PromptContributor.fixed(repairEval.request.styleGuideContribution())
+        val styleContribution = PromptContributor.fixed(repairEval.request.promptContributions())
         val baseRunner = actor.promptRunner(operationContext).withPromptContributor(styleContribution)
         val docsPrompt = promptFactory.lintRuleDocsPrompt(repairEval.diagnostics)
         return if (docsPrompt != null) baseRunner.withPromptContributor(docsPrompt) else baseRunner

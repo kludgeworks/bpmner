@@ -16,7 +16,7 @@ import com.embabel.agent.core.support.InvalidLlmReturnTypeException
 import com.embabel.common.ai.prompt.PromptContributor
 import com.fasterxml.jackson.databind.ObjectMapper
 import dev.groknull.bpmner.bpmn.BpmnRequest
-import dev.groknull.bpmner.bpmn.styleGuideContribution
+import dev.groknull.bpmner.bpmn.promptContributions
 import dev.groknull.bpmner.llm.publishOnInvalidLlmReturn
 import dev.groknull.bpmner.readiness.BpmnReadinessAssessmentException
 import dev.groknull.bpmner.readiness.BpmnReadinessConfig
@@ -74,7 +74,7 @@ internal class BpmnReadinessAgent(
     private fun requestAssessment(request: BpmnRequest, context: OperationContext): ProcessInputAssessment {
         val promptRunner = config.readinessAssessor
             .promptRunner(context)
-            .withPromptContributor(PromptContributor.fixed(request.styleGuideContribution()))
+            .withPromptContributor(PromptContributor.fixed(request.promptContributions()))
         return try {
             eventPublisher.publishOnInvalidLlmReturn("readiness") {
                 promptRunner

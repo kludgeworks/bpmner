@@ -51,6 +51,7 @@ class BpmnWebControllerTest {
             WebGenerationRequest(
                 processDescription = "Order is shipped",
                 styleGuide = "Use verb-object task names",
+                targetLanguage = "es",
             ),
         )
 
@@ -59,6 +60,7 @@ class BpmnWebControllerTest {
         val request = captor.value
         assertEquals("Order is shipped", request.processDescription)
         assertEquals("Use verb-object task names", request.styleGuide)
+        assertEquals("es", request.targetLanguage)
     }
 
     @Test

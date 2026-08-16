@@ -8,6 +8,7 @@ package dev.groknull.bpmner.authoring.internal.domain
 import com.embabel.agent.domain.io.UserInput
 import dev.groknull.bpmner.authoring.BpmnRequestDraft
 import dev.groknull.bpmner.authoring.BpmnRequestResolutionPort
+import dev.groknull.bpmner.authoring.internal.BpmnAuthoringConfig
 import dev.groknull.bpmner.authoring.internal.adapter.inbound.InputPathResolver
 import dev.groknull.bpmner.bpmn.BpmnRequest
 import org.springframework.stereotype.Component
@@ -27,6 +28,7 @@ import org.springframework.stereotype.Component
 @Component
 internal class BpmnRequestResolver(
     private val inputPathResolver: InputPathResolver,
+    private val authoringConfig: BpmnAuthoringConfig,
 ) : BpmnRequestResolutionPort {
     override fun resolveShellRequest(userInput: UserInput, draft: BpmnRequestDraft): BpmnRequest {
         val description = resolveProcessDescription(userInput, draft)
@@ -37,6 +39,8 @@ internal class BpmnRequestResolver(
             processDescription = description,
             styleGuide = styleGuide,
             outputFile = outputFile,
+            targetLanguage = draft.targetLanguage?.trim()?.takeIf { it.isNotEmpty() }
+                ?: authoringConfig.targetLanguage?.trim()?.takeIf { it.isNotEmpty() },
         )
     }
 

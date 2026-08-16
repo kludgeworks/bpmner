@@ -46,6 +46,10 @@ fun BpmnRequest.generationPrompt(): String = buildString {
             appendLine("  Answer: ${it.answerText}")
         }
     }
+    if (!targetLanguage.isNullOrBlank()) {
+        appendLine()
+        appendLine("Target language: $targetLanguage (ISO 639 2-letter code)")
+    }
 }
 
 @JsonClassDescription("Result of a BPMN generation request")

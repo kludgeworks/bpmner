@@ -35,6 +35,7 @@ data class WebGenerationRequest(
     val processDescription: String,
     @field:Size(max = MAX_STYLE_GUIDE_LENGTH)
     val styleGuide: String? = null,
+    val targetLanguage: String? = null,
 ) {
     companion object {
         const val MAX_DESCRIPTION_LENGTH = 10_000

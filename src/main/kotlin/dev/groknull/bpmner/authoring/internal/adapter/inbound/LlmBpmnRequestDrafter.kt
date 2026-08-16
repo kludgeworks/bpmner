@@ -39,6 +39,7 @@ internal class LlmBpmnRequestDrafter(
               otherwise generate a concise, lowercase, kebab-case name ending in .bpmn derived from
               the process, with no directories or spaces (e.g. purchase-order-approval.bpmn).
             - Put inline style guidance in styleGuide, or a style-guide file path in styleGuideFile.
+            - Extract targetLanguage if the user specified a target language for the diagram (as a 2-letter ISO 639 code, e.g., "en", "es", "fr"). Leave it null if not specified.
             - Do not invent input files (processFile) or style-guide files.
 
             User instruction:

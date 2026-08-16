@@ -73,6 +73,20 @@ class BpmnShellCommandsTest {
     }
 
     @Test
+    fun `an explicit target language is conveyed as a directive in the intent`() {
+        val shellCommands = mock(ShellCommands::class.java)
+        val expectedIntent = "Make toast\n\nGenerate the diagram in target language: es"
+        `when`(
+            shellCommands.execute(expectedIntent, false, false, false, false, false, false, false, true, null),
+        ).thenReturn("ok")
+
+        val result = commandDelegatingTo(shellCommands).generate("Make toast", "", "es")
+
+        assertEquals("ok", result)
+        verify(shellCommands).execute(expectedIntent, false, false, false, false, false, false, false, true, null)
+    }
+
+    @Test
     fun `generate shows LLM interactions when diagnostic logging is enabled`() {
         val shellCommands = mock(ShellCommands::class.java)
         `when`(

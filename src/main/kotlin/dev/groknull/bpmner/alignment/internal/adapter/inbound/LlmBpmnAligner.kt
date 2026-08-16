@@ -21,7 +21,7 @@ import dev.groknull.bpmner.alignment.internal.BpmnAlignmentConfig
 import dev.groknull.bpmner.alignment.internal.domain.BpmnAlignmentPostChecker
 import dev.groknull.bpmner.alignment.internal.domain.BpmnSummarizer
 import dev.groknull.bpmner.bpmn.BpmnRequest
-import dev.groknull.bpmner.bpmn.styleGuideContribution
+import dev.groknull.bpmner.bpmn.promptContributions
 import dev.groknull.bpmner.conformance.FinalValidatedBpmnXml
 import dev.groknull.bpmner.contract.ProcessContract
 import dev.groknull.bpmner.contract.ValidatedProcessContract
@@ -52,7 +52,7 @@ internal class LlmBpmnAligner(
         val promptRunner =
             config.alignmentValidator
                 .promptRunner(context)
-                .withPromptContributor(PromptContributor.fixed(request.styleGuideContribution()))
+                .withPromptContributor(PromptContributor.fixed(request.promptContributions()))
         val findings = requestAlignmentFindings(promptRunner, request, contract.contract, summary)
 
         val report = postChecker.apply(findings, summary)
