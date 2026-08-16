@@ -69,6 +69,43 @@ class BpmnMilestoneEventListenerTest {
         val update = registry.subscribe("proc-readiness").take(1).collectList().block(TIMEOUT)!!.single()
         assertEquals(RunPhase.READINESS, update.phase)
         assertEquals(ArtifactState.NONE, update.artifactState)
+        // The summary is rendered verbatim by the shipped client; adding `verdict` must not reword it.
+        assertEquals("Assessed input readiness (ready).", update.summary)
+        assertEquals("READY", update.detail["verdict"])
+    }
+
+    @Test
+    fun `onReadinessAssessed carries the NEEDS_CLARIFICATION verdict as a typed detail key`() {
+        // artifactState is NONE for both verdicts, so `verdict` is the only signal telling a consumer
+        // that the next update is a clarification question rather than CONTRACT.
+        listener.onReadinessAssessed(
+            BpmnReadinessAssessedEvent(
+                request = BpmnRequest(processDescription = "x"),
+                assessment = needsClarificationAssessment(),
+                processId = "proc-readiness-clarify",
+            ),
+        )
+
+        val update = registry.subscribe("proc-readiness-clarify").take(1).collectList().block(TIMEOUT)!!.single()
+        assertEquals(RunPhase.READINESS, update.phase)
+        assertEquals("Assessed input readiness (needs_clarification).", update.summary)
+        assertEquals("NEEDS_CLARIFICATION", update.detail["verdict"])
+    }
+
+    @Test
+    fun `re-assessment after a clarification answer emits its own READINESS update with the new verdict`() {
+        // BpmnGenerationAgent.reassess() republishes BpmnReadinessAssessedEvent, so a run that parks
+        // for clarification produces READINESS twice. Both must carry their own verdict.
+        val request = BpmnRequest(processDescription = "x")
+        listener.onReadinessAssessed(
+            BpmnReadinessAssessedEvent(request, needsClarificationAssessment(), processId = "proc-reassess"),
+        )
+        listener.onReadinessAssessed(
+            BpmnReadinessAssessedEvent(request, readyAssessment(), processId = "proc-reassess"),
+        )
+
+        val updates = registry.subscribe("proc-reassess").take(2).collectList().block(TIMEOUT)!!
+        assertEquals(listOf("NEEDS_CLARIFICATION", "READY"), updates.map { it.detail["verdict"] })
     }
 
     @Test
@@ -247,6 +284,15 @@ class BpmnMilestoneEventListenerTest {
             ReadinessDimensionScore(dimension = ReadinessDimension.ACTORS_ROLES, score = 90, rationale = "clear"),
         ),
         rationale = "Input is sufficient.",
+    )
+
+    private fun needsClarificationAssessment(): ProcessInputAssessment = ProcessInputAssessment(
+        verdict = ReadinessVerdict.NEEDS_CLARIFICATION,
+        overallScore = 40,
+        dimensions = listOf(
+            ReadinessDimensionScore(dimension = ReadinessDimension.ACTORS_ROLES, score = 40, rationale = "unclear"),
+        ),
+        rationale = "Input needs clarification.",
     )
 
     private companion object {

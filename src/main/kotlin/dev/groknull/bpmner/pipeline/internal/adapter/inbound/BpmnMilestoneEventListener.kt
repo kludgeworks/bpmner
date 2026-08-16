@@ -51,6 +51,12 @@ internal class BpmnMilestoneEventListener(
             phase = RunPhase.READINESS,
             artifactState = ArtifactState.NONE,
             summary = "Assessed input readiness (${event.assessment.verdict.name.lowercase()}).",
+            // The verdict is control flow, not commentary: NEEDS_CLARIFICATION means the next update
+            // is a question, not CONTRACT. Carried as the enum constant name so a consumer branches on
+            // a stable value rather than parsing the summary prose, which is free to be reworded.
+            detail = mapOf(
+                "verdict" to event.assessment.verdict.name,
+            ),
         )
     }
 
