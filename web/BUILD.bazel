@@ -96,9 +96,9 @@ bpmner_node_test(
 )
 
 bpmner_node_test(
-    name = "stream_settle_test",
+    name = "stream_lifecycle_test",
     srcs = WEB_SRCS + WEB_TEST_SRCS,
-    entry_point = "test/stream-settle.test.ts",
+    entry_point = "test/stream-lifecycle.test.ts",
     deps = WEB_TS_DEPS,
 )
 

@@ -30,6 +30,11 @@ import {
 import { isTerminal, type RunUpdate } from "./run-update"
 import { importSnapshot } from "./snapshot-import"
 import {
+	classifyArtifactResponse,
+	classifyStreamError,
+	describeReconnect,
+} from "./stream-lifecycle"
+import {
 	appendTelemetry,
 	formatElapsed,
 	paceText,
@@ -102,10 +107,13 @@ let pausedFor = 0
 let pausedAt: number | null = null
 let sawTerminal = false
 let announced = ""
+/** Set while the transport is down; that time is not the run's, so the clock excludes it. */
+let disconnectedAt: number | null = null
 
 function elapsed(): number {
 	if (startedAt === 0) return 0
-	const paused = pausedFor + (pausedAt === null ? 0 : Date.now() - pausedAt)
+	const stalled = pausedAt ?? disconnectedAt
+	const paused = pausedFor + (stalled === null ? 0 : Date.now() - stalled)
 	return Date.now() - startedAt - paused
 }
 
@@ -269,8 +277,17 @@ function onUpdate(update: RunUpdate): void {
 		`seq ${update.seq} · ${update.phase} · ${update.summary}`,
 	)
 
-	if (!streamBanner.classList.contains("hidden")) {
-		streamBanner.classList.add("hidden")
+	if (disconnectedAt !== null) {
+		pausedFor += Date.now() - disconnectedAt
+		disconnectedAt = null
+		streamBannerText.textContent = describeReconnect(state.ignored)
+		appendTelemetry(
+			telemetryLog,
+			"client",
+			elapsed(),
+			describeReconnect(state.ignored),
+		)
+		setTimeout(() => streamBanner.classList.add("hidden"), 2_600)
 	}
 
 	if (isTerminal(update)) {
@@ -315,6 +332,12 @@ function showClarify(update: RunUpdate): void {
 					"POST …/answers → 202 · re-assessing readiness on the same stream",
 				)
 				renderRun()
+				return
+			}
+			if (response.status === 404) {
+				clarifyRegion.classList.add("hidden")
+				clarifyRegion.replaceChildren()
+				showRunGone()
 				return
 			}
 			if (response.status === 409) {
@@ -377,8 +400,7 @@ async function finish(update: RunUpdate): Promise<void> {
 	renderSummary(resultSections, state)
 
 	if (empty) {
-		emptyTitle.textContent = update.summary
-		emptyWhy.textContent = update.detail?.failureDetail ?? ""
+		showEmptyResult(update.summary, update.detail?.failureDetail ?? "")
 		return
 	}
 	await loadDiagram()
@@ -400,20 +422,36 @@ function headlineFor(status: string, update: RunUpdate): string {
 	}
 }
 
-async function loadDiagram(): Promise<void> {
+async function loadDiagram(retried = false): Promise<void> {
 	try {
 		const response = await fetch(`api/bpmn/generations/${processId}/bpmn`)
-		if (!response.ok) {
+		const outcome = classifyArtifactResponse(response.status)
+		if (outcome === "retry" && !retried) {
+			// The endpoint 409s until the run is terminal, so reaching it means we fetched early.
+			appendTelemetry(
+				telemetryLog,
+				"client",
+				elapsed(),
+				"GET …/bpmn → 409 · retrying once",
+			)
+			setTimeout(() => void loadDiagram(true), 500)
+			return
+		}
+		if (outcome === "gone") {
+			showEmptyResult("The diagram is no longer available", GONE_WHY)
+			return
+		}
+		if (outcome !== "ok") {
 			canvasStatus.textContent = "Diagram unavailable"
 			canvasStatus.classList.remove("hidden")
 			return
 		}
 		const xml = await response.text()
-		const outcome = await importSnapshot(
+		const imported = await importSnapshot(
 			{ importXML: (x) => modeler.importXML(x) },
 			xml,
 		)
-		if (outcome.status !== "drawn") {
+		if (imported.status !== "drawn") {
 			canvasStatus.textContent = "Diagram unavailable"
 			canvasStatus.classList.remove("hidden")
 			return
@@ -427,6 +465,36 @@ async function loadDiagram(): Promise<void> {
 		canvasStatus.textContent = "Diagram unavailable"
 		canvasStatus.classList.remove("hidden")
 	}
+}
+
+/** Runs are held in memory and bounded, so an id outlives its run. */
+const GONE_WHY =
+	"Runs are kept in memory only, so this one has been evicted to make room for newer runs. Start a new run from your description."
+
+function showEmptyResult(title: string, why: string): void {
+	const body = document.querySelector(".result-body") as HTMLElement | null
+	if (body) body.dataset.empty = "true"
+	emptyResult.classList.remove("hidden")
+	emptyTitle.textContent = title
+	emptyWhy.textContent = why
+	showView("result")
+	announce(title)
+}
+
+function showRunGone(): void {
+	sawTerminal = true
+	appendTelemetry(
+		telemetryLog,
+		"client",
+		elapsed(),
+		"GET …/updates → 404 · run no longer available",
+	)
+	renderSummary(resultSections, state)
+	resultBadge.textContent = "unavailable"
+	resultBadge.dataset.status = "CONTRACT_FAILED"
+	resultHeadline.textContent = "This run is no longer available"
+	resultMeta.textContent = `run ${processId ?? "—"}`
+	showEmptyResult("This run is no longer available", GONE_WHY)
 }
 
 function setCanvasReady(ready: boolean): void {
