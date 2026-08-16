@@ -118,6 +118,12 @@ class BpmnConfigBindingTest {
         assertEquals("file:/tmp/team-bpmner.pkl", rulesUriConfig.configUri)
     }
 
+    @Test
+    fun `targetLanguage binds correctly and is null by default`() {
+        // Since no properties override it in SpringBootTest annotations of this test class, it should be null.
+        org.junit.jupiter.api.Assertions.assertNull(authoringConfig.targetLanguage)
+    }
+
     /**
      * Static regression guard for [dev.groknull.bpmner.llm.defaultRoleLlmOptions]'s
      * native-enforcement contract: every role stays on Embabel's implicit

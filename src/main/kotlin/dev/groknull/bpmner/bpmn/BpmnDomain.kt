@@ -24,6 +24,8 @@ data class BpmnRequest(
     @field:Valid
     @get:JsonPropertyDescription("Ordered answered clarification history for this generation request")
     val clarificationHistory: List<ClarificationExchange> = emptyList(),
+    @get:JsonPropertyDescription("Optional target language for the generated diagram (2-letter ISO 639 code)")
+    val targetLanguage: String? = null,
 )
 
 @JsonClassDescription("Typed BPMN process definition describing the semantic topology of a workflow")

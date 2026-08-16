@@ -75,6 +75,10 @@ Original input for traceability only:
 Style guide:
 {{ styleGuide }}
 {% endif %}
+{% if targetLanguage %}
+Important Language Rule:
+The target language for the generated BPMN is "{{ targetLanguage }}" (ISO 639 2-letter code). You must write all node names, process names, labels, annotations, and descriptions in the generated BPMN in "{{ targetLanguage }}", regardless of the language of the input description or contract.
+{% endif %}
 {% if previousFailure %}
 Your previous attempt was rejected: it did not faithfully encode the contract's topology.
 Fix every issue below in this attempt — do not repeat them:

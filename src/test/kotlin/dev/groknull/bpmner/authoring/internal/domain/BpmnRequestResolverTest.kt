@@ -7,6 +7,7 @@ package dev.groknull.bpmner.authoring.internal.domain
 
 import com.embabel.agent.domain.io.UserInput
 import dev.groknull.bpmner.authoring.BpmnRequestDraft
+import dev.groknull.bpmner.authoring.internal.BpmnAuthoringConfig
 import dev.groknull.bpmner.authoring.internal.adapter.inbound.InputPathResolver
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
@@ -96,5 +97,25 @@ class BpmnRequestResolverTest {
         assertEquals("Approve invoice", request.processDescription)
     }
 
-    private fun resolver(tempDir: Path) = BpmnRequestResolver(InputPathResolver(cwd = tempDir))
+    @Test
+    fun `shell draft resolves target language from draft or falls back to authoring config`(
+        @TempDir tempDir: Path,
+    ) {
+        val config = BpmnAuthoringConfig(targetLanguage = "en")
+        val resolver = resolver(tempDir, config)
+
+        // 1. Fallback to config default when draft is empty
+        val request1 = resolver.resolveShellRequest(UserInput("Ship an order"), BpmnRequestDraft())
+        assertEquals("en", request1.targetLanguage)
+
+        // 2. Override with draft target language
+        val request2 = resolver.resolveShellRequest(
+            UserInput("Ship an order"),
+            BpmnRequestDraft(targetLanguage = "es"),
+        )
+        assertEquals("es", request2.targetLanguage)
+    }
+
+    private fun resolver(tempDir: Path, authoringConfig: BpmnAuthoringConfig = BpmnAuthoringConfig()) =
+        BpmnRequestResolver(InputPathResolver(cwd = tempDir), authoringConfig)
 }

@@ -13,7 +13,7 @@ import com.embabel.agent.core.support.InvalidLlmReturnTypeException
 import com.embabel.common.ai.prompt.PromptContributor
 import dev.groknull.bpmner.bpmn.BpmnRequest
 import dev.groknull.bpmner.bpmn.RetryableBpmnGenerationException
-import dev.groknull.bpmner.bpmn.styleGuideContribution
+import dev.groknull.bpmner.bpmn.promptContributions
 import dev.groknull.bpmner.contract.BpmnContractExtractedEvent
 import dev.groknull.bpmner.contract.BpmnContractExtractionException
 import dev.groknull.bpmner.contract.ContractIssueSeverity
@@ -55,7 +55,7 @@ internal class LlmProcessContractExtractor(
         val promptRunner =
             config.contractExtractor
                 .promptRunner(context)
-                .withPromptContributor(PromptContributor.fixed(request.styleGuideContribution()))
+                .withPromptContributor(PromptContributor.fixed(request.promptContributions()))
 
         var previousIssues: String? = null
         // The diagnostic behind the *previous* attempt's feedback and the
