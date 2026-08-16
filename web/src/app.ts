@@ -17,6 +17,7 @@ import {
 	type DiagramExportControls,
 	setDiagramExportControlsEnabled,
 } from "./diagram-export"
+import { renderSummary } from "./result-view"
 import {
 	answerSubmitted,
 	applyUpdate,
@@ -75,6 +76,9 @@ const emptyTitle = required("empty-title")
 const emptyWhy = required("empty-why")
 const emptyBack = required("empty-back")
 const srStatus = required("sr-status")
+const resultSections = required("result-sections")
+const summaryPanel = required("summary-panel")
+const summaryToggle = required<HTMLButtonElement>("summary-toggle")
 
 const modeler = new BpmnModeler({ container: canvasEl })
 const canvasViewport = modeler.get("canvas") as CanvasViewport
@@ -370,6 +374,8 @@ async function finish(update: RunUpdate): Promise<void> {
 	if (body) body.dataset.empty = String(empty)
 	emptyResult.classList.toggle("hidden", !empty)
 
+	renderSummary(resultSections, state)
+
 	if (empty) {
 		emptyTitle.textContent = update.summary
 		emptyWhy.textContent = update.detail?.failureDetail ?? ""
@@ -447,3 +453,13 @@ emptyBack.addEventListener("click", backToCompose)
 
 setCanvasReady(false)
 showView("compose")
+
+summaryToggle.addEventListener("click", () => {
+	const collapsed = summaryPanel.classList.toggle("collapsed")
+	summaryToggle.setAttribute("aria-expanded", String(!collapsed))
+	summaryToggle.title = collapsed ? "Show run summary" : "Collapse run summary"
+	// The canvas region changes width, so the diagram is re-fitted once the transition settles.
+	setTimeout(() => {
+		if (!canvasEl.inert) fitInitialViewport(canvasViewport)
+	}, 240)
+})

@@ -724,72 +724,6 @@ button:disabled:hover {
 }
 
 /* --------------------------------------------------------------------------
- * Result bar
- * ------------------------------------------------------------------------ */
-#result-bar:not(.hidden) {
-	display: flex;
-	flex-direction: column;
-	gap: var(--space-2);
-}
-
-.result-badge {
-	align-self: flex-start;
-	padding: var(--space-1) var(--space-2);
-	font-family: var(--font-display);
-	font-weight: 500;
-	font-size: 11px;
-	text-transform: uppercase;
-	letter-spacing: 0.08em;
-	color: var(--paper);
-	background: var(--ink);
-	border-radius: var(--radius-sm);
-}
-
-.result-badge[data-result-status="GENERATED"] {
-	background: var(--sev-success);
-}
-
-.result-badge[data-result-status="NEEDS_CLARIFICATION"] {
-	background: var(--sev-warning);
-}
-
-.result-badge[data-result-status="ALIGNMENT_FAILED"],
-.result-badge[data-result-status="VALIDATION_FAILED"] {
-	background: var(--oxide);
-}
-
-.alignment-report summary,
-.validation-diagnostics summary {
-	cursor: pointer;
-	font-size: 12px;
-	color: var(--ink-70);
-}
-
-.alignment-report p,
-.validation-diagnostics pre {
-	margin: var(--space-2) 0 0 0;
-	font-size: 12px;
-	white-space: pre-wrap;
-	color: var(--ink);
-}
-
-.download-bpmn {
-	align-self: flex-start;
-	padding: var(--space-1) var(--space-2);
-	font-size: 12px;
-	font-weight: 500;
-	color: var(--oxide);
-	text-decoration: none;
-	border: 1px solid var(--oxide);
-	border-radius: var(--radius-sm);
-}
-
-.download-bpmn:hover {
-	color: var(--paper);
-	background: var(--oxide);
-}
-
-/* --------------------------------------------------------------------------
  * Clarify region — a prominent oxide-tinted card (a required user action)
  * ------------------------------------------------------------------------ */
 #clarify-region {
@@ -898,5 +832,155 @@ button:disabled:hover {
 @media (prefers-reduced-motion: reduce) {
 	.canvas--entrance .djs-element {
 		animation: none;
+	}
+}
+
+/* --------------------------------------------------------------------------
+ * Run summary panel
+ * ------------------------------------------------------------------------ */
+.summary-panel {
+	position: relative;
+	transition: none;
+}
+
+.summary-panel.collapsed .summary-sections {
+	display: none;
+}
+
+.summary-toggle {
+	position: absolute;
+	top: var(--space-3);
+	left: calc(-1 * var(--space-4));
+	width: 22px;
+	height: 44px;
+	padding: 0;
+	border: 1px solid var(--ink-12);
+	border-radius: var(--radius-sm);
+	background: var(--paper);
+	color: var(--ink-45);
+	cursor: pointer;
+}
+
+.summary-toggle:hover {
+	background: var(--ink-06);
+	color: var(--ink);
+}
+
+.summary-chev {
+	display: inline-block;
+	transition: transform 160ms ease;
+}
+
+.summary-panel.collapsed .summary-chev {
+	transform: rotate(180deg);
+}
+
+.summary-section {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-3);
+}
+
+.summary-title {
+	margin: 0;
+	padding-bottom: var(--space-2);
+	border-bottom: 1px solid var(--ink-12);
+	font-family: var(--font-display);
+	font-weight: 500;
+	font-size: 11px;
+	text-transform: uppercase;
+	letter-spacing: 0.14em;
+	color: var(--ink-45);
+}
+
+.metric-grid {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: var(--space-2);
+}
+
+.metric-card {
+	padding: var(--space-3);
+	border: 1px solid var(--ink-12);
+	border-radius: var(--radius-sm);
+}
+
+.metric-value {
+	margin: 0;
+	font-family: var(--font-display);
+	font-weight: 500;
+	font-size: 20px;
+	font-variant-numeric: tabular-nums;
+	color: var(--ink);
+}
+
+.timing-list {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.timing-row {
+	display: grid;
+	grid-template-columns: 78px 1fr 44px;
+	align-items: center;
+	gap: var(--space-2);
+	padding: 3px 0;
+}
+
+.timing-label {
+	overflow: hidden;
+	font-size: 11px;
+	color: var(--ink-70);
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.timing-track {
+	height: 6px;
+	border-radius: 3px;
+	background: var(--ink-06);
+}
+
+.timing-fill {
+	display: block;
+	height: 100%;
+	border-radius: 3px;
+	background: var(--ink);
+}
+
+.timing-value {
+	font-family: var(--font-mono);
+	font-size: 11px;
+	font-variant-numeric: tabular-nums;
+	text-align: right;
+	color: var(--ink-45);
+}
+
+.summary-note,
+.summary-prose {
+	margin: 0;
+	font-size: 12px;
+	color: var(--ink-45);
+}
+
+.summary-prose {
+	font-size: 13px;
+	color: var(--ink-70);
+}
+
+.summary-diagnostics {
+	margin: 0;
+	padding: var(--space-3);
+	border-radius: var(--radius-sm);
+	background: var(--ink-06);
+	font-family: var(--font-mono);
+	font-size: 11px;
+	white-space: pre-wrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.summary-chev {
+		transition: none;
 	}
 }
