@@ -20,7 +20,9 @@ function fixture(): {
 	xmlCalls: Array<{ format: boolean }>
 	svgCalls: number[]
 } {
-	const dom = new JSDOM('<a id="xml"></a><a id="svg"></a>')
+	const dom = new JSDOM(
+		'<button id="xml" type="button"></button><button id="svg" type="button"></button>',
+	)
 	const xml = dom.window.document.querySelector("#xml")
 	const svg = dom.window.document.querySelector("#svg")
 	assert.ok(xml instanceof dom.window.HTMLElement)
@@ -98,5 +100,48 @@ describe("diagram export", () => {
 		assert.deepEqual(svgCalls, [])
 		assert.equal(xml.tabIndex, -1)
 		assert.equal(xml.getAttribute("aria-disabled"), "true")
+	})
+	it("exports when a control is activated by keyboard", async () => {
+		// The controls were <a role="button"> with no href, which is neither focusable nor
+		// activated by Enter/Space — the role promised behaviour the markup did not provide
+		// (REVIEW-698 row 10). Native <button> gives both, and a keypress dispatches a click.
+		const { serializer, xml, svg, xmlCalls } = fixture()
+		const dom = new JSDOM("<!doctype html><body></body>")
+		const originalDocument = globalThis.document
+		const originalCreateObjectURL = URL.createObjectURL
+		const originalRevokeObjectURL = URL.revokeObjectURL
+		Object.assign(globalThis, { document: dom.window.document })
+		URL.createObjectURL = () => "blob:kbd"
+		URL.revokeObjectURL = () => {}
+		const originalClick = dom.window.HTMLAnchorElement.prototype.click
+		dom.window.HTMLAnchorElement.prototype.click = function click() {}
+
+		try {
+			bindDiagramExports(serializer, { xml, svg })
+			setDiagramExportControlsEnabled({ xml, svg }, true)
+
+			assert.equal(
+				xml.tagName,
+				"BUTTON",
+				"export controls must be native buttons",
+			)
+			assert.equal(
+				xml.tabIndex,
+				0,
+				"an enabled control must be reachable by Tab",
+			)
+
+			// A native button turns Enter/Space into a click; assert on that contract, since
+			// jsdom does not synthesise activation behaviour from a raw keydown event.
+			xml.click()
+			await new Promise((resolve) => setTimeout(resolve))
+
+			assert.deepEqual(xmlCalls, [{ format: true }])
+		} finally {
+			Object.assign(globalThis, { document: originalDocument })
+			URL.createObjectURL = originalCreateObjectURL
+			URL.revokeObjectURL = originalRevokeObjectURL
+			dom.window.HTMLAnchorElement.prototype.click = originalClick
+		}
 	})
 })

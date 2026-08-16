@@ -278,8 +278,7 @@ button:disabled:hover {
 	cursor: pointer;
 }
 
-.io-control-list button:hover:not(:disabled),
-.io-control-list a:hover:not([aria-disabled="true"]) {
+.io-control-list button:hover:not(:disabled):not([aria-disabled="true"]) {
 	background: #e0e0e0;
 }
 
@@ -289,7 +288,7 @@ button:disabled:hover {
 	border-top: 1px solid #e0e0e0;
 }
 
-.io-control-list a[aria-disabled="true"] {
+.io-control-list [aria-disabled="true"] {
 	opacity: 0.5;
 	pointer-events: none;
 	cursor: default;
