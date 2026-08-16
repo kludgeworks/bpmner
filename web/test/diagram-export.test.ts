@@ -102,9 +102,9 @@ describe("diagram export", () => {
 		assert.equal(xml.getAttribute("aria-disabled"), "true")
 	})
 	it("exports when a control is activated by keyboard", async () => {
-		// The controls were <a role="button"> with no href, which is neither focusable nor
-		// activated by Enter/Space — the role promised behaviour the markup did not provide
-		// (REVIEW-698 row 10). Native <button> gives both, and a keypress dispatches a click.
+		// The controls must be native buttons. An <a> without href is neither focusable nor
+		// activated by Enter/Space, so `role="button"` alone promises behaviour the markup does
+		// not provide; a button is focusable and turns a keypress into a click.
 		const { serializer, xml, svg, xmlCalls } = fixture()
 		const dom = new JSDOM("<!doctype html><body></body>")
 		const originalDocument = globalThis.document

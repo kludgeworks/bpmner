@@ -9,13 +9,12 @@ import path from "node:path"
 import { describe, it } from "node:test"
 
 /**
- * Regression guard for the blank canvas control icons (issue #698): the
- * zoom/export controls must render inline SVG, never a `bpmn-icon-*` class
- * targeting a codepoint the vendored bpmn-font does not define.
+ * The canvas zoom and export controls render their icons as inline SVG. A `bpmn-icon-*` class
+ * is not a valid source for them: the vendored bpmn-font defines no codepoint for these glyphs,
+ * so such a class renders a blank control.
  *
- * Asserts against the shipped artifacts directly — the studio page and the
- * standalone preview template — rather than a hand-maintained test fixture, so
- * a regression is caught even when a fixture drifts out of sync.
+ * Asserts against the shipped artifacts — the studio page and the standalone preview template —
+ * rather than a hand-maintained fixture, so the assertion cannot drift from what is served.
  */
 
 const CONTROL_IDS = [

@@ -225,9 +225,9 @@ class BpmnRunUpdateChannelTest {
 
     @Test
     fun `a readiness sub-process finishing without a BpmnResult emits nothing`() {
-        // Readiness runs as its own ephemeral process on a different agent and never binds a
-        // BpmnResult. Without the primary-run filter it took the null branch of onFinished and
-        // reported a terminal FAILED on every successful run.
+        // Readiness runs as its own process on a different agent and never binds a BpmnResult,
+        // so without the filter it reaches the null branch of onFinished and reports a terminal
+        // FAILED against a run that is still going.
         val readiness = nonPrimaryProcess("proc-readiness-sub", "BpmnReadinessAgent", root = true)
         `when`(readiness.last(BpmnResult::class.java)).thenReturn(null)
 
