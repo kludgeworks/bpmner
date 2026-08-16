@@ -339,3 +339,97 @@ function verdictFromSummary(summary: string): string | null {
 	const match = summary.match(/\(([^)]+)\)/)
 	return match ? match[1].toUpperCase() : null
 }
+
+/**
+ * The label a row carries while it is the active one. Present participles throughout, so the
+ * text reads as work in flight rather than a noun the reader has to interpret.
+ */
+export function rowLabel(row: DisplayRow): string {
+	switch (row.phase) {
+		case "READINESS":
+			return row.again
+				? "Re-reading with your answer"
+				: "Reading your description"
+		case "AWAITING_INPUT":
+			return row.anticipating
+				? "Preparing a question"
+				: "Waiting on your answer"
+		case "CONTRACT":
+			return "Identifying steps and decisions"
+		case "OUTLINE":
+		case "DRAFT":
+			return "Working out the flow"
+		case "VALIDATION":
+			return row.state === "repeat" && row.attempt
+				? `Repairing the diagram (attempt ${row.attempt})`
+				: "Checking it's valid"
+		case "LAYOUT":
+			return "Positioning everything"
+		case "ALIGNMENT":
+			return "Comparing against your description"
+		case "FINISHED":
+			return "Finishing up"
+	}
+}
+
+/** The `detail` values worth surfacing under a row, already worded. */
+export function rowFacts(row: DisplayRow): string[] {
+	const detail = row.detail
+	if (!detail) return []
+	const facts: string[] = []
+	const add = (value: string | undefined, noun: string) => {
+		if (value !== undefined) facts.push(`${value} ${noun}`)
+	}
+	add(detail.issueCount, "contract issues")
+	add(detail.nodeCount, "activities")
+	add(detail.edgeCount, "connections")
+	add(detail.conformanceCorrections, "auto-corrections")
+	add(detail.graphIssues, "graph issues")
+	add(detail.xsdIssues, "XSD issues")
+	add(detail.lintIssues, "lint issues")
+	return facts
+}
+
+export type PipelineGroup = {
+	key: GroupKey
+	title: string
+	subtitle: string
+	state: OccurrenceState
+	rows: DisplayRow[]
+}
+
+/**
+ * Groups rows for rendering, preserving arrival order. Groups are contiguous runs of the real
+ * phase order, so a repeated phase stays inside the group it belongs to. `FINISHED` has no
+ * group and is returned separately as the ungrouped tail.
+ */
+export function groupRows(rows: DisplayRow[]): {
+	groups: PipelineGroup[]
+	tail: DisplayRow[]
+} {
+	const groups: PipelineGroup[] = []
+	const tail: DisplayRow[] = []
+	for (const row of rows) {
+		const key = PHASE_GROUP[row.phase]
+		if (!key) {
+			tail.push(row)
+			continue
+		}
+		const last = groups[groups.length - 1]
+		if (last && last.key === key) {
+			last.rows.push(row)
+		} else {
+			groups.push({ key, ...GROUP_LABELS[key], state: "pending", rows: [row] })
+		}
+	}
+	for (const group of groups) {
+		group.state = group.rows.some(
+			(row) => row.state === "active" || row.state === "repeat",
+		)
+			? "active"
+			: group.rows.every((row) => row.state === "done")
+				? "done"
+				: "pending"
+	}
+	return { groups, tail }
+}

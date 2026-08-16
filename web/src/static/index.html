@@ -37,188 +37,276 @@
 		<div class="studio">
 			<header class="studio-bar">
 				<h1 class="studio-brand">bpmner</h1>
-				<span
-					id="version-footer"
-					class="studio-version"
-					aria-label="Application version"
-				></span>
-				<p class="studio-tagline">Generation Studio</p>
+				<span class="studio-tagline">Generation Studio</span>
+				<p class="studio-version">
+					<span class="visually-hidden">Application version</span>
+					<span id="version-footer"></span>
+				</p>
 			</header>
 
-			<aside class="studio-sidebar" aria-label="Controls and status">
-				<section class="panel">
-					<h2 class="panel-title">Describe</h2>
-					<label class="visually-hidden" for="process-description"
-						>Process description</label
-					>
-					<textarea
-						id="process-description"
-						rows="8"
-						placeholder="Enter process description…"
-					></textarea>
-					<button id="generate-btn" type="button" class="btn-primary">
-						Generate
-					</button>
+			<!--
+				One announcement channel for the whole studio. Written only when the text
+				changes, so the per-second elapsed readouts are never narrated.
+			-->
+			<p
+				id="sr-status"
+				class="visually-hidden"
+				role="status"
+				aria-live="polite"
+			></p>
+
+			<main class="studio-main">
+				<!-- 01 · Compose ------------------------------------------------------- -->
+				<section
+					id="view-compose"
+					class="view view-compose"
+					aria-label="Describe the process"
+				>
+					<section class="compose-card">
+						<p class="tag">01 / Describe</p>
+						<h2 class="compose-title">What process should I draw?</h2>
+						<label class="visually-hidden" for="process-description"
+							>Process description</label
+						>
+						<div class="compose-field">
+							<textarea
+								id="process-description"
+								rows="7"
+								maxlength="10000"
+								placeholder="Describe the process in plain language — who does what, in what order, and where the decisions are."
+							></textarea>
+							<span id="compose-count" class="compose-count" aria-live="off"
+								>0 / 10 000</span
+							>
+						</div>
+						<p id="compose-error" class="compose-error" role="alert"></p>
+						<div class="compose-actions">
+							<button id="generate-btn" type="button" class="btn-primary">
+								Generate diagram
+							</button>
+						</div>
+					</section>
 				</section>
 
-				<div id="clarify-region" class="hidden"></div>
+				<!-- 02 · Run ----------------------------------------------------------- -->
+				<section
+					id="view-run"
+					class="view view-run hidden"
+					aria-label="Generation progress"
+				>
+					<header class="run-head">
+						<div class="run-head-desc">
+							<p class="tag">02 / Generating</p>
+							<p id="run-desc" class="run-desc"></p>
+						</div>
+						<div class="run-head-clock">
+							<p id="run-clock" class="run-clock" aria-live="off">0:00</p>
+							<p class="tag">Elapsed</p>
+						</div>
+					</header>
 
-				<section class="panel">
-					<h2 class="panel-title">Pipeline</h2>
-					<ol id="stage-rail" aria-label="Pipeline stages">
-						<li data-stage="readiness" data-state="pending">Readiness</li>
-						<li data-stage="contract" data-state="pending">Contract</li>
-						<li data-stage="generate" data-state="pending">Generate</li>
-						<li data-stage="validate" data-state="pending">Validate</li>
-						<li data-stage="layout" data-state="pending">Layout</li>
-						<li data-stage="align" data-state="pending">Align</li>
-					</ol>
+					<div id="stream-banner" class="stream-banner hidden" role="status">
+						<span id="stream-banner-text"></span>
+					</div>
+
+					<div class="run-body">
+						<section class="run-pipeline" aria-label="Pipeline">
+							<div id="now-running" class="now-running"></div>
+							<div id="clarify-region" class="hidden"></div>
+							<ol id="pipeline" class="pipeline"></ol>
+						</section>
+
+						<section class="run-telemetry" aria-label="Run telemetry">
+							<header class="telemetry-head">
+								<p class="tag">Run telemetry</p>
+								<p id="telemetry-state" class="telemetry-state">
+									<span
+										class="telemetry-dot"
+										aria-hidden="true"
+									></span>Streaming
+								</p>
+							</header>
+							<ol id="telemetry-log" class="telemetry-log"></ol>
+						</section>
+					</div>
 				</section>
 
-				<div id="progress-container" class="panel hidden">
-					<h2 class="panel-title">Progress</h2>
-					<ul id="progress-list"></ul>
-				</div>
+				<!-- 03 · Result -------------------------------------------------------- -->
+				<section
+					id="view-result"
+					class="view view-result hidden"
+					aria-label="Generated diagram"
+				>
+					<header class="result-head">
+						<div class="result-head-title">
+							<p class="tag">03 / Result</p>
+							<p id="result-badge" class="result-badge"></p>
+							<p id="result-headline" class="result-headline"></p>
+						</div>
+						<div class="result-head-actions">
+							<p id="result-meta" class="result-meta"></p>
+							<button id="new-run-btn" type="button" class="btn-outline">
+								New run
+							</button>
+						</div>
+					</header>
 
-				<div id="result-bar" class="hidden"></div>
-			</aside>
+					<div class="result-body">
+						<div class="canvas-region">
+							<div id="canvas"></div>
+							<div id="canvas-status" class="canvas-status hidden"></div>
+							<div id="empty-result" class="empty-result hidden">
+								<p class="tag">Nothing to render</p>
+								<p id="empty-title" class="empty-title"></p>
+								<p id="empty-why" class="empty-why"></p>
+								<button id="empty-back" type="button" class="btn-primary">
+									Back to your description
+								</button>
+							</div>
+							<div class="io-zoom-controls">
+								<ul
+									class="io-zoom-reset io-control io-control-list"
+									aria-label="Diagram zoom controls"
+								>
+									<li>
+										<button
+											id="zoom-reset-btn"
+											type="button"
+											title="Reset zoom"
+											aria-label="Reset zoom"
+										>
+											<svg
+												viewBox="0 0 24 24"
+												width="14"
+												height="14"
+												fill="none"
+												stroke="currentColor"
+												stroke-width="2"
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												aria-hidden="true"
+											>
+												<path d="M8 3H5a2 2 0 0 0-2 2v3" />
+												<path d="M16 3h3a2 2 0 0 1 2 2v3" />
+												<path d="M8 21H5a2 2 0 0 1-2-2v-3" />
+												<path d="M16 21h3a2 2 0 0 0 2-2v-3" />
+											</svg>
+										</button>
+									</li>
+									<li><hr></li>
+									<li>
+										<button
+											id="zoom-in-btn"
+											type="button"
+											title="Zoom in"
+											aria-label="Zoom in"
+										>
+											<svg
+												viewBox="0 0 24 24"
+												width="14"
+												height="14"
+												fill="none"
+												stroke="currentColor"
+												stroke-width="2"
+												stroke-linecap="round"
+												aria-hidden="true"
+											>
+												<path d="M12 5v14M5 12h14" />
+											</svg>
+										</button>
+									</li>
+									<li><hr></li>
+									<li>
+										<button
+											id="zoom-out-btn"
+											type="button"
+											title="Zoom out"
+											aria-label="Zoom out"
+										>
+											<svg
+												viewBox="0 0 24 24"
+												width="14"
+												height="14"
+												fill="none"
+												stroke="currentColor"
+												stroke-width="2"
+												stroke-linecap="round"
+												aria-hidden="true"
+											>
+												<path d="M5 12h14" />
+											</svg>
+										</button>
+									</li>
+								</ul>
+							</div>
+							<div class="io-import-export">
+								<ul
+									class="io-export io-control io-control-list io-horizontal"
+									aria-label="Diagram export actions"
+								>
+									<li>
+										<button
+											id="download-diagram-btn"
+											type="button"
+											aria-disabled="true"
+											title="Download as BPMN 2.0 file"
+											aria-label="Download as BPMN 2.0 file"
+										>
+											<svg
+												viewBox="0 0 24 24"
+												width="14"
+												height="14"
+												fill="none"
+												stroke="currentColor"
+												stroke-width="2"
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												aria-hidden="true"
+											>
+												<path d="M12 3v12" />
+												<path d="M7 10l5 5 5-5" />
+												<path d="M4 19h16" />
+											</svg>
+										</button>
+									</li>
+									<li>
+										<button
+											id="download-svg-btn"
+											type="button"
+											aria-disabled="true"
+											title="Download as SVG image"
+											aria-label="Download as SVG image"
+										>
+											<svg
+												viewBox="0 0 24 24"
+												width="14"
+												height="14"
+												fill="none"
+												stroke="currentColor"
+												stroke-width="2"
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												aria-hidden="true"
+											>
+												<rect x="3" y="3" width="18" height="18" rx="2" />
+												<circle cx="8.5" cy="8.5" r="1.5" />
+												<path d="M21 15l-5-5L5 21" />
+											</svg>
+										</button>
+									</li>
+								</ul>
+							</div>
+						</div>
 
-			<main class="studio-canvas" aria-label="Diagram canvas">
-				<div id="canvas"></div>
-				<div id="canvas-status" class="canvas-status hidden"></div>
-				<div class="io-zoom-controls">
-					<ul
-						class="io-zoom-reset io-control io-control-list"
-						aria-label="Diagram zoom controls"
-					>
-						<li>
-							<button
-								id="zoom-reset-btn"
-								type="button"
-								title="Reset zoom"
-								aria-label="Reset zoom"
-							>
-								<svg
-									viewBox="0 0 24 24"
-									width="14"
-									height="14"
-									fill="none"
-									stroke="currentColor"
-									stroke-width="2"
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									aria-hidden="true"
-								>
-									<path d="M8 3H5a2 2 0 0 0-2 2v3" />
-									<path d="M16 3h3a2 2 0 0 1 2 2v3" />
-									<path d="M8 21H5a2 2 0 0 1-2-2v-3" />
-									<path d="M16 21h3a2 2 0 0 0 2-2v-3" />
-								</svg>
-							</button>
-						</li>
-						<li><hr></li>
-						<li>
-							<button
-								id="zoom-in-btn"
-								type="button"
-								title="Zoom in"
-								aria-label="Zoom in"
-							>
-								<svg
-									viewBox="0 0 24 24"
-									width="14"
-									height="14"
-									fill="none"
-									stroke="currentColor"
-									stroke-width="2"
-									stroke-linecap="round"
-									aria-hidden="true"
-								>
-									<path d="M12 5v14M5 12h14" />
-								</svg>
-							</button>
-						</li>
-						<li><hr></li>
-						<li>
-							<button
-								id="zoom-out-btn"
-								type="button"
-								title="Zoom out"
-								aria-label="Zoom out"
-							>
-								<svg
-									viewBox="0 0 24 24"
-									width="14"
-									height="14"
-									fill="none"
-									stroke="currentColor"
-									stroke-width="2"
-									stroke-linecap="round"
-									aria-hidden="true"
-								>
-									<path d="M5 12h14" />
-								</svg>
-							</button>
-						</li>
-					</ul>
-				</div>
-				<div class="io-import-export">
-					<ul
-						class="io-export io-control io-control-list io-horizontal"
-						aria-label="Diagram export actions"
-					>
-						<li>
-							<button
-								id="download-diagram-btn"
-								type="button"
-								aria-disabled="true"
-								title="Download as BPMN 2.0 file"
-								aria-label="Download as BPMN 2.0 file"
-							>
-								<svg
-									viewBox="0 0 24 24"
-									width="14"
-									height="14"
-									fill="none"
-									stroke="currentColor"
-									stroke-width="2"
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									aria-hidden="true"
-								>
-									<path d="M12 3v12" />
-									<path d="M7 10l5 5 5-5" />
-									<path d="M4 19h16" />
-								</svg>
-							</button>
-						</li>
-						<li>
-							<button
-								id="download-svg-btn"
-								type="button"
-								aria-disabled="true"
-								title="Download as SVG image"
-								aria-label="Download as SVG image"
-							>
-								<svg
-									viewBox="0 0 24 24"
-									width="14"
-									height="14"
-									fill="none"
-									stroke="currentColor"
-									stroke-width="2"
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									aria-hidden="true"
-								>
-									<rect x="3" y="3" width="18" height="18" rx="2" />
-									<circle cx="8.5" cy="8.5" r="1.5" />
-									<path d="M21 15l-5-5L5 21" />
-								</svg>
-							</button>
-						</li>
-					</ul>
-				</div>
+						<aside
+							id="summary-panel"
+							class="summary-panel"
+							aria-label="Run summary"
+						>
+							<div id="result-sections" class="summary-sections"></div>
+						</aside>
+					</div>
+				</section>
 			</main>
 		</div>
 		<script src="js/app-bundle.js"></script>

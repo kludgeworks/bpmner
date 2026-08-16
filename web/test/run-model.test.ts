@@ -9,8 +9,11 @@ import {
 	answerSubmitted,
 	applyUpdate,
 	displayRows,
+	groupRows,
 	initialRunState,
 	type RunState,
+	rowFacts,
+	rowLabel,
 	startRun,
 } from "../src/run-model"
 import type { ArtifactState, RunPhase, RunUpdate } from "../src/run-update"
@@ -282,5 +285,105 @@ describe("run model", () => {
 		const state = initialRunState()
 		assert.deepEqual(state.occurrences, [])
 		assert.equal(state.terminal, null)
+	})
+	it("labels a row by the work in flight, distinguishing a re-read and a repair", () => {
+		assert.equal(
+			rowLabel({ phase: "READINESS", state: "active", started: 0 }),
+			"Reading your description",
+		)
+		assert.equal(
+			rowLabel({
+				phase: "READINESS",
+				state: "active",
+				started: 0,
+				again: true,
+			}),
+			"Re-reading with your answer",
+		)
+		assert.equal(
+			rowLabel({
+				phase: "AWAITING_INPUT",
+				state: "active",
+				started: 0,
+				anticipating: true,
+			}),
+			"Preparing a question",
+		)
+		assert.equal(
+			rowLabel({
+				phase: "VALIDATION",
+				state: "repeat",
+				started: 0,
+				attempt: 2,
+			}),
+			"Repairing the diagram (attempt 2)",
+		)
+	})
+
+	it("words the detail values a row carries", () => {
+		assert.deepEqual(
+			rowFacts({
+				phase: "OUTLINE",
+				state: "done",
+				started: 0,
+				detail: {
+					nodeCount: "17",
+					edgeCount: "18",
+					conformanceCorrections: "2",
+				},
+			}),
+			["17 activities", "18 connections", "2 auto-corrections"],
+		)
+		assert.deepEqual(
+			rowFacts({ phase: "LAYOUT", state: "done", started: 0 }),
+			[],
+		)
+	})
+
+	it("groups rows into contiguous runs and keeps FINISHED as an ungrouped tail", () => {
+		seq = 0
+		const state = run(
+			startRun(0),
+			progress("READINESS", "NONE", { verdict: "READY" }),
+		)
+		const { groups, tail } = groupRows(displayRows(state))
+
+		assert.deepEqual(
+			groups.map((group) => group.key),
+			["understand", "structure", "refine"],
+		)
+		assert.equal(groups[0].title, "Understand")
+		assert.equal(
+			groups[0].state,
+			"active",
+			"the group holding the active row is active",
+		)
+		assert.equal(groups[1].state, "pending")
+		assert.deepEqual(
+			tail.map((row) => row.phase),
+			["FINISHED"],
+		)
+	})
+
+	it("keeps a repeated phase inside its own group", () => {
+		seq = 0
+		let state = run(
+			startRun(0),
+			progress("READINESS", "NONE", { verdict: "NEEDS_CLARIFICATION" }),
+			progress("AWAITING_INPUT", "NONE", { round: "1", maxRounds: "3" }),
+		)
+		state = answerSubmitted(state, 20_000)
+		const { groups } = groupRows(displayRows(state))
+
+		// Readiness, the question and the re-read all belong to Understand, in arrival order,
+		// followed by the contract row still projected ahead of them.
+		assert.deepEqual(
+			groups[0].rows.map((row) => row.phase),
+			["READINESS", "AWAITING_INPUT", "READINESS", "CONTRACT"],
+		)
+		assert.deepEqual(
+			groups[0].rows.map((row) => row.projected === true),
+			[false, false, false, true],
+		)
 	})
 })
