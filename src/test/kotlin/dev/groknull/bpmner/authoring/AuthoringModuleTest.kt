@@ -5,10 +5,12 @@
 
 package dev.groknull.bpmner.authoring
 
+import dev.groknull.bpmner.EmbabelShellTestConfiguration
 import dev.groknull.bpmner.authoring.internal.adapter.outbound.AgentPlatformBpmnAgentInvoker
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.context.annotation.Import
 import org.springframework.modulith.test.ApplicationModuleTest
 import org.springframework.modulith.test.ApplicationModuleTest.BootstrapMode
 import org.springframework.test.context.TestPropertySource
@@ -25,6 +27,7 @@ import org.springframework.test.context.TestPropertySource
  * (S7 — ADR-006 gate 4‴ ALL_DEPENDENCIES rationale; ARCHITECTURE §5 S7, G8)
  */
 @ApplicationModuleTest(mode = BootstrapMode.ALL_DEPENDENCIES, verifyAutomatically = false)
+@Import(EmbabelShellTestConfiguration::class)
 @TestPropertySource(
     properties = [
         "embabel.agent.platform.models.anthropic.api-key=test-key",

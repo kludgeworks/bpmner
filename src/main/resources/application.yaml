@@ -6,6 +6,8 @@ spring:
     name: bpmner
   main:
     web-application-type: none
+  jackson:
+    use-jackson2-defaults: true
 
 embabel:
   models:
@@ -27,6 +29,11 @@ embabel:
         capture-message-content: false
 
 management:
+  # Boot 4 enables liveness/readiness health groups for web deployments; preserve prior exposure.
+  endpoint:
+    health:
+      probes:
+        enabled: false
   tracing:
     enabled: true
     sampling:

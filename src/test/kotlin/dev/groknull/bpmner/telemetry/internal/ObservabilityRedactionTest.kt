@@ -95,7 +95,7 @@ class ObservabilityRedactionTest {
             .prompt(Prompt(UserMessage(SECRET_PROMPT)))
             .provider("openai")
             .build()
-        context.response = ChatResponse(listOf(Generation(AssistantMessage(SECRET_RESPONSE))))
+        context.setResponse(ChatResponse(listOf(Generation(AssistantMessage(SECRET_RESPONSE)))))
         return context
     }
 

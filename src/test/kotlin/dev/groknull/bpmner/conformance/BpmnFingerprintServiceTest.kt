@@ -5,12 +5,12 @@
 
 package dev.groknull.bpmner.conformance
 
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import dev.groknull.bpmner.bpmn.BpmnDefinition
 import dev.groknull.bpmner.bpmn.BpmnEdge
 import dev.groknull.bpmner.bpmn.BpmnEndEvent
 import dev.groknull.bpmner.bpmn.BpmnStartEvent
 import dev.groknull.bpmner.bpmn.BpmnUserTask
+import tools.jackson.module.kotlin.jacksonObjectMapper
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
@@ -48,7 +48,7 @@ class BpmnFingerprintServiceTest {
                 "lanes",
                 "messageFlows",
             ),
-            json.fieldNames().asSequence().toSet(),
+            json.propertyNames().asSequence().toSet(),
         )
         assertEquals(definition.processId, json["processId"].asText())
         assertEquals(definition.nodes.size, json["nodes"].size())

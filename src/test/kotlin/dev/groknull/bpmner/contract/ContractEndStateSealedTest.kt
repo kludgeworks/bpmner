@@ -5,8 +5,8 @@
 
 package dev.groknull.bpmner.contract
 
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import com.fasterxml.jackson.module.kotlin.readValue
+import tools.jackson.module.kotlin.jacksonObjectMapper
+import tools.jackson.module.kotlin.readValue
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
@@ -20,7 +20,7 @@ import kotlin.test.assertTrue
  * flat-constructor call sites compiling, and `kindName` is exhaustive over every subtype.
  */
 class ContractEndStateSealedTest {
-    private val objectMapper = jacksonObjectMapper().findAndRegisterModules()
+    private val objectMapper = jacksonObjectMapper()
 
     @Test
     fun `companion invoke defaults to Normal end state`() {

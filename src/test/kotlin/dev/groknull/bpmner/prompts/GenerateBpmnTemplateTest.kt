@@ -8,7 +8,6 @@
 package dev.groknull.bpmner.prompts
 
 import com.embabel.common.textio.template.JinjavaTemplateRenderer
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import dev.groknull.bpmner.bpmn.BoundaryEventKind
 import dev.groknull.bpmner.bpmn.BpmnRequest
 import dev.groknull.bpmner.bpmn.MultiInstanceMode
@@ -28,6 +27,7 @@ import dev.groknull.bpmner.contract.DefaultBranch
 import dev.groknull.bpmner.contract.ProcessContract
 import dev.groknull.bpmner.llm.PromptJsonRenderer
 import dev.groknull.bpmner.ruleset.BpmnNamingShapeAdvice
+import tools.jackson.module.kotlin.jsonMapper
 import kotlin.test.Test
 import kotlin.test.assertTrue
 
@@ -37,7 +37,7 @@ import kotlin.test.assertTrue
  */
 class GenerateBpmnTemplateTest {
     private val renderer = JinjavaTemplateRenderer()
-    private val jsonRenderer = PromptJsonRenderer(jacksonObjectMapper())
+    private val jsonRenderer = PromptJsonRenderer(jsonMapper())
 
     @Test
     fun `template renders a contract-first BPMN generation prompt with traceability context`() {

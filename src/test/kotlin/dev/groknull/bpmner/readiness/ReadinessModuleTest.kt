@@ -6,6 +6,7 @@
 package dev.groknull.bpmner.readiness
 
 import com.embabel.agent.config.annotation.EnableAgents
+import dev.groknull.bpmner.EmbabelShellTestConfiguration
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -29,7 +30,7 @@ import org.springframework.test.context.TestPropertySource
  * (S7 — ADR-006 Decisions 1+2; ARCHITECTURE §5 S7, G8; S4 — config dissolution)
  */
 @ApplicationModuleTest(mode = BootstrapMode.DIRECT_DEPENDENCIES, verifyAutomatically = false)
-@Import(ReadinessModuleTest.ReadinessTestConfig::class)
+@Import(ReadinessModuleTest.ReadinessTestConfig::class, EmbabelShellTestConfiguration::class)
 @TestPropertySource(
     properties = [
         "embabel.agent.platform.models.anthropic.api-key=test-key",

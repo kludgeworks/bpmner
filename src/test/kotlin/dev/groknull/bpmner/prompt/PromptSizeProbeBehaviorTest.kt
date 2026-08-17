@@ -5,8 +5,8 @@
 
 package dev.groknull.bpmner.prompt
 
-import com.fasterxml.jackson.databind.node.ObjectNode
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import tools.jackson.databind.node.ObjectNode
+import tools.jackson.module.kotlin.jacksonObjectMapper
 import kotlin.test.Test
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -73,11 +73,11 @@ class PromptSizeProbeBehaviorTest {
                 put("updatedBy", "test")
                 put("reason", "behaviour-test fixture")
             }
-            baselines.set<ObjectNode>(key, entry)
+            baselines.set(key, entry)
         }
         val root = mapper.createObjectNode().apply {
             put("version", 1)
-            set<ObjectNode>("baselines", baselines)
+            set("baselines", baselines)
         }
         return PromptBaselineRatchet(root)
     }

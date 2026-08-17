@@ -6,13 +6,14 @@
 package dev.groknull.bpmner.smoke
 
 import com.embabel.agent.core.LlmInvocation
-import com.fasterxml.jackson.databind.ObjectMapper
 import org.junit.jupiter.api.extension.AfterAllCallback
 import org.junit.jupiter.api.extension.BeforeEachCallback
 import org.junit.jupiter.api.extension.ExtensionContext
 import org.junit.jupiter.api.extension.TestWatcher
 import org.slf4j.LoggerFactory
 import org.springframework.test.context.junit.jupiter.SpringExtension
+import tools.jackson.databind.ObjectMapper
+import tools.jackson.databind.json.JsonMapper
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardOpenOption
@@ -45,19 +46,19 @@ class SmokeResultRecorder :
 
     override fun testFailed(
         context: ExtensionContext,
-        cause: Throwable,
+        cause: Throwable?,
     ) = record(
         context,
         outcome = "fail",
-        category = smokeCategoryFor(cause),
-        message = cause.message,
+        category = cause?.let(::smokeCategoryFor) ?: "infra",
+        message = cause?.message,
         cause = cause,
     )
 
     override fun testAborted(
         context: ExtensionContext,
-        cause: Throwable,
-    ) = record(context, outcome = "skip", category = "infra", message = cause.message)
+        cause: Throwable?,
+    ) = record(context, outcome = "skip", category = "infra", message = cause?.message)
 
     override fun testDisabled(
         context: ExtensionContext,
@@ -66,7 +67,7 @@ class SmokeResultRecorder :
 
     override fun afterAll(context: ExtensionContext) {
         if (rows.isEmpty()) return
-        val mapper = bean(context, ObjectMapper::class.java) ?: ObjectMapper()
+        val mapper = bean(context, ObjectMapper::class.java) ?: JsonMapper()
         val target = outputDir().resolve(JSONL_FILE)
         try {
             Files.createDirectories(target.parent)

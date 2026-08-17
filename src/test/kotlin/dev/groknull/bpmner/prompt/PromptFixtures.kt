@@ -7,7 +7,6 @@ package dev.groknull.bpmner.prompt
 
 import com.embabel.common.ai.prompt.PromptContributor
 import com.embabel.common.textio.template.JinjavaTemplateRenderer
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import dev.groknull.bpmner.alignment.AlignmentFindings
 import dev.groknull.bpmner.alignment.BpmnDefinitionSummary
 import dev.groknull.bpmner.alignment.BpmnSummaryElement
@@ -39,6 +38,7 @@ import dev.groknull.bpmner.readiness.ProcessInputAssessment
 import dev.groknull.bpmner.readiness.ReadinessVerdict
 import dev.groknull.bpmner.readiness.SourceEvidence
 import dev.groknull.bpmner.ruleset.BpmnNamingShapeAdvice
+import tools.jackson.module.kotlin.jsonMapper
 
 /**
  * Canonical inputs + per-site [PromptSite] bundles shared between [PromptSizeProbeTest] and
@@ -48,7 +48,7 @@ import dev.groknull.bpmner.ruleset.BpmnNamingShapeAdvice
  */
 internal object PromptFixtures {
     private val renderer = JinjavaTemplateRenderer()
-    private val objectMapper = jacksonObjectMapper()
+    private val objectMapper = jsonMapper()
     private val contractThresholds = BpmnContractThresholdsConfig()
     private val readinessThresholds = BpmnReadinessThresholdsConfig()
     private val jsonRenderer = PromptJsonRenderer(objectMapper)

@@ -7,7 +7,6 @@ package dev.groknull.bpmner.authoring.internal.adapter.inbound
 
 import com.embabel.agent.core.NonRetryable
 import com.embabel.agent.test.unit.FakeOperationContext
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import dev.groknull.bpmner.authoring.BpmnAgentInvoker
 import dev.groknull.bpmner.authoring.BpmnConformance
 import dev.groknull.bpmner.authoring.BpmnContractConformancePort
@@ -45,6 +44,7 @@ import org.mockito.Mockito
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.`when`
 import org.springframework.context.ApplicationEventPublisher
+import tools.jackson.module.kotlin.jsonMapper
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
@@ -82,7 +82,7 @@ class LlmBpmnProcessGeneratorFidelitySeamTest {
         metricsCalculator = BpmnGeneratorMetrics(),
         fidelityChecker = mockFidelityChecker,
         conformancePort = mockConformancePort,
-        jsonRenderer = PromptJsonRenderer(jacksonObjectMapper()),
+        jsonRenderer = PromptJsonRenderer(jsonMapper()),
         renderer = mock(BpmnRenderer::class.java),
         agentInvoker = mock(BpmnAgentInvoker::class.java),
         eventPublisher = mock(ApplicationEventPublisher::class.java),

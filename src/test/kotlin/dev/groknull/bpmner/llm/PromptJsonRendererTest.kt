@@ -5,8 +5,6 @@
 
 package dev.groknull.bpmner.llm
 
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import com.fasterxml.jackson.module.kotlin.readValue
 import dev.groknull.bpmner.bpmn.BoundaryEventKind
 import dev.groknull.bpmner.bpmn.MultiInstanceMode
 import dev.groknull.bpmner.contract.ActivityModifiers
@@ -18,10 +16,14 @@ import dev.groknull.bpmner.contract.ContractLoop
 import dev.groknull.bpmner.contract.ContractStart
 import dev.groknull.bpmner.contract.ContractTrigger
 import dev.groknull.bpmner.contract.ProcessContract
+import tools.jackson.databind.json.JsonMapper
+import tools.jackson.module.kotlin.kotlinModule
+import tools.jackson.module.kotlin.readValue
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 /**
  * A serialiser that drops a field passes every offline gate and fails only here: round-trip
@@ -29,7 +31,7 @@ import kotlin.test.assertFalse
  * `@JsonSubTypes` entry, a stray `@JsonIgnore`, an inclusion setting that eats a value).
  */
 class PromptJsonRendererTest {
-    private val objectMapper = jacksonObjectMapper()
+    private val objectMapper = JsonMapper.builder().addModule(kotlinModule()).build()
     private val renderer = PromptJsonRenderer(objectMapper)
 
     private val contractWithAllModifiers = ProcessContract(
@@ -101,4 +103,25 @@ class PromptJsonRendererTest {
         assertFalse(json.contains("iteration"))
         assertFalse(json.contains("boundaryEvents"))
     }
+
+    @Test
+    fun `preserves declaration order and omits empty map content`() {
+        val json = renderer.render(
+            OrderedValues(
+                first = "first",
+                second = "second",
+                values = mapOf("empty" to "", "value" to "kept"),
+            ),
+        )
+
+        assertTrue(json.indexOf("\"first\"") < json.indexOf("\"second\""))
+        assertFalse(json.contains("\"empty\""))
+        assertContains(json, "\"value\":\"kept\"")
+    }
+
+    private data class OrderedValues(
+        val first: String,
+        val second: String,
+        val values: Map<String, String>,
+    )
 }

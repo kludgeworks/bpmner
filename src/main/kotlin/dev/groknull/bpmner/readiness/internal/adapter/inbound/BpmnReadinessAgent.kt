@@ -14,7 +14,6 @@ import com.embabel.agent.core.ActionRetryPolicy
 import com.embabel.agent.core.support.InvalidLlmReturnFormatException
 import com.embabel.agent.core.support.InvalidLlmReturnTypeException
 import com.embabel.common.ai.prompt.PromptContributor
-import com.fasterxml.jackson.databind.ObjectMapper
 import dev.groknull.bpmner.bpmn.BpmnRequest
 import dev.groknull.bpmner.bpmn.promptContributions
 import dev.groknull.bpmner.llm.publishOnInvalidLlmReturn
@@ -27,6 +26,7 @@ import dev.groknull.bpmner.readiness.ReadinessDimensionScore
 import dev.groknull.bpmner.readiness.ReadinessVerdict
 import org.jmolecules.architecture.onion.simplified.InfrastructureRing
 import org.springframework.context.ApplicationEventPublisher
+import tools.jackson.databind.ObjectMapper
 
 @InfrastructureRing
 @Agent(description = "Assess whether source text is ready for BPMN generation")

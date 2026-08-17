@@ -5,9 +5,9 @@
 
 package dev.groknull.bpmner.contract
 
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import com.fasterxml.jackson.module.kotlin.readValue
 import dev.groknull.bpmner.bpmn.MultiInstanceMode
+import tools.jackson.module.kotlin.jacksonObjectMapper
+import tools.jackson.module.kotlin.readValue
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
@@ -20,7 +20,7 @@ import kotlin.test.assertIs
  * polymorphic [iteration] / [loop] / [dataInputIds] accessors, and `kindName` exhaustiveness.
  */
 class ContractActivitySealedTest {
-    private val objectMapper = jacksonObjectMapper().findAndRegisterModules()
+    private val objectMapper = jacksonObjectMapper()
 
     @Test
     fun `companion invoke defaults to a Service activity`() {
