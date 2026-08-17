@@ -39,4 +39,13 @@ data class BpmnerLintConfig(
         "bpmn:DataInputAssociation",
         "bpmn:DataOutputAssociation",
     ),
+    val abbreviationReplacements: Map<String, String> = mapOf(
+        "REQ" to "request",
+        "RESP" to "response",
+        "AUTH" to "authentication",
+        "CFG" to "configuration",
+        "MSG" to "message",
+        "DOC" to "document",
+        "ITBL" to "itinerary block",
+    ),
 )

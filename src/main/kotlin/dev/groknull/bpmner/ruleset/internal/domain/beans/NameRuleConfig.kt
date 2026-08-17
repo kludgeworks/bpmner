@@ -90,15 +90,7 @@ internal class NameRuleConfig {
             kind = RepairKind.LOCAL_MODEL_FIX,
             safety = RepairSafety.SAFE_AUTOMATIC,
             handler = "expandAbbreviations",
-            replacementMap = mapOf(
-                "REQ" to "request",
-                "RESP" to "response",
-                "AUTH" to "authentication",
-                "CFG" to "configuration",
-                "MSG" to "message",
-                "DOC" to "document",
-                "ITBL" to "itinerary block",
-            ),
+            replacementMap = lintConfig.abbreviationReplacements,
         ),
     )
 }

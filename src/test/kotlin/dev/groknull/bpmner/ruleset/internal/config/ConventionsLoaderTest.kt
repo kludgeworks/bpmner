@@ -25,6 +25,7 @@ internal class ConventionsLoaderTest {
         assertThat(config.elementTypeWords).containsExactly("activity", "process", "event")
         assertThat(config.allowedAcronyms).containsExactly("BPMN", "ACME", "SLA", "API", "IT")
         assertThat(config.discouragedBpmnTypes).contains("bpmn:Transaction")
+        assertThat(config.abbreviationReplacements).containsEntry("REQ", "request")
     }
 
     @Test
@@ -38,6 +39,7 @@ internal class ConventionsLoaderTest {
             elementTypeWords = List("step")
             allowedAcronyms = List("VIP")
             discouragedBpmnTypes = List("bpmn:Transaction")
+            abbreviationReplacements = new Mapping<String, String> {}
             """.trimIndent(),
         )
 
@@ -49,6 +51,7 @@ internal class ConventionsLoaderTest {
         assertThat(config.elementTypeWords).containsExactly("step")
         assertThat(config.allowedAcronyms).containsExactly("VIP")
         assertThat(config.discouragedBpmnTypes).containsExactly("bpmn:Transaction")
+        assertThat(config.abbreviationReplacements).isEmpty()
     }
 
     @Test

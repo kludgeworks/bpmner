@@ -56,6 +56,7 @@ internal class ConventionsLoader(private val config: BpmnRulesUriConfig) {
             elementTypeWords = pkl.get("elementTypeWords").to(),
             allowedAcronyms = pkl.get("allowedAcronyms").to(),
             discouragedBpmnTypes = pkl.get("discouragedBpmnTypes").to(),
+            abbreviationReplacements = pkl.get("abbreviationReplacements").to<Map<String, String>>(),
         )
         logger.info(
             "BPMN lint conventions loaded from {} ({} element type word(s), {} allowed acronym(s))",
@@ -67,7 +68,7 @@ internal class ConventionsLoader(private val config: BpmnRulesUriConfig) {
     }
 
     companion object {
-        const val DEFAULT_CONFIG_URI = "modulepath:/linter/pkl/bpmner.pkl"
+        const val DEFAULT_CONFIG_URI = "modulepath:/bpmner.pkl"
 
         private fun fileOverrideUri(raw: String): URI {
             val uri = try {

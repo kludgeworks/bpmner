@@ -52,7 +52,7 @@ internal data class BpmnRulesConfig(
 @ConfigurationProperties("bpmner.rules")
 internal data class BpmnRulesUriConfig(
     // Modeller-owned lint convention source. Defaults to the packaged
-    // `modulepath:/linter/pkl/bpmner.pkl`; set `bpmner.rules.config-uri` to a `file:` URI to load
+    // `modulepath:/bpmner.pkl`; set `bpmner.rules.config-uri` to a `file:` URI to load
     // team-specific word lists. Rule profile and per-rule severity overrides are read from
     // `bpmner.pkl` as part of [BpmnerLintConfig] (fields `profile` and `severityOverrides`).
     val configUri: String? = null,
