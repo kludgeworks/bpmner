@@ -6,7 +6,6 @@
 package dev.groknull.bpmner.prompts
 
 import com.embabel.common.textio.template.JinjavaTemplateRenderer
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import dev.groknull.bpmner.alignment.BpmnDefinitionSummary
 import dev.groknull.bpmner.alignment.BpmnSummaryElement
 import dev.groknull.bpmner.alignment.BpmnSummaryFlow
@@ -18,6 +17,7 @@ import dev.groknull.bpmner.contract.ContractStart
 import dev.groknull.bpmner.contract.ContractTrigger
 import dev.groknull.bpmner.contract.ProcessContract
 import dev.groknull.bpmner.llm.PromptJsonRenderer
+import tools.jackson.module.kotlin.jsonMapper
 import kotlin.test.Test
 import kotlin.test.assertTrue
 
@@ -28,7 +28,7 @@ import kotlin.test.assertTrue
  */
 class CheckAlignmentTemplateTest {
     private val renderer = JinjavaTemplateRenderer()
-    private val jsonRenderer = PromptJsonRenderer(jacksonObjectMapper())
+    private val jsonRenderer = PromptJsonRenderer(jsonMapper())
 
     @Test
     fun `template includes system instructions and the misaligned worked example`() {

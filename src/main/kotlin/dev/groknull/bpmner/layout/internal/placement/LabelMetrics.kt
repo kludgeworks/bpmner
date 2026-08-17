@@ -5,7 +5,7 @@
 
 package dev.groknull.bpmner.layout.internal.placement
 
-import com.fasterxml.jackson.databind.ObjectMapper
+import tools.jackson.databind.json.JsonMapper
 
 /**
  * Frozen glyph advance-width table for the bpmn-js default label font.
@@ -54,15 +54,13 @@ internal object LabelMetrics {
     private fun loadAdvanceTable(): DoubleArray {
         val stream = LabelMetrics::class.java.getResourceAsStream("/label-metrics.json")
             ?: error("label-metrics.json not found on classpath")
-        val root = ObjectMapper().readTree(stream)
+        val root = JsonMapper().readTree(stream)
         val advances = root.get("advances")
         val table = DoubleArray(ADVANCE_MAX - ADVANCE_BASE + 1) { DEFAULT_ADVANCE }
-        val fieldNames = advances.fieldNames()
-        while (fieldNames.hasNext()) {
-            val key = fieldNames.next()
-            val cp = key.toIntOrNull() ?: continue
-            if (cp in ADVANCE_BASE..ADVANCE_MAX) {
-                table[cp - ADVANCE_BASE] = advances.get(key).doubleValue()
+        advances.properties().forEach { (key, value) ->
+            val cp = key.toIntOrNull()
+            if (cp != null && cp in ADVANCE_BASE..ADVANCE_MAX) {
+                table[cp - ADVANCE_BASE] = value.doubleValue()
             }
         }
         return table

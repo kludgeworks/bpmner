@@ -5,15 +5,15 @@
 
 package dev.groknull.bpmner.bpmn
 
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import com.fasterxml.jackson.module.kotlin.readValue
 import dev.groknull.bpmner.bpmn.BpmnTimerKind
+import tools.jackson.module.kotlin.jacksonObjectMapper
+import tools.jackson.module.kotlin.readValue
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class BpmnEventDefinitionJsonTest {
-    private val objectMapper = jacksonObjectMapper().findAndRegisterModules()
+    private val objectMapper = jacksonObjectMapper()
 
     @Test
     fun `start event serializes event definition with nested discriminator`() {

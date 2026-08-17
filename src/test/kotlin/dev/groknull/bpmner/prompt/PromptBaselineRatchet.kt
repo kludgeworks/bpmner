@@ -5,8 +5,8 @@
 
 package dev.groknull.bpmner.prompt
 
-import com.fasterxml.jackson.databind.JsonNode
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import tools.jackson.databind.JsonNode
+import tools.jackson.module.kotlin.jacksonObjectMapper
 
 /**
  * ArchUnit-style ratchet for LLM prompt sizes.

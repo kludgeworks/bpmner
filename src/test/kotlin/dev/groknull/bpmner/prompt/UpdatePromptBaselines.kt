@@ -5,13 +5,12 @@
 
 package dev.groknull.bpmner.prompt
 
-import com.fasterxml.jackson.core.util.DefaultIndenter
-import com.fasterxml.jackson.core.util.DefaultPrettyPrinter
-import com.fasterxml.jackson.core.util.Separators
-import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.databind.node.ObjectNode
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import dev.groknull.bpmner.repair.RepairTestFixtures
+import tools.jackson.core.util.DefaultIndenter
+import tools.jackson.core.util.DefaultPrettyPrinter
+import tools.jackson.databind.ObjectMapper
+import tools.jackson.databind.node.ObjectNode
+import tools.jackson.module.kotlin.jacksonObjectMapper
 import java.nio.file.Files
 import java.nio.file.Path
 import java.time.LocalDate
@@ -88,7 +87,7 @@ private fun mergeBaselines(oldBaselines: ObjectNode, mapper: ObjectMapper): Pair
     for ((key, measure) in MEASUREMENTS) {
         val entry = updatedEntry(key, measure(), oldBaselines, mapper, today)
         if (entry.changed) changes++
-        newBaselines.set<ObjectNode>(key, entry.node)
+        newBaselines.set(key, entry.node)
     }
     preserveOrphans(oldBaselines, newBaselines)
     return newBaselines to changes
@@ -132,10 +131,10 @@ private fun updatedEntry(
 private fun preserveOrphans(oldBaselines: ObjectNode, newBaselines: ObjectNode) {
     // Entries in the JSON not present in MEASUREMENTS — surface but preserve, so a typo in
     // MEASUREMENTS doesn't silently drop a baseline.
-    oldBaselines.fieldNames().forEachRemaining { key ->
+    oldBaselines.propertyNames().forEach { key ->
         if (!MEASUREMENTS.containsKey(key)) {
             println("  orphan     $key  (preserved; remove manually if intentional)")
-            newBaselines.set<ObjectNode>(key, oldBaselines.get(key))
+            newBaselines.set(key, oldBaselines.get(key))
         }
     }
 }
@@ -144,18 +143,15 @@ private fun writeBaselines(path: Path, newBaselines: ObjectNode, mapper: ObjectM
     val out = mapper.createObjectNode().apply {
         put("version", 1)
         put("_doc", DOC)
-        set<ObjectNode>("baselines", newBaselines)
+        set("baselines", newBaselines)
     }
     val printer = DefaultPrettyPrinter()
-        .withSeparators(
-            Separators.createDefaultInstance().withObjectFieldValueSpacing(Separators.Spacing.AFTER),
-        )
         .apply {
             val indenter = DefaultIndenter("\t", DefaultIndenter.SYS_LF)
             indentObjectsWith(indenter)
             indentArraysWith(indenter)
         }
-    Files.writeString(path, mapper.writer(printer).writeValueAsString(out) + "\n")
+    Files.writeString(path, mapper.writer().with(printer).writeValueAsString(out) + "\n")
 }
 
 private fun printSummary(changes: Int) {

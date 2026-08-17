@@ -6,6 +6,7 @@
 package dev.groknull.bpmner.alignment
 
 import com.embabel.agent.config.annotation.EnableAgents
+import dev.groknull.bpmner.EmbabelShellTestConfiguration
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -25,7 +26,7 @@ import org.springframework.test.context.TestPropertySource
  * API keys are stubbed so no live LLM call is made at startup.
  */
 @ApplicationModuleTest(mode = BootstrapMode.DIRECT_DEPENDENCIES, verifyAutomatically = false)
-@Import(AlignmentModuleTest.AlignmentTestConfig::class)
+@Import(AlignmentModuleTest.AlignmentTestConfig::class, EmbabelShellTestConfiguration::class)
 @TestPropertySource(
     properties = [
         "embabel.agent.platform.models.anthropic.api-key=test-key",

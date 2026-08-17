@@ -6,7 +6,7 @@
 package dev.groknull.bpmner.repair.internal.domain
 
 import com.embabel.common.ai.converters.FilteringJacksonOutputConverter
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import tools.jackson.module.kotlin.jacksonObjectMapper
 import kotlin.test.Test
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue

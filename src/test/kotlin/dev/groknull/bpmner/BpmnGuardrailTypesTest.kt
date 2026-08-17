@@ -5,8 +5,6 @@
 
 package dev.groknull.bpmner
 
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import com.fasterxml.jackson.module.kotlin.readValue
 import dev.groknull.bpmner.alignment.AlignmentVerdict
 import dev.groknull.bpmner.alignment.BpmnAlignmentReport
 import dev.groknull.bpmner.alignment.BpmnDefinitionSummary
@@ -35,10 +33,12 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import tools.jackson.module.kotlin.jacksonObjectMapper
+import tools.jackson.module.kotlin.readValue
 
 @Suppress("TooManyFunctions")
 class BpmnGuardrailTypesTest {
-    private val objectMapper = jacksonObjectMapper().findAndRegisterModules()
+    private val objectMapper = jacksonObjectMapper()
     private val validator = Validation.buildDefaultValidatorFactory().validator
 
     @Test
