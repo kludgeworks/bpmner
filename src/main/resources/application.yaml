@@ -29,6 +29,7 @@ embabel:
         capture-message-content: false
 
 management:
+  # Boot 4 enables liveness/readiness health groups for web deployments; preserve prior exposure.
   endpoint:
     health:
       probes:
