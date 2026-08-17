@@ -36,3 +36,13 @@ discouragedBpmnTypes: List<String> =
     "bpmn:DataInputAssociation",
     "bpmn:DataOutputAssociation",
   )
+
+abbreviationReplacements: Mapping<String, String> = new {
+  ["REQ"] = "request"
+  ["RESP"] = "response"
+  ["AUTH"] = "authentication"
+  ["CFG"] = "configuration"
+  ["MSG"] = "message"
+  ["DOC"] = "document"
+  ["ITBL"] = "itinerary block"
+}

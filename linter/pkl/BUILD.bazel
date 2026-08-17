@@ -1,20 +1,2 @@
 # Copyright 2026 The Project Contributors
 # SPDX-License-Identifier: MIT
-
-load("@rules_java//java:defs.bzl", "java_library")
-
-package(default_visibility = ["//linter:__subpackages__"])
-
-PKL_TOP_LEVEL_SRCS = [
-    "BpmnerLintConfig.pkl",
-    "bpmner.pkl",
-]
-
-# Packages the .pkl source files as classpath resources so the runtime ConfigEvaluator can
-# load bpmner.pkl via `modulepath:/linter/pkl/bpmner.pkl` at startup. Workspace-relative
-# paths are preserved (no resource_strip_prefix).
-java_library(
-    name = "pkl_runtime_resources",
-    resources = PKL_TOP_LEVEL_SRCS,
-    visibility = ["//src:__subpackages__"],
-)
