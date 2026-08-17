@@ -7,11 +7,13 @@ package dev.groknull.bpmner.pipeline.internal.adapter.inbound
 
 import dev.groknull.bpmner.authoring.BpmnProcessGenerator
 import dev.groknull.bpmner.bpmn.BpmnRequest
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
 
 @Service
 internal class WebGenerationStarter(
     private val processGenerator: BpmnProcessGenerator,
+    @Value("\${bpmner.target-language:}") private val defaultTargetLanguage: String,
 ) {
     /**
      * Starts an async BPMN generation process and returns its process ID.
@@ -27,6 +29,8 @@ internal class WebGenerationStarter(
                 processDescription = request.processDescription,
                 styleGuide = request.styleGuide?.trim()?.takeIf { it.isNotEmpty() },
                 outputFile = null,
+                targetLanguage = request.targetLanguage?.trim()?.takeIf { it.isNotEmpty() }
+                    ?: defaultTargetLanguage.trim().takeIf { it.isNotEmpty() },
             )
         return processGenerator.startAsync(bpmnRequest)
     }

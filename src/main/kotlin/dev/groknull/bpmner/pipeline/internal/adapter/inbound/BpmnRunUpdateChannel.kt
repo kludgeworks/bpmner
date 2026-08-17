@@ -69,19 +69,38 @@ internal class BpmnRunUpdateChannel(
     }
 
     override fun onProcessEvent(event: AgentProcessEvent) {
+        // `primaryOrNull` drops every process that is not the run the browser subscribes to;
+        // AgentProcessEvent exposes the process on each subtype, not on the base type.
         when (event) {
-            is AgentProcessWaitingEvent -> onWaiting(event.agentProcess)
+            is AgentProcessWaitingEvent -> onWaiting(primaryOrNull(event.agentProcess) ?: return)
             // AgentProcessFailedEvent extends AgentProcessFinishedEvent; listed first so it
             // wins this `when` before the broader FinishedEvent branch.
-            is AgentProcessFailedEvent -> onFailed(event.agentProcess)
-            is AgentProcessFinishedEvent -> onFinished(event.agentProcess)
+            is AgentProcessFailedEvent -> onFailed(primaryOrNull(event.agentProcess) ?: return)
+            is AgentProcessFinishedEvent -> onFinished(primaryOrNull(event.agentProcess) ?: return)
             // A stuck process has no plan to reach any goal and will emit nothing further.
             // It is not a "finished" event, so without this branch the run goes silent and a
             // subscriber waits forever.
-            is AgentProcessStuckEvent -> onStuck(event.agentProcess)
+            is AgentProcessStuckEvent -> onStuck(primaryOrNull(event.agentProcess) ?: return)
             else -> {}
         }
     }
+
+    /**
+     * The run a subscriber is watching, or null for a process this channel must stay silent about.
+     *
+     * This listener is registered platform-wide, so it observes *every* [AgentProcess], and two
+     * kinds are not the watched run: the readiness assessment, which runs as its own process on
+     * its own agent, and nested sub-processes spawned by an action. Neither ever binds a
+     * [BpmnResult], so without this guard both take the null branch of [onFinished] and report a
+     * terminal FAILED — on every successful run.
+     *
+     * An allow-list, so a sub-agent added later stays silent by default rather than leaking a
+     * spurious terminal until someone notices. The filter is on *which process*, never on the
+     * absence of a result — a watched run that genuinely finishes empty is a real failure and must
+     * still be reported.
+     */
+    private fun primaryOrNull(process: AgentProcess): AgentProcess? =
+        process.takeIf { it.parentId == null && it.agent.name == GENERATION_AGENT_NAME }
 
     private fun onWaiting(process: AgentProcess) {
         val form = process.last(FormBindingRequest::class.java) ?: return
@@ -155,6 +174,10 @@ internal class BpmnRunUpdateChannel(
         // Mirrors BpmnGenerationAgent.MAX_ROUNDS (private const = 3).
         private const val MAX_CLARIFICATION_ROUNDS = 3
         private const val OPTION_SEPARATOR = "|"
+
+        // @Agent declares no explicit name, so Embabel derives it from the class simple name.
+        // Taken from the class rather than a literal so a rename cannot silently mute the stream.
+        private val GENERATION_AGENT_NAME = BpmnGenerationAgent::class.simpleName!!
     }
 }
 

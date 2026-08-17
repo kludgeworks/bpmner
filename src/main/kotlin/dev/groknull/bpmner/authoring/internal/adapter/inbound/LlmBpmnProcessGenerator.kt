@@ -366,6 +366,7 @@ internal class LlmBpmnProcessGenerator(
         "contractJson" to jsonRenderer.render(validatedContract.contract),
         "processDescription" to request.processDescription,
         "styleGuide" to (request.styleGuide ?: ""),
+        "targetLanguage" to (request.targetLanguage ?: ""),
         "previousFailure" to (previousFailure ?: ""),
         "namingShapeAdvice" to BpmnNamingShapeAdvice.allAdvice().map { advice ->
             val examples = advice.examples.joinToString(", ") { "\"$it\"" }

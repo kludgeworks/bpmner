@@ -28,6 +28,8 @@ data class BpmnRequestDraft(
     val styleGuide: String? = null,
     @get:JsonPropertyDescription("Optional path to a file containing style-guide Markdown")
     val styleGuideFile: String? = null,
+    @get:JsonPropertyDescription("Optional target language for the generated diagram (2-letter ISO 639 code)")
+    val targetLanguage: String? = null,
 ) {
     companion object {
         const val MAX_STYLE_GUIDE_LENGTH = 20_000

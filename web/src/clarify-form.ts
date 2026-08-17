@@ -66,7 +66,7 @@ export function renderClarifyForm(
 	onSubmit: (answer: string) => void,
 ): void {
 	container.innerHTML = buildClarifyFormHtml(state)
-	container.classList.remove("hidden")
+	container.hidden = false
 
 	const btn = container.querySelector<HTMLButtonElement>(".clarify-submit")
 	const textarea =

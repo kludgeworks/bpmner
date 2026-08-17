@@ -55,9 +55,14 @@ internal class BpmnShellCommands(
             defaultValue = "",
             help = "Output .bpmn file name. A descriptive name is generated if omitted.",
         ) outputFile: String = "",
+        @ShellOption(
+            value = ["--target-language", "-l"],
+            defaultValue = "",
+            help = "Target language for the generated diagram (2-letter ISO 639 code).",
+        ) targetLanguage: String = "",
     ): String {
         val rendered = shellCommands.getObject().execute(
-            intent = intentFor(description, outputFile),
+            intent = intentFor(description, outputFile, targetLanguage),
             open = false,
             showPrompts = logging.llmInteractions,
             showLlmResponses = logging.llmInteractions,
@@ -89,10 +94,15 @@ internal class BpmnShellCommands(
     private fun intentFor(
         description: String,
         outputFile: String,
-    ): String = if (outputFile.isBlank()) {
-        description
-    } else {
-        "$description\n\nWrite the generated BPMN to the file: ${outputFile.trim()}"
+        targetLanguage: String,
+    ): String = buildString {
+        append(description)
+        if (outputFile.isNotBlank()) {
+            append("\n\nWrite the generated BPMN to the file: ${outputFile.trim()}")
+        }
+        if (targetLanguage.isNotBlank()) {
+            append("\n\nGenerate the diagram in target language: ${targetLanguage.trim()}")
+        }
     }
 
     // Embabel renders the result (incl. the output file) above its cost/tool-usage summary, so the

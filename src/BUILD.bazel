@@ -45,10 +45,9 @@ java_library(
     resources = ["//web:static_assets"],
 )
 
-# Exposed so //web:control_icons_test can assert on the shipped preview markup
-# directly (issue #698 regression guard) rather than on a copy of it. rules_js
-# requires a js_library here: data files must be copied to bin by a target in
-# their own package.
+# Exposes the shipped preview markup to //web:control_icons_test so it asserts on the served
+# artifact rather than a copy of it. rules_js requires a js_library here: data files must be
+# copied to bin by a target in their own package.
 js_library(
     name = "preview_template",
     srcs = ["main/resources/preview/preview-template.html"],

@@ -27,6 +27,7 @@ internal data class BpmnAuthoringConfig(
     // corrective feedback rather than identical re-rolls.
     @field:Min(1)
     val maxOutlineAttempts: Int = 3,
+    val targetLanguage: String? = null,
 ) {
     companion object {
         val DEFAULT_GENERATOR =

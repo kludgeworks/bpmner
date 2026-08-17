@@ -8,9 +8,11 @@ package dev.groknull.bpmner
 import com.embabel.common.ai.prompt.PromptContributor
 import dev.groknull.bpmner.authoring.generationPrompt
 import dev.groknull.bpmner.bpmn.BpmnRequest
+import dev.groknull.bpmner.bpmn.promptContributions
 import dev.groknull.bpmner.bpmn.styleGuideContribution
 import dev.groknull.bpmner.readiness.ClarificationExchange
 import dev.groknull.bpmner.readiness.ReadinessDimension
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -100,5 +102,36 @@ class BpmnRequestTest {
 
         assertTrue(prompt.contains("Ship the order"))
         assertFalse(prompt.contains("Clarification answers:"))
+    }
+
+    @Test
+    fun `generationPrompt includes target language when provided`() {
+        val request = BpmnRequest(processDescription = "Ship the order", targetLanguage = "es")
+
+        val prompt = request.generationPrompt()
+
+        assertTrue(prompt.contains("Ship the order"))
+        assertTrue(prompt.contains("Target language: es"))
+    }
+
+    @Test
+    fun `promptContributions combines style guide and target language`() {
+        val requestEmpty = BpmnRequest(processDescription = "Ship the order")
+        assertTrue(requestEmpty.promptContributions().isEmpty())
+
+        val requestStyleOnly = BpmnRequest(processDescription = "Ship the order", styleGuide = "Use sentence case.")
+        assertEquals("## Style guide\n\nUse sentence case.", requestStyleOnly.promptContributions())
+
+        val requestLangOnly = BpmnRequest(processDescription = "Ship the order", targetLanguage = "fr")
+        assertTrue(requestLangOnly.promptContributions().contains("Target language"))
+        assertTrue(requestLangOnly.promptContributions().contains("\"fr\""))
+
+        val requestBoth = BpmnRequest(
+            processDescription = "Ship the order",
+            styleGuide = "Use sentence case.",
+            targetLanguage = "fr",
+        )
+        assertTrue(requestBoth.promptContributions().contains("Style guide"))
+        assertTrue(requestBoth.promptContributions().contains("Target language"))
     }
 }
