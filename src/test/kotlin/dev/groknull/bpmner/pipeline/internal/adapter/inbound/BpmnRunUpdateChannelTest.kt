@@ -10,6 +10,7 @@ import com.embabel.agent.api.event.AgentProcessCompletedEvent
 import com.embabel.agent.api.event.AgentProcessFailedEvent
 import com.embabel.agent.api.event.AgentProcessStuckEvent
 import com.embabel.agent.api.event.AgentProcessWaitingEvent
+import com.embabel.agent.core.Agent
 import com.embabel.agent.core.AgentProcess
 import com.embabel.agent.core.hitl.FormBindingRequest
 import com.embabel.ux.form.Form
@@ -99,8 +100,7 @@ class BpmnRunUpdateChannelTest {
 
     @Test
     fun `AgentProcessWaitingEvent with no FormBindingRequest is a no-op`() {
-        val process = mock(AgentProcess::class.java)
-        `when`(process.id).thenReturn("proc-no-form")
+        val process = primaryProcess("proc-no-form")
         `when`(process.last(FormBindingRequest::class.java)).thenReturn(null)
 
         channel.onProcessEvent(AgentProcessWaitingEvent(process))
@@ -112,8 +112,7 @@ class BpmnRunUpdateChannelTest {
 
     @Test
     fun `AgentProcessFailedEvent emits a terminal FAILED update with NONE artifact state`() {
-        val process = mock(AgentProcess::class.java)
-        `when`(process.id).thenReturn("proc-failed")
+        val process = primaryProcess("proc-failed")
 
         channel.onProcessEvent(AgentProcessFailedEvent(process))
 
@@ -126,8 +125,7 @@ class BpmnRunUpdateChannelTest {
 
     @Test
     fun `AgentProcessCompletedEvent with no BpmnResult on the blackboard emits a terminal FAILED update`() {
-        val process = mock(AgentProcess::class.java)
-        `when`(process.id).thenReturn("proc-no-result")
+        val process = primaryProcess("proc-no-result")
         `when`(process.last(BpmnResult::class.java)).thenReturn(null)
 
         channel.onProcessEvent(AgentProcessCompletedEvent(process))
@@ -139,8 +137,7 @@ class BpmnRunUpdateChannelTest {
 
     @Test
     fun `AgentProcessCompletedEvent with a GENERATED BpmnResult emits a terminal COMPLETED FINAL update`() {
-        val process = mock(AgentProcess::class.java)
-        `when`(process.id).thenReturn("proc-generated")
+        val process = primaryProcess("proc-generated")
         `when`(process.last(BpmnResult::class.java)).thenReturn(
             BpmnResult(outputFile = null, status = BpmnGenerationStatus.GENERATED, xml = "<xml/>"),
         )
@@ -156,8 +153,7 @@ class BpmnRunUpdateChannelTest {
 
     @Test
     fun `a VALIDATION_FAILED BpmnResult emits a terminal FAILED DIAGNOSTIC update with a diagnostics summary`() {
-        val process = mock(AgentProcess::class.java)
-        `when`(process.id).thenReturn("proc-valfail")
+        val process = primaryProcess("proc-valfail")
         `when`(process.last(BpmnResult::class.java)).thenReturn(
             BpmnResult(
                 outputFile = null,
@@ -184,8 +180,7 @@ class BpmnRunUpdateChannelTest {
 
     @Test
     fun `AgentProcessFailedEvent takes priority over the broader Finished branch (no double emission)`() {
-        val process = mock(AgentProcess::class.java)
-        `when`(process.id).thenReturn("proc-priority")
+        val process = primaryProcess("proc-priority")
 
         // A failed event must route to onFailed exactly once — not also fall through as if it
         // were a generic AgentProcessFinishedEvent.
@@ -199,8 +194,7 @@ class BpmnRunUpdateChannelTest {
     fun `a stuck process emits a terminal FAILED update`() {
         // A stuck process has no route to any goal and emits nothing further. It is not a
         // "finished" event, so without an explicit branch a subscriber waits forever.
-        val process = mock(AgentProcess::class.java)
-        `when`(process.id).thenReturn("proc-stuck")
+        val process = primaryProcess("proc-stuck")
 
         channel.onProcessEvent(AgentProcessStuckEvent(process))
 
@@ -213,8 +207,7 @@ class BpmnRunUpdateChannelTest {
     fun `only the first terminal is delivered when a run reports one more than once`() {
         // A run can reach a terminal by more than one route — its own result, a platform failure
         // event, and the abort backstop. A consumer must still see exactly one.
-        val process = mock(AgentProcess::class.java)
-        `when`(process.id).thenReturn("proc-double")
+        val process = primaryProcess("proc-double")
 
         channel.onProcessEvent(AgentProcessStuckEvent(process))
         channel.onProcessEvent(AgentProcessFailedEvent(process))
@@ -230,13 +223,83 @@ class BpmnRunUpdateChannelTest {
         assertEquals("BPMN generation could not continue.", updates.single().summary)
     }
 
+    @Test
+    fun `a readiness sub-process finishing without a BpmnResult emits nothing`() {
+        // Readiness runs as its own process on a different agent and never binds a BpmnResult,
+        // so without the filter it reaches the null branch of onFinished and reports a terminal
+        // FAILED against a run that is still going.
+        val readiness = nonPrimaryProcess("proc-readiness-sub", "BpmnReadinessAgent", root = true)
+        `when`(readiness.last(BpmnResult::class.java)).thenReturn(null)
+
+        channel.onProcessEvent(AgentProcessCompletedEvent(readiness))
+
+        // A sink with no terminal never completes, so assert by sentinel: if the event above had
+        // emitted, the sentinel would not be first and would not hold seq 1.
+        registry.emit("proc-readiness-sub", RunPhase.READINESS, ArtifactState.NONE, "sentinel")
+        val update = registry.subscribe("proc-readiness-sub").take(1).collectList().block(TIMEOUT)!!.single()
+        assertEquals("sentinel", update.summary)
+        assertEquals(1L, update.seq)
+    }
+
+    @Test
+    fun `a nested sub-process of the generation agent emits nothing`() {
+        // The generation agent spawns nested processes (ids like "BpmnGenerationAgent >> name").
+        // They share the agent name, so only the root check excludes them.
+        val nested = nonPrimaryProcess("BpmnGenerationAgent >> nested", "BpmnGenerationAgent", root = false)
+        `when`(nested.last(BpmnResult::class.java)).thenReturn(null)
+
+        channel.onProcessEvent(AgentProcessCompletedEvent(nested))
+        channel.onProcessEvent(AgentProcessFailedEvent(nested))
+        channel.onProcessEvent(AgentProcessStuckEvent(nested))
+
+        registry.emit("BpmnGenerationAgent >> nested", RunPhase.READINESS, ArtifactState.NONE, "sentinel")
+        val update = registry.subscribe("BpmnGenerationAgent >> nested")
+            .take(1).collectList().block(TIMEOUT)!!.single()
+        assertEquals("sentinel", update.summary)
+        assertEquals(1L, update.seq)
+    }
+
+    @Test
+    fun `a primary run finishing without a BpmnResult still emits a terminal FAILED`() {
+        // The filter is on which process, never on the absence of a result: a primary run that
+        // finishes empty is a real failure and must not be swallowed.
+        val process = primaryProcess("proc-primary-empty")
+        `when`(process.last(BpmnResult::class.java)).thenReturn(null)
+
+        channel.onProcessEvent(AgentProcessCompletedEvent(process))
+
+        val update = registry.subscribe("proc-primary-empty").collectList().block(TIMEOUT)!!.single()
+        assertEquals(RunOutcome.FAILED, (update as RunUpdate.Terminal).outcome)
+        assertEquals("BPMN generation did not complete.", update.summary)
+    }
+
+    /**
+     * A root process running the generation agent — the one process the browser subscribes to,
+     * and the only one this channel may emit for. See [nonPrimaryProcess].
+     */
+    private fun primaryProcess(id: String): AgentProcess = agentProcess(id, "BpmnGenerationAgent", root = true)
+
+    /** A process this channel must ignore: any agent but the deployed generation agent, or a
+     * nested sub-process of it. */
+    private fun nonPrimaryProcess(id: String, agentName: String, root: Boolean): AgentProcess =
+        agentProcess(id, agentName, root)
+
+    private fun agentProcess(id: String, agentName: String, root: Boolean): AgentProcess {
+        val process = mock(AgentProcess::class.java)
+        val agent = mock(Agent::class.java)
+        `when`(process.id).thenReturn(id)
+        `when`(agent.name).thenReturn(agentName)
+        `when`(process.agent).thenReturn(agent)
+        `when`(process.parentId).thenReturn(if (root) null else "parent-run")
+        return process
+    }
+
     private fun processWithForm(
         id: String,
         prompt: String,
         options: List<String> = emptyList(),
     ): AgentProcess {
-        val process = mock(AgentProcess::class.java)
-        `when`(process.id).thenReturn(id)
+        val process = primaryProcess(id)
         val controls = options.takeIf { it.isNotEmpty() }
             ?.let { values ->
                 listOf(

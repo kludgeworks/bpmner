@@ -8,9 +8,7 @@ package dev.groknull.bpmner.pipeline
 import com.embabel.agent.core.AgentPlatform
 import com.embabel.agent.core.AgentProcess
 import com.embabel.agent.core.Budget
-import com.embabel.agent.core.Goal
 import com.embabel.agent.core.ProcessOptions
-import com.embabel.agent.spi.common.Constants
 import com.embabel.agent.test.integration.EmbabelMockitoIntegrationTest
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
@@ -19,7 +17,6 @@ import dev.groknull.bpmner.authoring.BpmnGenerationStatus
 import dev.groknull.bpmner.authoring.BpmnResult
 import dev.groknull.bpmner.authoring.internal.adapter.outbound.FlatBpmnDefinition
 import dev.groknull.bpmner.contract.FlatContractTestFixtures
-import dev.groknull.bpmner.pipeline.internal.adapter.inbound.RunUpdateSinkRegistry
 import dev.groknull.bpmner.prompt.PromptFixtures
 import dev.groknull.bpmner.readiness.BpmnReadinessInvoker
 import dev.groknull.bpmner.readiness.ProcessInputAssessment
@@ -36,7 +33,6 @@ import org.springframework.test.context.TestPropertySource
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.xmlunit.assertj.XmlAssert
 import org.xmlunit.assertj.XmlAssert.assertThat
-import java.time.Duration
 
 /**
  * End-to-end offline test of the generation pipeline: the LLM stages are stubbed with the canned
@@ -47,7 +43,8 @@ import java.time.Duration
  * and sequence-flow shape, every outline id surviving into the rendered model), not a self-minted
  * byte-golden — so it catches a deterministic stage dropping/mangling elements without being circular.
  * BPMN validity itself is already enforced inside the pipeline (the `layout` action errors on XSD
- * corruption), so it is not re-asserted here.
+ * corruption), so it is not re-asserted here. The RunUpdate stream a real run delivers is
+ * `BpmnRunUpdateDeliveryTest`; this test asserts structure only.
  */
 @SpringBootTest
 @ActiveProfiles("offline")
@@ -65,9 +62,6 @@ class BpmnGenerationPipelineTest : EmbabelMockitoIntegrationTest() {
 
     @Autowired
     private lateinit var objectMapper: ObjectMapper
-
-    @Autowired
-    private lateinit var runUpdateSinkRegistry: RunUpdateSinkRegistry
 
     // The orchestrator's assessReadiness action delegates to BpmnReadinessInvoker, whose production
     // implementation spins a nested agent sub-process that is unmockable offline. Readiness is
@@ -124,7 +118,7 @@ class BpmnGenerationPipelineTest : EmbabelMockitoIntegrationTest() {
         whenCreateObject({ true }, AlignmentFindings::class.java)
             .thenReturn(loadFixtureObject("canonicalAlignment.json"))
 
-        val process = runGoalProcess()
+        val process = runGenerationProcess()
         val result = process.last(BpmnResult::class.java)!!
 
         assertEquals(BpmnGenerationStatus.GENERATED, result.status)
@@ -161,23 +155,15 @@ class BpmnGenerationPipelineTest : EmbabelMockitoIntegrationTest() {
         expectedIds.forEach { id ->
             assertXml(xml).nodesByXPath("//*[@id='$id']").exist()
         }
-
-        assertRunUpdateStream(process.id)
     }
 
-    // Runs through an explicit AgentProcess (not AgentPlatformTypedOps.transform) so the process
-    // id is in hand — needed by assertRunUpdateStream to read back the emitted RunUpdate stream.
-    // Mirrors BpmnAgentFlowSystemTest.runGateProcess's goal-agent shape.
-    private fun runGoalProcess(): AgentProcess {
-        val goalAgent = platform.createAgent(
-            name = "goal-BpmnResult",
-            provider = Constants.EMBABEL_PROVIDER,
-            description = "Goal agent for BpmnResult",
-        ).withSingleGoal(
-            Goal(name = "create-BpmnResult", description = "Create BpmnResult", satisfiedBy = BpmnResult::class.java),
-        )
+    // Runs the deployed generation agent, the same one AgentPlatformBpmnAgentInvoker resolves in
+    // production, synchronously so the finished process is in hand.
+    private fun runGenerationProcess(): AgentProcess {
+        val agent = platform.agents().find { it.name == GENERATION_AGENT_NAME }
+            ?: error("Agent platform has no agent named '$GENERATION_AGENT_NAME'")
         return platform.createAgentProcessFrom(
-            goalAgent,
+            agent,
             // Headroom over the happy path, not a budget assertion. Each stage that can fail
             // returns a sealed ready/failed pair, so its success branch costs one extra action to
             // unwrap; production runs on a far larger budget.
@@ -186,38 +172,10 @@ class BpmnGenerationPipelineTest : EmbabelMockitoIntegrationTest() {
         ).run()
     }
 
-    // Asserts a real run actually produces an ordered RunUpdate sequence — every other
-    // RunUpdate test feeds itself fabricated updates directly. The sink is a bounded replay
-    // buffer and emitTerminal() completes it, so subscribing after a completed run still
-    // replays the whole sequence with no timing coordination needed.
-    private fun assertRunUpdateStream(processId: String) {
-        val updates = runUpdateSinkRegistry.subscribe(processId).collectList().block(Duration.ofSeconds(5))!!
-        assertTrue(updates.isNotEmpty(), "expected at least one RunUpdate from a real run")
-
-        updates.forEachIndexed { index, update ->
-            assertEquals((index + 1).toLong(), update.seq, "seq must be strictly increasing from 1")
-        }
-
-        assertEquals(1, updates.count { it is RunUpdate.Terminal }, "exactly one terminal update")
-        val terminal = updates.last()
-        assertTrue(terminal is RunUpdate.Terminal, "the terminal update must be last")
-        assertEquals(RunOutcome.COMPLETED, (terminal as RunUpdate.Terminal).outcome)
-
-        val graphDraftIndex = updates.indexOfFirst { it.artifactState == ArtifactState.GRAPH_DRAFT }
-        val firstXmlDraftIndex = updates.indexOfFirst { it.artifactState == ArtifactState.XML_DRAFT }
-        assertTrue(graphDraftIndex >= 0, "expected a GRAPH_DRAFT update on a real run")
-        assertTrue(firstXmlDraftIndex >= 0, "expected an XML_DRAFT update on a real run")
-        assertTrue(graphDraftIndex < firstXmlDraftIndex, "GRAPH_DRAFT must be delivered before the first XML_DRAFT")
-
-        for (i in 1 until updates.size) {
-            assertTrue(
-                updates[i].phase.ordinal >= updates[i - 1].phase.ordinal,
-                "phase must never regress: ${updates[i - 1].phase} -> ${updates[i].phase}",
-            )
-        }
-    }
-
     private companion object {
+        // Matches the production invoker's lookup; @Agent derives the name from the class.
+        private const val GENERATION_AGENT_NAME = "BpmnGenerationAgent"
+
         private val NAMESPACES = mapOf(
             "bpmn" to "http://www.omg.org/spec/BPMN/20100524/MODEL",
         )

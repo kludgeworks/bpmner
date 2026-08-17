@@ -9,21 +9,21 @@ import path from "node:path"
 import { describe, it } from "node:test"
 
 /**
- * Regression guard for the blank canvas control icons (issue #698): the
- * zoom/export controls must render inline SVG, never a `bpmn-icon-*` class
- * targeting a codepoint the vendored bpmn-font does not define.
+ * The canvas zoom and export controls render their icons as inline SVG. A `bpmn-icon-*` class
+ * is not a valid source for them: the vendored bpmn-font defines no codepoint for these glyphs,
+ * so such a class renders a blank control.
  *
- * Asserts against the shipped artifacts directly — the studio page and the
- * standalone preview template — rather than a hand-maintained test fixture, so
- * a regression is caught even when a fixture drifts out of sync.
+ * Asserts against the shipped artifacts — the studio page and the standalone preview template —
+ * rather than a hand-maintained fixture, so the assertion cannot drift from what is served.
  */
 
-const CONTROL_IDS = [
-	"zoom-reset-btn",
-	"zoom-in-btn",
-	"zoom-out-btn",
-	"download-diagram-btn",
-	"download-svg-btn",
+/** Icon-only controls: with no text, a failed glyph leaves a blank button. */
+const ICON_CONTROL_IDS = ["zoom-reset-btn", "zoom-in-btn", "zoom-out-btn"]
+
+/** The studio's export controls carry their own text, so they need no icon at all. */
+const LABELLED_CONTROLS: Array<[string, string]> = [
+	["download-diagram-btn", "BPMN 2.0 XML"],
+	["download-svg-btn", "SVG"],
 ]
 
 /** Glyph names with no counterpart in the vendored bpmn-font. */
@@ -43,7 +43,7 @@ function assertControlsUseInlineSvg(html: string, label: string): void {
 		PHANTOM_GLYPHS,
 		`${label} still references a canvas-control glyph class`,
 	)
-	for (const id of CONTROL_IDS) {
+	for (const id of ICON_CONTROL_IDS) {
 		assert.match(
 			html,
 			new RegExp(`id="${id}"[\\s\\S]{0,400}?<svg`),
@@ -58,6 +58,19 @@ describe("canvas control icons render as inline SVG", () => {
 			readArtifact("web/src/static/index.html"),
 			"web/src/static/index.html",
 		)
+	})
+
+	it("studio export controls are labelled with text", () => {
+		const html = readArtifact("web/src/static/index.html")
+		for (const [id, label] of LABELLED_CONTROLS) {
+			assert.match(
+				html,
+				new RegExp(
+					`id="${id}"[\\s\\S]{0,400}?${label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`,
+				),
+				`export control #${id} has no visible label`,
+			)
+		}
 	})
 
 	it("standalone preview template", () => {
