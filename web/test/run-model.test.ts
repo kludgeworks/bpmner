@@ -8,6 +8,7 @@ import { describe, it } from "node:test"
 import {
 	answerSubmitted,
 	applyUpdate,
+	clearPause,
 	displayRows,
 	groupRows,
 	initialRunState,
@@ -230,6 +231,28 @@ describe("run model", () => {
 				.map((row) => row.round),
 			[1, 2],
 		)
+	})
+
+	it("clears a stale pause without touching the occurrences", () => {
+		// A 409 on the answer means another client already resumed the run; the row that
+		// actually closes AWAITING_INPUT is still in flight on the stream.
+		seq = 0
+		const state = run(
+			startRun(0),
+			progress("READINESS", "NONE", { verdict: "NEEDS_CLARIFICATION" }),
+			progress("AWAITING_INPUT", "NONE", { round: "1", maxRounds: "3" }),
+		)
+		assert.equal(state.paused, true)
+
+		const cleared = clearPause(state)
+		assert.equal(cleared.paused, false)
+		assert.deepEqual(cleared.occurrences, state.occurrences)
+
+		const advanced = run(
+			cleared,
+			progress("READINESS", "NONE", { verdict: "READY" }),
+		)
+		assert.equal(active(advanced), "CONTRACT")
 	})
 
 	it("drops replayed updates and counts them", () => {

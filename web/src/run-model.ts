@@ -139,6 +139,15 @@ export function answerSubmitted(state: RunState, at: number): RunState {
 	}
 }
 
+/**
+ * Clears a stale pause after an answer was rejected with `409` — another client's answer
+ * already resumed the run. The occurrences are left as they are: the update that actually
+ * closes the `AWAITING_INPUT` row is still in flight on the stream and applies normally.
+ */
+export function clearPause(state: RunState): RunState {
+	return { ...state, paused: false }
+}
+
 /** Applies one `RunUpdate`. Idempotent per `seq`: a replayed update is counted and dropped. */
 export function applyUpdate(
 	state: RunState,

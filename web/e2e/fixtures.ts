@@ -107,6 +107,22 @@ export const AWAITING_ANSWER: Update[] = [
 	},
 ]
 
+/**
+ * A run with no `detail.status` at all — the shape of the four non-status terminals (aborted,
+ * platform failure, stuck, no result), none of which is one of the seven `BpmnGenerationStatus`
+ * values. `artifactState: "NONE"` still drives the empty state, but the badge and headline must
+ * not read as a generated diagram.
+ */
+export const ABORTED_NO_STATUS: Update[] = [
+	{
+		seq: 1,
+		phase: "FINISHED",
+		artifactState: "NONE",
+		summary: "BPMN generation stopped unexpectedly.",
+		outcome: "FAILED",
+	},
+]
+
 const MINIMAL_BPMN = `<?xml version="1.0" encoding="UTF-8"?>
 <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
   xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
@@ -123,6 +139,12 @@ const MINIMAL_BPMN = `<?xml version="1.0" encoding="UTF-8"?>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>
 </bpmn:definitions>`
+
+/** The minimal diagram with its start event renamed, so two runs' diagrams are distinguishable
+ * on screen without inspecting bpmn-js internals. */
+export function bpmnWithLabel(label: string): string {
+	return MINIMAL_BPMN.replace('name="Start"', `name="${label}"`)
+}
 
 const STATIC_ROOT = path.resolve(__dirname, "../src/static")
 const BUNDLE_DIR = path.resolve(__dirname, "../../bazel-bin/web/dist/static/js")
@@ -183,6 +205,7 @@ function bundleName(): string {
 export async function stubBackend(
 	page: Page,
 	updates: Update[],
+	options: { answersStatus?: number } = {},
 ): Promise<{ answers: string[] }> {
 	const answers: string[] = []
 
@@ -206,7 +229,7 @@ export async function stubBackend(
 
 	await page.route("**/answers", async (route) => {
 		answers.push(route.request().postData() ?? "")
-		await route.fulfill({ status: 202, body: "" })
+		await route.fulfill({ status: options.answersStatus ?? 202, body: "" })
 	})
 
 	await page.route("**/bpmn", async (route) => {

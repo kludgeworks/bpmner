@@ -21,6 +21,7 @@ import { renderSummary } from "./result-view"
 import {
 	answerSubmitted,
 	applyUpdate,
+	clearPause,
 	displayRows,
 	initialRunState,
 	type RunState,
@@ -109,6 +110,8 @@ let sawTerminal = false
 let announced = ""
 /** Set while the transport is down; that time is not the run's, so the clock excludes it. */
 let disconnectedAt: number | null = null
+/** Bumped on every new run, so a stale async continuation from a previous run is a no-op. */
+let runToken = 0
 
 function elapsed(): number {
 	if (startedAt === 0) return 0
@@ -186,6 +189,7 @@ generateBtn.addEventListener("click", async () => {
 })
 
 function beginRun(description: string): void {
+	runToken += 1
 	startedAt = Date.now()
 	pausedFor = 0
 	pausedAt = null
@@ -243,17 +247,25 @@ setInterval(() => {
 }, TICK_MS)
 
 function connect(url: string): void {
-	eventSource = new EventSource(url)
-	eventSource.onmessage = (event) => {
+	const source = new EventSource(url)
+	eventSource = source
+	source.onmessage = (event) => {
 		const update = parseRunUpdate(event.data)
 		if (!update) return
 		onUpdate(update)
 	}
-	eventSource.onerror = () => {
+	source.onerror = () => {
 		// The server completes the stream right after the terminal update, and EventSource
-		// reports a graceful close the same way as a drop. Only a close with no terminal seen
-		// is a real disconnect.
-		if (sawTerminal) return
+		// reports a graceful close the same way as a drop — `classifyStreamError` tells a
+		// genuine disconnect apart from that, and a permanently closed connection (an evicted
+		// run's 404) apart from one the browser will keep retrying.
+		const outcome = classifyStreamError(source.readyState, sawTerminal)
+		if (outcome === "graceful") return
+		if (outcome === "gone") {
+			showRunGone()
+			return
+		}
+		if (disconnectedAt === null) disconnectedAt = Date.now()
 		streamBannerText.textContent = "Connection lost — reconnecting…"
 		streamBanner.hidden = false
 		appendTelemetry(
@@ -346,12 +358,18 @@ function showClarify(update: RunUpdate): void {
 				// The run is no longer parked; the stream carries on without this answer.
 				clarifyRegion.hidden = true
 				clarifyRegion.replaceChildren()
+				if (pausedAt !== null) {
+					pausedFor += Date.now() - pausedAt
+					pausedAt = null
+				}
+				state = clearPause(state)
 				appendTelemetry(
 					telemetryLog,
 					"client",
 					elapsed(),
 					"answer rejected · run not awaiting input",
 				)
+				renderRun()
 				return
 			}
 			throw new Error(`${response.status}`)
@@ -372,6 +390,9 @@ function showClarify(update: RunUpdate): void {
 /* ── result ──────────────────────────────────────────────────────────────── */
 
 async function finish(update: RunUpdate): Promise<void> {
+	// Captured before any await: if the user starts a new run before this one's diagram fetch
+	// settles, the continuation below must recognise it no longer belongs to the current run.
+	const token = runToken
 	// Close synchronously, before any await: the server has already completed the stream, and a
 	// close observed while we are fetching would surface as a spurious connection error.
 	sawTerminal = true
@@ -385,7 +406,12 @@ async function finish(update: RunUpdate): Promise<void> {
 	)
 
 	renderRun()
-	const status = update.detail?.status ?? "GENERATED"
+	// The seven `BpmnGenerationStatus` values all carry `detail.status`; the remaining terminals
+	// (aborted, platform failure, stuck, no result) don't, and defaulting them to a success
+	// status would badge and headline a failed run as generated.
+	const status =
+		update.detail?.status ??
+		(update.outcome === "FAILED" ? "FAILED" : "GENERATED")
 	const empty = update.artifactState === "NONE"
 
 	resultBadge.textContent = status.replace(/_/g, " ").toLowerCase()
@@ -405,7 +431,7 @@ async function finish(update: RunUpdate): Promise<void> {
 		showEmptyResult(update.summary, update.detail?.failureDetail ?? "")
 		return
 	}
-	await loadDiagram()
+	await loadDiagram(token)
 }
 
 function headlineFor(status: string, update: RunUpdate): string {
@@ -424,9 +450,16 @@ function headlineFor(status: string, update: RunUpdate): string {
 	}
 }
 
-async function loadDiagram(retried = false): Promise<void> {
+/**
+ * `token` pins this call to the run that started it. `processId` and the modeler are shared,
+ * mutable state a later run can overwrite before this fetch or its retry settles — every
+ * continuation past an `await` checks the token before touching either.
+ */
+async function loadDiagram(token: number, retried = false): Promise<void> {
+	const id = processId
 	try {
-		const response = await fetch(`api/bpmn/generations/${processId}/bpmn`)
+		const response = await fetch(`api/bpmn/generations/${id}/bpmn`)
+		if (token !== runToken) return
 		const outcome = classifyArtifactResponse(response.status)
 		if (outcome === "retry" && !retried) {
 			// The endpoint 409s until the run is terminal, so reaching it means we fetched early.
@@ -436,7 +469,9 @@ async function loadDiagram(retried = false): Promise<void> {
 				elapsed(),
 				"GET …/bpmn → 409 · retrying once",
 			)
-			setTimeout(() => void loadDiagram(true), 500)
+			setTimeout(() => {
+				if (token === runToken) void loadDiagram(token, true)
+			}, 500)
 			return
 		}
 		if (outcome === "gone") {
@@ -453,6 +488,7 @@ async function loadDiagram(retried = false): Promise<void> {
 			{ importXML: (x) => modeler.importXML(x) },
 			xml,
 		)
+		if (token !== runToken) return
 		if (imported.status !== "drawn") {
 			canvasStatus.textContent = "Diagram unavailable"
 			canvasStatus.hidden = false
@@ -460,10 +496,12 @@ async function loadDiagram(retried = false): Promise<void> {
 		}
 		canvasEl.classList.add("canvas--entrance")
 		requestAnimationFrame(() => {
+			if (token !== runToken) return
 			fitInitialViewport(canvasViewport)
 			setCanvasReady(true)
 		})
 	} catch {
+		if (token !== runToken) return
 		canvasStatus.textContent = "Diagram unavailable"
 		canvasStatus.hidden = false
 	}

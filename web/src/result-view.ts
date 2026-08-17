@@ -43,9 +43,11 @@ export function buildMetrics(state: RunState): Metric[] {
 		})
 	}
 
-	const repairs = state.occurrences.filter(
-		(row) => row.phase === "VALIDATION" && row.attempt !== undefined,
-	).length
+	// The `VALIDATION` occurrence is updated in place across repair rounds (ADDENDUM-1), so
+	// there is only ever one row to find — but its `attempt` is overwritten with each round's
+	// `attemptNumber`, which the server increments, so the last value already is the total.
+	const validation = state.occurrences.find((row) => row.phase === "VALIDATION")
+	const repairs = validation?.attempt ?? 0
 	if (repairs > 0)
 		metrics.push({ label: "Repair attempts", value: String(repairs) })
 	return metrics

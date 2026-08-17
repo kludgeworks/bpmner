@@ -103,6 +103,42 @@ describe("result view", () => {
 		)
 	})
 
+	it("counts every repair round, not just the last diagnostic occurrence", () => {
+		// The VALIDATION row is updated in place across repeats (ADDENDUM-1), so a filter over
+		// occurrences can never see more than one row — the count must come from the highest
+		// attemptNumber the run reported, not from how many rows carry one.
+		seq = 0
+		let state = startRun(0)
+		state = applyUpdate(
+			state,
+			at("READINESS", "NONE", { verdict: "READY" }),
+			12_000,
+		)
+		state = applyUpdate(
+			state,
+			at("CONTRACT", "NONE", { issueCount: "0" }),
+			24_000,
+		)
+		state = applyUpdate(state, at("OUTLINE", "GRAPH_DRAFT"), 40_000)
+		state = applyUpdate(state, at("DRAFT", "XML_DRAFT"), 41_000)
+		state = applyUpdate(
+			state,
+			at("VALIDATION", "DIAGNOSTIC", { attemptNumber: "1" }),
+			48_000,
+		)
+		state = applyUpdate(
+			state,
+			at("VALIDATION", "DIAGNOSTIC", { attemptNumber: "2" }),
+			55_000,
+		)
+		state = applyUpdate(state, at("VALIDATION", "XML_DRAFT"), 60_000)
+
+		assert.deepEqual(
+			buildMetrics(state).find((metric) => metric.label === "Repair attempts"),
+			{ label: "Repair attempts", value: "2" },
+		)
+	})
+
 	it("times each stage from the gap between updates, scaled against the longest", () => {
 		const timings = buildTimings(runWithRepair())
 

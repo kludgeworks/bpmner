@@ -4,7 +4,7 @@
 	"scripts": {
 		"vale:docs": "node tools/vale/vale-test.mjs docs",
 		"vale:fixtures": "node tools/vale/vale-test.mjs fixtures",
-		"test:e2e": "playwright test --config web/e2e/playwright.config.ts"
+		"test:e2e": "bazel build //web:bundle && playwright test --config web/e2e/playwright.config.ts"
 	},
 	"dependencies": {
 		"bpmn-js": "^18.16.1",
