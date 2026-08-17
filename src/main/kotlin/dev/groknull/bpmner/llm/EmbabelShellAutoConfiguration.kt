@@ -9,6 +9,7 @@ import com.embabel.agent.spi.logging.ColorPalette
 import com.embabel.agent.spi.logging.LoggingPersonality
 import org.slf4j.LoggerFactory
 import org.springframework.boot.autoconfigure.AutoConfiguration
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.context.annotation.Bean
 
@@ -16,6 +17,7 @@ import org.springframework.context.annotation.Bean
 @AutoConfiguration
 class EmbabelShellAutoConfiguration {
     @Bean
+    @ConditionalOnBean(ColorPalette::class)
     @ConditionalOnMissingBean
     fun loggingPersonality(palette: ColorPalette): LoggingPersonality = object : LoggingPersonality {
         override val colorPalette = palette

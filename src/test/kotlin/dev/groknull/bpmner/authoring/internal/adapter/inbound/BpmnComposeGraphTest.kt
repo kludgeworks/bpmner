@@ -5,8 +5,6 @@
 
 package dev.groknull.bpmner.authoring.internal.adapter.inbound
 
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import com.fasterxml.jackson.module.kotlin.readValue
 import dev.groknull.bpmner.authoring.BpmnAgentInvoker
 import dev.groknull.bpmner.authoring.BpmnContractConformancePort
 import dev.groknull.bpmner.authoring.BpmnContractFidelityPort
@@ -24,6 +22,8 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito
 import org.springframework.context.ApplicationEventPublisher
+import tools.jackson.module.kotlin.jacksonObjectMapper
+import tools.jackson.module.kotlin.readValue
 
 /**
  * Direct unit test on the highest-risk deterministic stage that was inlined and hand-edited during the

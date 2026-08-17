@@ -5,11 +5,11 @@
 
 package dev.groknull.bpmner
 
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import com.fasterxml.jackson.module.kotlin.readValue
 import dev.groknull.bpmner.readiness.ClarificationQuestion
 import dev.groknull.bpmner.readiness.ReadinessDimension
 import dev.groknull.bpmner.readiness.SourceEvidence
+import tools.jackson.module.kotlin.jacksonObjectMapper
+import tools.jackson.module.kotlin.readValue
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -26,7 +26,7 @@ import kotlin.test.assertTrue
  * `sourceType`, absorb that failure signature.
  */
 class BpmnGuardrailTypesJacksonTest {
-    private val objectMapper = jacksonObjectMapper().findAndRegisterModules()
+    private val objectMapper = jacksonObjectMapper()
 
     @Test
     fun `ReadinessDimension accepts every surviving alias via JsonAlias`() {

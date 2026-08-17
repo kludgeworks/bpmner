@@ -6,10 +6,10 @@
 package dev.groknull.bpmner.prompts
 
 import com.embabel.common.textio.template.JinjavaTemplateRenderer
-import com.fasterxml.jackson.databind.ObjectMapper
 import dev.groknull.bpmner.bpmn.BpmnRequest
 import dev.groknull.bpmner.readiness.BpmnReadinessThresholdsConfig
 import dev.groknull.bpmner.readiness.ClarificationExchange
+import tools.jackson.databind.json.JsonMapper
 import kotlin.test.Test
 import kotlin.test.assertTrue
 
@@ -19,7 +19,7 @@ import kotlin.test.assertTrue
  */
 class AssessReadinessTemplateTest {
     private val renderer = JinjavaTemplateRenderer()
-    private val objectMapper = ObjectMapper()
+    private val objectMapper = JsonMapper()
     private val config = BpmnReadinessThresholdsConfig()
 
     @Test

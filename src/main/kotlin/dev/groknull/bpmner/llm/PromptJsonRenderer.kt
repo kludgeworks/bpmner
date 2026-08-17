@@ -18,7 +18,10 @@ import tools.jackson.databind.json.JsonMapper
 @Component
 class PromptJsonRenderer(objectMapper: JsonMapper) {
     private val writer: ObjectWriter = objectMapper.rebuild()
-        .changeDefaultPropertyInclusion { it.withValueInclusion(JsonInclude.Include.NON_EMPTY) }
+        .changeDefaultPropertyInclusion {
+            it.withValueInclusion(JsonInclude.Include.NON_EMPTY)
+                .withContentInclusion(JsonInclude.Include.NON_EMPTY)
+        }
         .build()
         .writer()
 

@@ -5,11 +5,11 @@
 
 package dev.groknull.bpmner.pipeline
 
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import tools.jackson.module.kotlin.jacksonObjectMapper
 import kotlin.reflect.KClass
 import kotlin.reflect.full.memberProperties
 
@@ -110,7 +110,7 @@ class RunUpdateTest {
         val json = MAPPER.readTree(MAPPER.writeValueAsString(terminal))
         assertEquals(
             setOf("seq", "phase", "artifactState", "summary", "detail", "outcome"),
-            json.fieldNames().asSequence().toSet(),
+            json.propertyNames().asSequence().toSet(),
         )
         assertEquals("FINISHED", json["phase"].asText())
         assertEquals("FINAL", json["artifactState"].asText())
@@ -130,7 +130,7 @@ class RunUpdateTest {
         assertFalse(json.has("outcome"), "a Progress update must never carry an outcome key")
         assertEquals(
             setOf("seq", "phase", "artifactState", "summary", "detail"),
-            json.fieldNames().asSequence().toSet(),
+            json.propertyNames().asSequence().toSet(),
         )
     }
 

@@ -29,7 +29,11 @@ internal class NativeStructuredOutputSchemaShapeTest {
     private val objectMapper = jacksonObjectMapper()
 
     private fun schemaOf(clazz: Class<Any>): JsonNode {
-        val json = FilteringJacksonOutputConverter(clazz, objectMapper, Predicate { true }).jsonSchema
+        val json = FilteringJacksonOutputConverter(
+            clazz = clazz,
+            objectMapper = objectMapper,
+            fieldFilter = Predicate { true },
+        ).jsonSchema
         return objectMapper.readTree(json)
     }
 
@@ -83,9 +87,9 @@ internal class NativeStructuredOutputSchemaShapeTest {
         // Mirrors BpmnLlmRepairApplier.kt's `.creating(BpmnRepairPatch::class.java)
         // .withoutProperties("node", "edge")` for the repair-label role.
         val json = FilteringJacksonOutputConverter(
-            RepairTestFixtures.BPMN_REPAIR_PATCH_CLASS,
-            objectMapper,
-            Predicate { field -> field.name != "node" && field.name != "edge" },
+            clazz = RepairTestFixtures.BPMN_REPAIR_PATCH_CLASS,
+            objectMapper = objectMapper,
+            fieldFilter = Predicate { field -> field.name != "node" && field.name != "edge" },
         ).jsonSchema
         val schema = objectMapper.readTree(json)
         assertNoCombinators(schema, "label-only BpmnRepairPatch")

@@ -23,6 +23,7 @@ import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 /**
  * A serialiser that drops a field passes every offline gate and fails only here: round-trip
@@ -102,4 +103,25 @@ class PromptJsonRendererTest {
         assertFalse(json.contains("iteration"))
         assertFalse(json.contains("boundaryEvents"))
     }
+
+    @Test
+    fun `preserves declaration order and omits empty map content`() {
+        val json = renderer.render(
+            OrderedValues(
+                first = "first",
+                second = "second",
+                values = mapOf("empty" to "", "value" to "kept"),
+            ),
+        )
+
+        assertTrue(json.indexOf("\"first\"") < json.indexOf("\"second\""))
+        assertFalse(json.contains("\"empty\""))
+        assertContains(json, "\"value\":\"kept\"")
+    }
+
+    private data class OrderedValues(
+        val first: String,
+        val second: String,
+        val values: Map<String, String>,
+    )
 }

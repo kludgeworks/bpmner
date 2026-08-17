@@ -32,7 +32,11 @@ internal class BpmnRepairPatchSchemaFilterTest {
     private val objectMapper = jacksonObjectMapper()
 
     private fun schemaFor(filter: (java.lang.reflect.Field) -> Boolean): String {
-        val converter = FilteringJacksonOutputConverter(BpmnRepairPatch::class.java, objectMapper, filter)
+        val converter = FilteringJacksonOutputConverter(
+            clazz = BpmnRepairPatch::class.java,
+            objectMapper = objectMapper,
+            fieldFilter = filter,
+        )
         return converter.jsonSchema
     }
 
