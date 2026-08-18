@@ -46,3 +46,27 @@ abbreviationReplacements: Mapping<String, String> = new {
   ["DOC"] = "document"
   ["ITBL"] = "itinerary block"
 }
+
+/// Per-shape visual style override. All properties are optional; unset properties fall back
+/// to [ThemeConfig]'s global defaults.
+class ShapeStyle {
+  fill: String?
+  stroke: String?
+  fontColor: String?
+  fontName: String?
+  fontSize: Number?
+  fontWeight: String?
+}
+
+/// Global default visual theme applied to generated BPMN diagrams, with optional per-BPMN-type
+/// overrides. Matches the `bpmner` web UI's `--sev-info` / `--ink` / `--paper` design tokens.
+class ThemeConfig {
+  primaryColor: String = "#2b6cb0"
+  secondaryColor: String = "#16181d"
+  backgroundColor: String = "#ffffff"
+  fontName: String?
+  fontSize: Number?
+  shapeOverrides: Mapping<String, ShapeStyle> = new {}
+}
+
+theme: ThemeConfig = new {}

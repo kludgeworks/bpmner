@@ -20,13 +20,15 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean
 /**
  * Validates that the `layout` module context bootstraps and exposes its root-package ports.
  *
- * BootstrapMode.DIRECT_DEPENDENCIES (ADR-009 (bootstrap tiers) Tier 2): `layout` grants only `bpmn` and
- * `conformance`; `ElkBpmnLayouter` has no cross-module Spring-bean dependencies of its own.
- * The `conformance` adapters constructor-inject two `ruleset` `@ApplicationRing` interfaces
- * (`RuleEngine`, `RuleRegistry`) that are outside the DIRECT closure — `ruleset` is
+ * BootstrapMode.DIRECT_DEPENDENCIES (ADR-009 (bootstrap tiers) Tier 2): `layout` grants `bpmn`,
+ * `conformance`, and `ruleset`. `ElkBpmnLayouter` directly depends on `ruleset`'s
+ * `BpmnerLintConfig` for [dev.groknull.bpmner.layout.internal.ThemeDecorator]'s theme, mirroring
+ * how `repair`'s `StripTypeWordsHandler` already shares the same conventions source. The
+ * `conformance` adapters separately constructor-inject two `ruleset` `@ApplicationRing`
+ * interfaces (`RuleEngine`, `RuleRegistry`) that are outside the DIRECT closure — `ruleset` is
  * `conformance`'s dependency, not `layout`'s. Since `layout` never references either port
- * directly (zero `import dev.groknull.bpmner.ruleset` under `layout/`), both are mocked here
- * as Tier-2 transitive non-collaborators (ADR-009 (bootstrap tiers) lines 955–964, 968–971).
+ * directly, both are mocked here as Tier-2 transitive non-collaborators (ADR-009 (bootstrap
+ * tiers) lines 955–964, 968–971).
  * No `@EnableAgents` is needed: no bean in {layout, bpmn, conformance} injects `AgentPlatform`.
  * API keys are stubbed so no live LLM call is made at startup.
  * (S7 — ADR-009 (bootstrap tiers); ARCHITECTURE §5 S7)
