@@ -123,5 +123,65 @@ class ThemeDecoratorTest {
         assertXml(result)
             .nodesByXPath("//bpmndi:BPMNShape[@bpmnElement='Start_1'][@bioc:fill='#abcdef'][@bioc:stroke='#fedcba']")
             .exist()
+        // The missing `color:` counterpart must be backfilled with the author's `bioc:` value,
+        // not the theme fallback — cross-viewer compatibility must not leak the theme in.
+        assertXml(result)
+            .nodesByXPath(
+                "//bpmndi:BPMNShape[@bpmnElement='Start_1']" +
+                    "[@color:background-color='#abcdef'][@color:border-color='#fedcba']",
+            )
+            .exist()
+    }
+
+    @Test
+    fun `pre-existing OMG-only color on a shape and edge is not overwritten by the theme`() {
+        val xmlWithOmgColor = """<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+                  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+                  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+                  xmlns:color="http://www.omg.org/spec/BPMN/non-normative/color/1.0"
+                  id="Definitions_theme_omg" targetNamespace="https://groknull.dev/bpmner">
+  <bpmn:process id="Process_1" isExecutable="true">
+    <bpmn:startEvent id="Start_1"><bpmn:outgoing>Flow_1</bpmn:outgoing></bpmn:startEvent>
+    <bpmn:endEvent id="End_1"><bpmn:incoming>Flow_1</bpmn:incoming></bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="Start_1" targetRef="End_1"/>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="Diagram_1">
+    <bpmndi:BPMNPlane id="Plane_1" bpmnElement="Process_1">
+      <bpmndi:BPMNShape id="Shape_1" bpmnElement="Start_1"
+                        color:background-color="#123123" color:border-color="#321321">
+        <dc:Bounds x="0" y="0" width="36" height="36"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Edge_1" bpmnElement="Flow_1" color:border-color="#654654">
+        <di:waypoint x="36" y="18"/>
+        <di:waypoint x="100" y="18"/>
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>"""
+        val theme = ThemeConfig(secondaryColor = "#112233", backgroundColor = "#445566")
+        val layouter = ElkBpmnLayouter(BpmnerLintConfig(theme = theme)).apply { registerElkLayoutAlgorithm() }
+
+        val result = layouter.layout(xmlWithOmgColor)
+
+        // The author's OMG-only colours must survive untouched...
+        assertXml(result)
+            .nodesByXPath(
+                "//bpmndi:BPMNShape[@bpmnElement='Start_1']" +
+                    "[@color:background-color='#123123'][@color:border-color='#321321']",
+            )
+            .exist()
+        assertXml(result)
+            .nodesByXPath("//bpmndi:BPMNEdge[@bpmnElement='Flow_1'][@color:border-color='#654654']")
+            .exist()
+        // ...and the missing `bioc:` counterpart must be backfilled with the author's value,
+        // not the theme fallback.
+        assertXml(result)
+            .nodesByXPath("//bpmndi:BPMNShape[@bpmnElement='Start_1'][@bioc:fill='#123123'][@bioc:stroke='#321321']")
+            .exist()
+        assertXml(result)
+            .nodesByXPath("//bpmndi:BPMNEdge[@bpmnElement='Flow_1'][@bioc:stroke='#654654']")
+            .exist()
     }
 }

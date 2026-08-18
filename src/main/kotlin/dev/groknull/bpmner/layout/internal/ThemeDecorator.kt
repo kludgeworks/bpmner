@@ -50,13 +50,20 @@ internal object ThemeDecorator {
         "bpmn:${elementType.typeName.replaceFirstChar { it.uppercase() }}"
 
     private fun DomElement.writeColorIfAbsent(fill: String?, stroke: String?) {
-        if (fill != null && !hasAttribute(BIOC_NS, "fill")) {
-            setAttribute(BIOC_NS, "fill", fill)
-            setAttribute(COLOR_NS, "background-color", fill)
-        }
-        if (stroke != null && !hasAttribute(BIOC_NS, "stroke")) {
-            setAttribute(BIOC_NS, "stroke", stroke)
-            setAttribute(COLOR_NS, "border-color", stroke)
-        }
+        if (fill != null) writeChannelIfAbsent(fallback = fill, biocName = "fill", colorName = "background-color")
+        if (stroke != null) writeChannelIfAbsent(fallback = stroke, biocName = "stroke", colorName = "border-color")
+    }
+
+    /**
+     * Resolves the existing author colour from either namespace (an imported diagram may carry
+     * only `bioc:` or only `color:`), then writes only whichever namespace attribute is missing —
+     * preserving an author colour found in either namespace rather than overwriting it, while
+     * still filling in the counterpart namespace for cross-viewer compatibility.
+     */
+    private fun DomElement.writeChannelIfAbsent(fallback: String, biocName: String, colorName: String) {
+        val existing = getAttribute(BIOC_NS, biocName) ?: getAttribute(COLOR_NS, colorName)
+        val value = existing ?: fallback
+        if (!hasAttribute(BIOC_NS, biocName)) setAttribute(BIOC_NS, biocName, value)
+        if (!hasAttribute(COLOR_NS, colorName)) setAttribute(COLOR_NS, colorName, value)
     }
 }
