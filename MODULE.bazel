@@ -61,8 +61,9 @@ register_toolchains("//tools/kotlin:kotlin_toolchain")
 # --- Maven Dependency Versions ---
 # The Embabel BOM (embabel-agent-dependencies, below) manages com.embabel.agent:* module
 # versions but carries no Spring version management, so Spring Boot / Spring AI are
-# pinned here for compatibility with the Embabel 1.5.0 baseline. Re-derive the
-# compatible versions from Embabel's dependency-management metadata on future bumps.
+# pinned here for compatibility with the Embabel 1.5.0 baseline. Spring Modulith sits
+# outside the Embabel BOM too. Re-derive the compatible Spring Boot / Spring AI / Spring
+# Modulith versions from Embabel's dependency-management metadata on future bumps.
 SPRING_BOOT_VERSION = "4.0.6"
 
 SPRING_AI_VERSION = "2.0.0"
@@ -90,16 +91,11 @@ JUNIT_JUPITER_VERSION = "6.0.3"
 
 ELK_VERSION = "0.12.0"
 
-SPRING_MODULITH_VERSION = "1.4.1"
+SPRING_MODULITH_VERSION = "2.0.7"
 
 JMOLECULES_VERSION = "2.0.1"
 
 JMOLECULES_INTEGRATIONS_VERSION = "0.33.0"
-
-# jmolecules-archunit must match the version bundled by spring-modulith-core (1.4.1 bundles 0.26.0).
-# Using 0.33.0 causes AbstractMethodError because the jMolecules ArchUnit API changed between
-# these versions, and Spring Modulith calls into it at compile-time-expected signatures.
-JMOLECULES_ARCHUNIT_VERSION = "0.26.0"
 
 # Must match the Pkl CLI version shipped by rules_pkl (see rules_pkl/pkl/private/constants.bzl).
 PKL_VERSION = "0.31.0"
@@ -150,8 +146,8 @@ maven.install(
         "org.jmolecules:jmolecules-cqrs-architecture:" + JMOLECULES_VERSION,
         "org.jmolecules.integrations:jmolecules-starter-ddd:" + JMOLECULES_INTEGRATIONS_VERSION,
         "org.jmolecules.integrations:jmolecules-spring:" + JMOLECULES_INTEGRATIONS_VERSION,
-        "org.jmolecules.integrations:jmolecules-archunit:" + JMOLECULES_ARCHUNIT_VERSION,
-        "com.tngtech.archunit:archunit:1.4.1",
+        "org.jmolecules.integrations:jmolecules-archunit:" + JMOLECULES_INTEGRATIONS_VERSION,
+        "com.tngtech.archunit:archunit:1.4.2",
         "com.github.spotbugs:spotbugs:4.9.8",
         "org.assertj:assertj-core:3.26.3",
         "org.xmlunit:xmlunit-assertj:2.10.0",
