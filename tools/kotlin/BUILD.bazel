@@ -5,7 +5,7 @@ load("@rules_kotlin//kotlin:core.bzl", "define_kt_toolchain")
 
 define_kt_toolchain(
     name = "kotlin_toolchain",
-    api_version = "2.2",
+    api_version = "2.3",
     jvm_target = "21",
-    language_version = "2.2",
+    language_version = "2.3",
 )
