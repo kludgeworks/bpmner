@@ -64,7 +64,7 @@ register_toolchains("//tools/kotlin:kotlin_toolchain")
 # pinned here for compatibility with the Embabel 1.5.0 baseline. Spring Modulith sits
 # outside the Embabel BOM too. Re-derive the compatible Spring Boot / Spring AI / Spring
 # Modulith versions from Embabel's dependency-management metadata on future bumps.
-SPRING_BOOT_VERSION = "4.0.6"
+SPRING_BOOT_VERSION = "4.1.0"
 
 SPRING_AI_VERSION = "2.0.0"
 
@@ -73,14 +73,14 @@ SPRING_AI_VERSION = "2.0.0"
 # module versions; EMBABEL_VERSION only seeds the BOM coordinate itself.
 EMBABEL_VERSION = "1.5.0"
 
-KOTLIN_VERSION = "2.2.21"
+KOTLIN_VERSION = "2.3.21"
 
 rules_kotlin_extensions = use_extension(
     "@rules_kotlin//src/main/starlark/core/repositories:bzlmod_setup.bzl",
     "rules_kotlin_extensions",
 )
 rules_kotlin_extensions.kotlinc_version(
-    sha256 = "a623871f1cd9c938946948b70ef9170879f0758043885bbd30c32f024e511714",  # https://github.com/JetBrains/kotlin/releases/download/v2.2.21/kotlin-compiler-2.2.21.zip
+    sha256 = "a8cfc1d62cd4d0de4d04f42575e40135bd620588c17d568a20eb9c7c259af14f",  # https://github.com/JetBrains/kotlin/releases/download/v2.3.21/kotlin-compiler-2.3.21.zip
     version = KOTLIN_VERSION,
 )
 use_repo(rules_kotlin_extensions, "com_github_google_ksp", "com_github_jetbrains_kotlin", "com_github_jetbrains_kotlin_git", "com_github_pinterest_ktlint", "kotlin_build_tools_impl", "kotlinx_coroutines_core_jvm", "kotlinx_serialization_core_jvm", "kotlinx_serialization_json", "kotlinx_serialization_json_jvm")
@@ -91,11 +91,14 @@ JUNIT_JUPITER_VERSION = "6.0.3"
 
 ELK_VERSION = "0.12.0"
 
-SPRING_MODULITH_VERSION = "2.0.7"
+SPRING_MODULITH_VERSION = "2.1.0"
 
 JMOLECULES_VERSION = "2.0.1"
 
 JMOLECULES_INTEGRATIONS_VERSION = "0.33.0"
+
+# jmolecules-archunit must match the version bundled by spring-modulith-core (2.1.0 bundles 0.33.0).
+JMOLECULES_ARCHUNIT_VERSION = "0.33.0"
 
 # Must match the Pkl CLI version shipped by rules_pkl (see rules_pkl/pkl/private/constants.bzl).
 PKL_VERSION = "0.31.0"
@@ -146,8 +149,8 @@ maven.install(
         "org.jmolecules:jmolecules-cqrs-architecture:" + JMOLECULES_VERSION,
         "org.jmolecules.integrations:jmolecules-starter-ddd:" + JMOLECULES_INTEGRATIONS_VERSION,
         "org.jmolecules.integrations:jmolecules-spring:" + JMOLECULES_INTEGRATIONS_VERSION,
-        "org.jmolecules.integrations:jmolecules-archunit:" + JMOLECULES_INTEGRATIONS_VERSION,
-        "com.tngtech.archunit:archunit:1.4.2",
+        "org.jmolecules.integrations:jmolecules-archunit:" + JMOLECULES_ARCHUNIT_VERSION,
+        "com.tngtech.archunit:archunit:1.4.1",
         "com.github.spotbugs:spotbugs:4.9.8",
         "org.assertj:assertj-core:3.26.3",
         "org.xmlunit:xmlunit-assertj:2.10.0",
