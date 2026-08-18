@@ -1069,6 +1069,8 @@ button:disabled:hover {
 }
 
 @media (prefers-reduced-motion: reduce) {
+	.result-body,
+	.summary-panel,
 	.summary-chev {
 		transition: none;
 	}

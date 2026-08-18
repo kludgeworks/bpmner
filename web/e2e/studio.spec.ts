@@ -182,8 +182,21 @@ test("collapses the run summary panel without clipping the toggle button", async
 
 	// The toggle button must still be visible and un-clipped outside the 0-width panel
 	await expect(summaryToggle).toBeVisible()
-	const toggleBox = await summaryToggle.boundingBox()
+	let toggleBox = await summaryToggle.boundingBox()
 	expect(toggleBox?.width).toBeGreaterThan(0)
+
+	// Expand it back
+	await summaryToggle.evaluate((el: HTMLElement) => el.click())
+
+	// Sections immediately become visible again
+	await expect(page.locator(".summary-sections")).toBeVisible()
+
+	// Wait for CSS transition
+	await page.waitForTimeout(300)
+
+	// Width restores to full
+	panelBox = await summaryPanel.boundingBox()
+	expect(panelBox?.width).toBeGreaterThan(300)
 })
 
 test("treats an evicted run's stream as gone, not as reconnecting", async ({
