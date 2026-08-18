@@ -387,6 +387,90 @@ Populate event definitions and catalog refs consistently for every event node.
 - **Kind**: `LLM_MODEL_PATCH`
 - **Safety**: `LLM_ONLY`
 
+## def-header-present
+
+- **Name**: Header Present
+- **Category**: Definition
+- **Severity**: INFO
+- **Target Elements**: `bpmn:TextAnnotation`
+
+### Purpose
+
+Add a diagram header.
+
+### Modeller Guidance
+
+Add a diagram header.
+
+### AI Guidance
+
+Add a diagram header.
+
+### Diagnostic Messages
+
+- `default`: Add a diagram header.
+
+### Repair
+
+- **Kind**: `LLM_MODEL_PATCH`
+- **Safety**: `LLM_ONLY`
+
+## def-legend-present
+
+- **Name**: Legend Present
+- **Category**: Definition
+- **Severity**: INFO
+- **Target Elements**: `bpmn:TextAnnotation`
+
+### Purpose
+
+Add a diagram legend.
+
+### Modeller Guidance
+
+Add a diagram legend.
+
+### AI Guidance
+
+Add a diagram legend.
+
+### Diagnostic Messages
+
+- `default`: Add a diagram legend.
+
+### Repair
+
+- **Kind**: `LLM_MODEL_PATCH`
+- **Safety**: `LLM_ONLY`
+
+## def-notes-present
+
+- **Name**: Notes Present
+- **Category**: Definition
+- **Severity**: INFO
+- **Target Elements**: `bpmn:TextAnnotation`
+
+### Purpose
+
+Add diagram notes.
+
+### Modeller Guidance
+
+Add diagram notes.
+
+### AI Guidance
+
+Add diagram notes.
+
+### Diagnostic Messages
+
+- `default`: Add diagram notes.
+
+### Repair
+
+- **Kind**: `LLM_MODEL_PATCH`
+- **Safety**: `LLM_ONLY`
+
 ## def-required-events
 
 - **Name**: Required Events

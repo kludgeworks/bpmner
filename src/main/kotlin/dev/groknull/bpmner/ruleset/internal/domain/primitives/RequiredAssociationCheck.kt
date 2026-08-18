@@ -26,6 +26,7 @@ internal class RequiredAssociationCheck {
         // which would be a false positive on every run.
         if (!model.supports(ModelCapability.ASSOCIATIONS)) return emptyList()
         return metadata.targetedElements(model)
+            .filter { config.excludeIdPrefix == null || it.id?.startsWith(config.excludeIdPrefix) != true }
             .filter { config.appliesWhenProperty == null || it.property(config.appliesWhenProperty) != null }
             .filter { element ->
                 val elementId = element.id ?: return@filter false

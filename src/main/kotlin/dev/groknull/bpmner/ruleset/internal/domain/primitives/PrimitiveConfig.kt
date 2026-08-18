@@ -76,6 +76,7 @@ internal data class RequiredAssociationCheckConfig(
     val direction: AssociationDirection = AssociationDirection.OUTBOUND,
     // Presence-test narrowing — see [VocabularyCheckConfig.appliesWhenProperty]. No-op when null.
     val appliesWhenProperty: String? = null,
+    val excludeIdPrefix: String? = null,
 ) : DeterministicCheckConfig
 
 internal enum class AssociationDirection {
