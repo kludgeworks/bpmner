@@ -48,4 +48,31 @@ data class BpmnerLintConfig(
         "DOC" to "document",
         "ITBL" to "itinerary block",
     ),
+    val theme: ThemeConfig = ThemeConfig(),
+)
+
+/**
+ * Per-shape visual style override. All properties are optional; unset properties fall back to
+ * [ThemeConfig]'s global defaults.
+ */
+data class ShapeStyle(
+    val fill: String? = null,
+    val stroke: String? = null,
+    val fontColor: String? = null,
+    val fontName: String? = null,
+    val fontSize: Double? = null,
+    val fontWeight: String? = null,
+)
+
+/**
+ * Global default visual theme applied to generated BPMN diagrams, with optional per-BPMN-type
+ * overrides, consumed by `dev.groknull.bpmner.layout.internal.ThemeDecorator`.
+ */
+data class ThemeConfig(
+    val primaryColor: String = "#2b6cb0",
+    val secondaryColor: String = "#16181d",
+    val backgroundColor: String = "#ffffff",
+    val fontName: String? = null,
+    val fontSize: Double? = null,
+    val shapeOverrides: Map<String, ShapeStyle> = emptyMap(),
 )

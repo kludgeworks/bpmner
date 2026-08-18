@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" expressionLanguage="http://www.w3.org/1999/XPath" id="Definitions_signal_escalation" targetNamespace="https://groknull.dev/bpmner" typeLanguage="http://www.w3.org/2001/XMLSchema">
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bioc="http://bpmn.io/schema/bpmn/biocolor/1.0" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:color="http://www.omg.org/spec/BPMN/non-normative/color/1.0" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" expressionLanguage="http://www.w3.org/1999/XPath" id="Definitions_signal_escalation" targetNamespace="https://groknull.dev/bpmner" typeLanguage="http://www.w3.org/2001/XMLSchema">
 
   <bpmn:signal id="Signal_1" name="Order Cancelled"/>
 
@@ -58,49 +58,49 @@
   </bpmn:process>
   <bpmndi:BPMNDiagram id="BPMNDiagram_1">
     <bpmndi:BPMNPlane bpmnElement="Process_1" id="BPMNPlane_1">
-      <bpmndi:BPMNShape bpmnElement="End_1" id="BPMNShape_End_1">
+      <bpmndi:BPMNShape bioc:fill="#ffffff" bioc:stroke="#16181d" bpmnElement="End_1" color:background-color="#ffffff" color:border-color="#16181d" id="BPMNShape_End_1">
         <dc:Bounds height="36.0" width="36.0" x="714.466796875" y="34.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_End_1">
           <dc:Bounds height="20.0" width="87.375" x="688.779296875" y="85.0"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape bpmnElement="Start_1" id="BPMNShape_Start_1">
+      <bpmndi:BPMNShape bioc:fill="#ffffff" bioc:stroke="#16181d" bpmnElement="Start_1" color:background-color="#ffffff" color:border-color="#16181d" id="BPMNShape_Start_1">
         <dc:Bounds height="36.0" width="36.0" x="29.349609375" y="34.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_Start_1">
           <dc:Bounds height="20.0" width="70.69921875" x="12.0" y="85.0"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape bpmnElement="Task_process" id="BPMNShape_Task_process">
+      <bpmndi:BPMNShape bioc:fill="#ffffff" bioc:stroke="#16181d" bpmnElement="Task_process" color:background-color="#ffffff" color:border-color="#16181d" id="BPMNShape_Task_process">
         <dc:Bounds height="80.0" width="100.0" x="172.69921875" y="12.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_Task_process">
           <dc:Bounds height="20.0" width="77.35546875" x="184.021484375" y="107.0"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape bpmnElement="Throw_escalation" id="BPMNShape_Throw_escalation">
+      <bpmndi:BPMNShape bioc:fill="#ffffff" bioc:stroke="#16181d" bpmnElement="Throw_escalation" color:background-color="#ffffff" color:border-color="#16181d" id="BPMNShape_Throw_escalation">
         <dc:Bounds height="36.0" width="36.0" x="540.759765625" y="34.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_Throw_escalation">
           <dc:Bounds height="20.0" width="80.0390625" x="518.740234375" y="85.0"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape bpmnElement="Throw_signal" id="BPMNShape_Throw_signal">
+      <bpmndi:BPMNShape bioc:fill="#ffffff" bioc:stroke="#16181d" bpmnElement="Throw_signal" color:background-color="#ffffff" color:border-color="#16181d" id="BPMNShape_Throw_signal">
         <dc:Bounds height="36.0" width="36.0" x="377.7197265625" y="34.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_Throw_signal">
           <dc:Bounds height="28.0" width="66.041015625" x="362.69921875" y="85.0"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNEdge bpmnElement="Flow_1" id="BPMNEdge_Flow_1">
+      <bpmndi:BPMNEdge bioc:stroke="#16181d" bpmnElement="Flow_1" color:border-color="#16181d" id="BPMNEdge_Flow_1">
         <di:waypoint x="65.349609375" y="52.0"/>
         <di:waypoint x="172.69921875" y="52.0"/>
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge bpmnElement="Flow_2" id="BPMNEdge_Flow_2">
+      <bpmndi:BPMNEdge bioc:stroke="#16181d" bpmnElement="Flow_2" color:border-color="#16181d" id="BPMNEdge_Flow_2">
         <di:waypoint x="272.69921875" y="52.0"/>
         <di:waypoint x="377.7197265625" y="52.0"/>
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge bpmnElement="Flow_3" id="BPMNEdge_Flow_3">
+      <bpmndi:BPMNEdge bioc:stroke="#16181d" bpmnElement="Flow_3" color:border-color="#16181d" id="BPMNEdge_Flow_3">
         <di:waypoint x="413.7197265625" y="52.0"/>
         <di:waypoint x="540.759765625" y="52.0"/>
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge bpmnElement="Flow_4" id="BPMNEdge_Flow_4">
+      <bpmndi:BPMNEdge bioc:stroke="#16181d" bpmnElement="Flow_4" color:border-color="#16181d" id="BPMNEdge_Flow_4">
         <di:waypoint x="576.759765625" y="52.0"/>
         <di:waypoint x="714.466796875" y="52.0"/>
       </bpmndi:BPMNEdge>

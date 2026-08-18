@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" expressionLanguage="http://www.w3.org/1999/XPath" id="Definitions_data" targetNamespace="https://groknull.dev/bpmner" typeLanguage="http://www.w3.org/2001/XMLSchema">
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bioc="http://bpmn.io/schema/bpmn/biocolor/1.0" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:color="http://www.omg.org/spec/BPMN/non-normative/color/1.0" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" expressionLanguage="http://www.w3.org/1999/XPath" id="Definitions_data" targetNamespace="https://groknull.dev/bpmner" typeLanguage="http://www.w3.org/2001/XMLSchema">
 
   <bpmn:process id="Process_data" isClosed="false" isExecutable="true" name="Data Object And Store" processType="None">
 
@@ -68,61 +68,61 @@
   <bpmn:dataStore id="DataStore_Orders" isUnlimited="true" name="Orders DB"/>
   <bpmndi:BPMNDiagram id="BPMNDiagram_1">
     <bpmndi:BPMNPlane bpmnElement="Process_data" id="BPMNPlane_1">
-      <bpmndi:BPMNShape bpmnElement="End_1" id="BPMNShape_End_1">
+      <bpmndi:BPMNShape bioc:fill="#ffffff" bioc:stroke="#16181d" bpmnElement="End_1" color:background-color="#ffffff" color:border-color="#16181d" id="BPMNShape_End_1">
         <dc:Bounds height="36.0" width="36.0" x="518.0" y="145.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_End_1">
           <dc:Bounds height="20.0" width="28.6875" x="521.65625" y="196.0"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape bpmnElement="Start_1" id="BPMNShape_Start_1">
+      <bpmndi:BPMNShape bioc:fill="#ffffff" bioc:stroke="#16181d" bpmnElement="Start_1" color:background-color="#ffffff" color:border-color="#16181d" id="BPMNShape_Start_1">
         <dc:Bounds height="36.0" width="36.0" x="12.0" y="12.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_Start_1">
           <dc:Bounds height="20.0" width="25.341796875" x="17.3291015625" y="63.0"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape bpmnElement="Task_archive" id="BPMNShape_Task_archive">
+      <bpmndi:BPMNShape bioc:fill="#ffffff" bioc:stroke="#16181d" bpmnElement="Task_archive" color:background-color="#ffffff" color:border-color="#16181d" id="BPMNShape_Task_archive">
         <dc:Bounds height="80.0" width="100.0" x="328.0" y="123.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_Task_archive">
           <dc:Bounds height="20.0" width="74.021484375" x="340.9892578125" y="218.0"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape bpmnElement="Task_place" id="BPMNShape_Task_place">
+      <bpmndi:BPMNShape bioc:fill="#ffffff" bioc:stroke="#16181d" bpmnElement="Task_place" color:background-color="#ffffff" color:border-color="#16181d" id="BPMNShape_Task_place">
         <dc:Bounds height="80.0" width="100.0" x="138.0" y="36.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_Task_place">
           <dc:Bounds height="20.0" width="64.025390625" x="155.9873046875" y="131.0"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape bpmnElement="DataObjectRef_Order" id="BPMNShape_DataObjectRef_Order">
+      <bpmndi:BPMNShape bioc:fill="#ffffff" bioc:stroke="#16181d" bpmnElement="DataObjectRef_Order" color:background-color="#ffffff" color:border-color="#16181d" id="BPMNShape_DataObjectRef_Order">
         <dc:Bounds height="50.0" width="36.0" x="12.0" y="143.0"/>
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape bpmnElement="DataStoreRef_Orders" id="BPMNShape_DataStoreRef_Orders">
+      <bpmndi:BPMNShape bioc:fill="#ffffff" bioc:stroke="#16181d" bpmnElement="DataStoreRef_Orders" color:background-color="#ffffff" color:border-color="#16181d" id="BPMNShape_DataStoreRef_Orders">
         <dc:Bounds height="50.0" width="36.0" x="360.0" y="248.0"/>
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNEdge bpmnElement="Flow_1" id="BPMNEdge_Flow_1">
+      <bpmndi:BPMNEdge bioc:stroke="#16181d" bpmnElement="Flow_1" color:border-color="#16181d" id="BPMNEdge_Flow_1">
         <di:waypoint x="48.0" y="30.0"/>
         <di:waypoint x="73.0" y="30.0"/>
         <di:waypoint x="73.0" y="63.0"/>
         <di:waypoint x="138.0" y="63.0"/>
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge bpmnElement="Flow_2" id="BPMNEdge_Flow_2">
+      <bpmndi:BPMNEdge bioc:stroke="#16181d" bpmnElement="Flow_2" color:border-color="#16181d" id="BPMNEdge_Flow_2">
         <di:waypoint x="238.0" y="76.0"/>
         <di:waypoint x="263.0" y="76.0"/>
         <di:waypoint x="263.0" y="150.0"/>
         <di:waypoint x="328.0" y="150.0"/>
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge bpmnElement="Flow_3" id="BPMNEdge_Flow_3">
+      <bpmndi:BPMNEdge bioc:stroke="#16181d" bpmnElement="Flow_3" color:border-color="#16181d" id="BPMNEdge_Flow_3">
         <di:waypoint x="428.0" y="163.0"/>
         <di:waypoint x="518.0" y="163.0"/>
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge bpmnElement="DataInputAssociation_archive" id="BPMNEdge_DataInputAssociation_archive">
+      <bpmndi:BPMNEdge bioc:stroke="#16181d" bpmnElement="DataInputAssociation_archive" color:border-color="#16181d" id="BPMNEdge_DataInputAssociation_archive">
         <di:waypoint x="48.0" y="176.0"/>
         <di:waypoint x="328.0" y="176.0"/>
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge bpmnElement="DataOutputAssociation_archive" id="BPMNEdge_DataOutputAssociation_archive">
+      <bpmndi:BPMNEdge bioc:stroke="#16181d" bpmnElement="DataOutputAssociation_archive" color:border-color="#16181d" id="BPMNEdge_DataOutputAssociation_archive">
         <di:waypoint x="378.0" y="248.0"/>
         <di:waypoint x="378.0" y="203.0"/>
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge bpmnElement="DataOutputAssociation_place" id="BPMNEdge_DataOutputAssociation_place">
+      <bpmndi:BPMNEdge bioc:stroke="#16181d" bpmnElement="DataOutputAssociation_place" color:border-color="#16181d" id="BPMNEdge_DataOutputAssociation_place">
         <di:waypoint x="48.0" y="160.0"/>
         <di:waypoint x="73.0" y="160.0"/>
         <di:waypoint x="73.0" y="89.0"/>

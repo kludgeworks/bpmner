@@ -26,6 +26,8 @@ internal class ConventionsLoaderTest {
         assertThat(config.allowedAcronyms).containsExactly("BPMN", "ACME", "SLA", "API", "IT")
         assertThat(config.discouragedBpmnTypes).contains("bpmn:Transaction")
         assertThat(config.abbreviationReplacements).containsEntry("REQ", "request")
+        assertThat(config.theme.backgroundColor).isEqualTo("#ffffff")
+        assertThat(config.theme.shapeOverrides).isEmpty()
     }
 
     @Test
@@ -40,6 +42,23 @@ internal class ConventionsLoaderTest {
             allowedAcronyms = List("VIP")
             discouragedBpmnTypes = List("bpmn:Transaction")
             abbreviationReplacements = new Mapping<String, String> {}
+            theme = new {
+                primaryColor = "#123456"
+                secondaryColor = "#654321"
+                backgroundColor = "#abcdef"
+                fontName = null
+                fontSize = null
+                shapeOverrides = new Mapping<String, Dynamic> {
+                    ["bpmn:Task"] = new {
+                        fill = "#00ff00"
+                        stroke = null
+                        fontColor = null
+                        fontName = null
+                        fontSize = null
+                        fontWeight = null
+                    }
+                }
+            }
             """.trimIndent(),
         )
 
@@ -52,6 +71,9 @@ internal class ConventionsLoaderTest {
         assertThat(config.allowedAcronyms).containsExactly("VIP")
         assertThat(config.discouragedBpmnTypes).containsExactly("bpmn:Transaction")
         assertThat(config.abbreviationReplacements).isEmpty()
+        assertThat(config.theme.primaryColor).isEqualTo("#123456")
+        assertThat(config.theme.shapeOverrides).containsKey("bpmn:Task")
+        assertThat(config.theme.shapeOverrides.getValue("bpmn:Task").fill).isEqualTo("#00ff00")
     }
 
     @Test

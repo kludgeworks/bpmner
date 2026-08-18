@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" expressionLanguage="http://www.w3.org/1999/XPath" id="Definitions_miwg_c2_four_pools" targetNamespace="https://groknull.dev/bpmner" typeLanguage="http://www.w3.org/2001/XMLSchema">
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bioc="http://bpmn.io/schema/bpmn/biocolor/1.0" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:color="http://www.omg.org/spec/BPMN/non-normative/color/1.0" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" expressionLanguage="http://www.w3.org/1999/XPath" id="Definitions_miwg_c2_four_pools" targetNamespace="https://groknull.dev/bpmner" typeLanguage="http://www.w3.org/2001/XMLSchema">
 
   <!--
     Pool-stacking spike fixture (622-1, spike b): a MIWG C.2.0-derived four-participant
@@ -234,228 +234,228 @@
   </bpmn:process>
   <bpmndi:BPMNDiagram id="BPMNDiagram_1">
     <bpmndi:BPMNPlane bpmnElement="Collab_c2_four_pools" id="BPMNPlane_1">
-      <bpmndi:BPMNShape bpmnElement="Participant_carrier" id="BPMNShape_Participant_carrier" isHorizontal="true">
+      <bpmndi:BPMNShape bioc:fill="#ffffff" bioc:stroke="#16181d" bpmnElement="Participant_carrier" color:background-color="#ffffff" color:border-color="#16181d" id="BPMNShape_Participant_carrier" isHorizontal="true">
         <dc:Bounds height="155.0" width="1436.7421875" x="12.0" y="1011.5"/>
         <bpmndi:BPMNLabel id="BPMNLabel_Participant_carrier">
           <dc:Bounds height="155.0" width="30.0" x="12.0" y="1011.5"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape bpmnElement="Participant_customer" id="BPMNShape_Participant_customer" isHorizontal="true">
+      <bpmndi:BPMNShape bioc:fill="#ffffff" bioc:stroke="#16181d" bpmnElement="Participant_customer" color:background-color="#ffffff" color:border-color="#16181d" id="BPMNShape_Participant_customer" isHorizontal="true">
         <dc:Bounds height="155.0" width="1436.7421875" x="12.0" y="12.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_Participant_customer">
           <dc:Bounds height="155.0" width="30.0" x="12.0" y="12.0"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape bpmnElement="Participant_retailer" id="BPMNShape_Participant_retailer" isHorizontal="true">
+      <bpmndi:BPMNShape bioc:fill="#ffffff" bioc:stroke="#16181d" bpmnElement="Participant_retailer" color:background-color="#ffffff" color:border-color="#16181d" id="BPMNShape_Participant_retailer" isHorizontal="true">
         <dc:Bounds height="449.5" width="1436.7421875" x="12.0" y="247.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_Participant_retailer">
           <dc:Bounds height="449.5" width="30.0" x="12.0" y="247.0"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape bpmnElement="Participant_warehouse" id="BPMNShape_Participant_warehouse" isHorizontal="true">
+      <bpmndi:BPMNShape bioc:fill="#ffffff" bioc:stroke="#16181d" bpmnElement="Participant_warehouse" color:background-color="#ffffff" color:border-color="#16181d" id="BPMNShape_Participant_warehouse" isHorizontal="true">
         <dc:Bounds height="155.0" width="1436.7421875" x="12.0" y="776.5"/>
         <bpmndi:BPMNLabel id="BPMNLabel_Participant_warehouse">
           <dc:Bounds height="155.0" width="30.0" x="12.0" y="776.5"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape bpmnElement="End_carrier" id="BPMNShape_End_carrier">
+      <bpmndi:BPMNShape bioc:fill="#ffffff" bioc:stroke="#16181d" bpmnElement="End_carrier" color:background-color="#ffffff" color:border-color="#16181d" id="BPMNShape_End_carrier">
         <dc:Bounds height="36.0" width="36.0" x="597.3876953125" y="1053.5"/>
         <bpmndi:BPMNLabel id="BPMNLabel_End_carrier">
           <dc:Bounds height="20.0" width="50.689453125" x="590.04296875" y="1104.5"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape bpmnElement="End_customer" id="BPMNShape_End_customer">
+      <bpmndi:BPMNShape bioc:fill="#ffffff" bioc:stroke="#16181d" bpmnElement="End_customer" color:background-color="#ffffff" color:border-color="#16181d" id="BPMNShape_End_customer">
         <dc:Bounds height="36.0" width="36.0" x="599.376953125" y="54.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_End_customer">
           <dc:Bounds height="20.0" width="28.6875" x="603.033203125" y="105.0"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape bpmnElement="End_retailer" id="BPMNShape_End_retailer">
+      <bpmndi:BPMNShape bioc:fill="#ffffff" bioc:stroke="#16181d" bpmnElement="End_retailer" color:background-color="#ffffff" color:border-color="#16181d" id="BPMNShape_End_retailer">
         <dc:Bounds height="36.0" width="36.0" x="1373.0634765625" y="406.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_End_retailer">
           <dc:Bounds height="20.0" width="75.357421875" x="1353.384765625" y="457.0"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape bpmnElement="End_retailer_error" id="BPMNShape_End_retailer_error">
+      <bpmndi:BPMNShape bioc:fill="#ffffff" bioc:stroke="#16181d" bpmnElement="End_retailer_error" color:background-color="#ffffff" color:border-color="#16181d" id="BPMNShape_End_retailer_error">
         <dc:Bounds height="36.0" width="36.0" x="1373.0634765625" y="583.5"/>
         <bpmndi:BPMNLabel id="BPMNLabel_End_retailer_error">
           <dc:Bounds height="20.0" width="53.3671875" x="1364.3798828125" y="634.5"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape bpmnElement="End_warehouse" id="BPMNShape_End_warehouse">
+      <bpmndi:BPMNShape bioc:fill="#ffffff" bioc:stroke="#16181d" bpmnElement="End_warehouse" color:background-color="#ffffff" color:border-color="#16181d" id="BPMNShape_End_warehouse">
         <dc:Bounds height="36.0" width="36.0" x="407.7216796875" y="818.5"/>
         <bpmndi:BPMNLabel id="BPMNLabel_End_warehouse">
           <dc:Bounds height="20.0" width="51.357421875" x="400.04296875" y="869.5"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape bpmnElement="Start_carrier" id="BPMNShape_Start_carrier">
+      <bpmndi:BPMNShape bioc:fill="#ffffff" bioc:stroke="#16181d" bpmnElement="Start_carrier" color:background-color="#ffffff" color:border-color="#16181d" id="BPMNShape_Start_carrier">
         <dc:Bounds height="36.0" width="36.0" x="73.021484375" y="1053.5"/>
         <bpmndi:BPMNLabel id="BPMNLabel_Start_carrier">
           <dc:Bounds height="28.0" width="58.04296875" x="62.0" y="1104.5"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape bpmnElement="Start_customer" id="BPMNShape_Start_customer">
+      <bpmndi:BPMNShape bioc:fill="#ffffff" bioc:stroke="#16181d" bpmnElement="Start_customer" color:background-color="#ffffff" color:border-color="#16181d" id="BPMNShape_Start_customer">
         <dc:Bounds height="36.0" width="36.0" x="77.6884765625" y="54.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_Start_customer">
           <dc:Bounds height="20.0" width="67.376953125" x="62.0" y="105.0"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape bpmnElement="Start_retailer" id="BPMNShape_Start_retailer">
+      <bpmndi:BPMNShape bioc:fill="#ffffff" bioc:stroke="#16181d" bpmnElement="Start_retailer" color:background-color="#ffffff" color:border-color="#16181d" id="BPMNShape_Start_retailer">
         <dc:Bounds height="36.0" width="36.0" x="86.017578125" y="406.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_Start_retailer">
           <dc:Bounds height="20.0" width="84.03515625" x="62.0" y="457.0"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape bpmnElement="Start_warehouse" id="BPMNShape_Start_warehouse">
+      <bpmndi:BPMNShape bioc:fill="#ffffff" bioc:stroke="#16181d" bpmnElement="Start_warehouse" color:background-color="#ffffff" color:border-color="#16181d" id="BPMNShape_Start_warehouse">
         <dc:Bounds height="36.0" width="36.0" x="73.021484375" y="818.5"/>
         <bpmndi:BPMNLabel id="BPMNLabel_Start_warehouse">
           <dc:Bounds height="28.0" width="58.04296875" x="62.0" y="869.5"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape bpmnElement="SubEnd_fulfil" id="BPMNShape_SubEnd_fulfil">
+      <bpmndi:BPMNShape bioc:fill="#ffffff" bioc:stroke="#16181d" bpmnElement="SubEnd_fulfil" color:background-color="#ffffff" color:border-color="#16181d" id="BPMNShape_SubEnd_fulfil">
         <dc:Bounds height="36.0" width="36.0" x="984.7099609375" y="398.5"/>
         <bpmndi:BPMNLabel id="BPMNLabel_SubEnd_fulfil">
           <dc:Bounds height="20.0" width="41.349609375" x="982.03515625" y="449.5"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape bpmnElement="SubProcess_fulfil" id="BPMNShape_SubProcess_fulfil" isExpanded="true">
+      <bpmndi:BPMNShape bioc:fill="#ffffff" bioc:stroke="#16181d" bpmnElement="SubProcess_fulfil" color:background-color="#ffffff" color:border-color="#16181d" id="BPMNShape_SubProcess_fulfil" isExpanded="true">
         <dc:Bounds height="235.0" width="647.349609375" x="426.03515625" y="306.5"/>
         <bpmndi:BPMNLabel id="BPMNLabel_SubProcess_fulfil">
           <dc:Bounds height="20.0" width="59.34375" x="720.0380859375" y="631.5"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape bpmnElement="SubStart_fulfil" id="BPMNShape_SubStart_fulfil">
+      <bpmndi:BPMNShape bioc:fill="#ffffff" bioc:stroke="#16181d" bpmnElement="SubStart_fulfil" color:background-color="#ffffff" color:border-color="#16181d" id="BPMNShape_SubStart_fulfil">
         <dc:Bounds height="36.0" width="36.0" x="476.03515625" y="398.5"/>
         <bpmndi:BPMNLabel id="BPMNLabel_SubStart_fulfil">
           <dc:Bounds height="20.0" width="30.69140625" x="478.689453125" y="449.5"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape bpmnElement="Task_confirm_order" id="BPMNShape_Task_confirm_order">
+      <bpmndi:BPMNShape bioc:fill="#ffffff" bioc:stroke="#16181d" bpmnElement="Task_confirm_order" color:background-color="#ffffff" color:border-color="#16181d" id="BPMNShape_Task_confirm_order">
         <dc:Bounds height="80.0" width="100.0" x="792.03515625" y="376.5"/>
         <bpmndi:BPMNLabel id="BPMNLabel_Task_confirm_order">
           <dc:Bounds height="20.0" width="76.013671875" x="804.0283203125" y="471.5"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape bpmnElement="Task_deliver" id="BPMNShape_Task_deliver">
+      <bpmndi:BPMNShape bioc:fill="#ffffff" bioc:stroke="#16181d" bpmnElement="Task_deliver" color:background-color="#ffffff" color:border-color="#16181d" id="BPMNShape_Task_deliver">
         <dc:Bounds height="80.0" width="100.0" x="400.04296875" y="1031.5"/>
         <bpmndi:BPMNLabel id="BPMNLabel_Task_deliver">
           <dc:Bounds height="20.0" width="37.341796875" x="431.3720703125" y="1126.5"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape bpmnElement="Task_notify_customer" id="BPMNShape_Task_notify_customer">
+      <bpmndi:BPMNShape bioc:fill="#ffffff" bioc:stroke="#16181d" bpmnElement="Task_notify_customer" color:background-color="#ffffff" color:border-color="#16181d" id="BPMNShape_Task_notify_customer">
         <dc:Bounds height="80.0" width="100.0" x="1163.384765625" y="561.5"/>
         <bpmndi:BPMNLabel id="BPMNLabel_Task_notify_customer">
           <dc:Bounds height="20.0" width="86.021484375" x="1170.3740234375" y="656.5"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape bpmnElement="Task_place_order" id="BPMNShape_Task_place_order">
+      <bpmndi:BPMNShape bioc:fill="#ffffff" bioc:stroke="#16181d" bpmnElement="Task_place_order" color:background-color="#ffffff" color:border-color="#16181d" id="BPMNShape_Task_place_order">
         <dc:Bounds height="80.0" width="100.0" x="219.376953125" y="32.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_Task_place_order">
           <dc:Bounds height="20.0" width="64.025390625" x="237.3642578125" y="127.0"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape bpmnElement="Task_process_order" id="BPMNShape_Task_process_order">
+      <bpmndi:BPMNShape bioc:fill="#ffffff" bioc:stroke="#16181d" bpmnElement="Task_process_order" color:background-color="#ffffff" color:border-color="#16181d" id="BPMNShape_Task_process_order">
         <dc:Bounds height="80.0" width="100.0" x="602.03515625" y="376.5"/>
         <bpmndi:BPMNLabel id="BPMNLabel_Task_process_order">
           <dc:Bounds height="20.0" width="77.35546875" x="613.357421875" y="471.5"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape bpmnElement="Task_receive_goods" id="BPMNShape_Task_receive_goods">
+      <bpmndi:BPMNShape bioc:fill="#ffffff" bioc:stroke="#16181d" bpmnElement="Task_receive_goods" color:background-color="#ffffff" color:border-color="#16181d" id="BPMNShape_Task_receive_goods">
         <dc:Bounds height="80.0" width="100.0" x="409.376953125" y="32.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_Task_receive_goods">
           <dc:Bounds height="20.0" width="82.04296875" x="418.35546875" y="127.0"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape bpmnElement="Task_receive_order" id="BPMNShape_Task_receive_order">
+      <bpmndi:BPMNShape bioc:fill="#ffffff" bioc:stroke="#16181d" bpmnElement="Task_receive_order" color:background-color="#ffffff" color:border-color="#16181d" id="BPMNShape_Task_receive_order">
         <dc:Bounds height="80.0" width="100.0" x="236.03515625" y="384.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_Task_receive_order">
           <dc:Bounds height="20.0" width="77.361328125" x="247.3544921875" y="479.0"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape bpmnElement="Task_reserve_stock" id="BPMNShape_Task_reserve_stock">
+      <bpmndi:BPMNShape bioc:fill="#ffffff" bioc:stroke="#16181d" bpmnElement="Task_reserve_stock" color:background-color="#ffffff" color:border-color="#16181d" id="BPMNShape_Task_reserve_stock">
         <dc:Bounds height="80.0" width="100.0" x="210.04296875" y="796.5"/>
         <bpmndi:BPMNLabel id="BPMNLabel_Task_reserve_stock">
           <dc:Bounds height="20.0" width="78.029296875" x="221.0283203125" y="891.5"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape bpmnElement="Task_schedule_pickup" id="BPMNShape_Task_schedule_pickup">
+      <bpmndi:BPMNShape bioc:fill="#ffffff" bioc:stroke="#16181d" bpmnElement="Task_schedule_pickup" color:background-color="#ffffff" color:border-color="#16181d" id="BPMNShape_Task_schedule_pickup">
         <dc:Bounds height="80.0" width="100.0" x="210.04296875" y="1031.5"/>
         <bpmndi:BPMNLabel id="BPMNLabel_Task_schedule_pickup">
           <dc:Bounds height="20.0" width="89.390625" x="215.34765625" y="1126.5"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape bpmnElement="Boundary_fulfil_error" id="BPMNShape_Boundary_fulfil_error">
+      <bpmndi:BPMNShape bioc:fill="#ffffff" bioc:stroke="#16181d" bpmnElement="Boundary_fulfil_error" color:background-color="#ffffff" color:border-color="#16181d" id="BPMNShape_Boundary_fulfil_error">
         <dc:Bounds height="36.0" width="36.0" x="731.7099609375" y="515.5"/>
         <bpmndi:BPMNLabel id="BPMNLabel_Boundary_fulfil_error">
           <dc:Bounds height="28.0" width="62.70703125" x="718.3564453125" y="603.5"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNEdge bpmnElement="Flow_c1" id="BPMNEdge_Flow_c1">
+      <bpmndi:BPMNEdge bioc:stroke="#16181d" bpmnElement="Flow_c1" color:border-color="#16181d" id="BPMNEdge_Flow_c1">
         <di:waypoint x="113.6884765625" y="72.0"/>
         <di:waypoint x="219.376953125" y="72.0"/>
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge bpmnElement="Flow_c2" id="BPMNEdge_Flow_c2">
+      <bpmndi:BPMNEdge bioc:stroke="#16181d" bpmnElement="Flow_c2" color:border-color="#16181d" id="BPMNEdge_Flow_c2">
         <di:waypoint x="319.376953125" y="72.0"/>
         <di:waypoint x="409.376953125" y="72.0"/>
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge bpmnElement="Flow_c3" id="BPMNEdge_Flow_c3">
+      <bpmndi:BPMNEdge bioc:stroke="#16181d" bpmnElement="Flow_c3" color:border-color="#16181d" id="BPMNEdge_Flow_c3">
         <di:waypoint x="509.376953125" y="72.0"/>
         <di:waypoint x="599.376953125" y="72.0"/>
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge bpmnElement="Flow_error" id="BPMNEdge_Flow_error">
+      <bpmndi:BPMNEdge bioc:stroke="#16181d" bpmnElement="Flow_error" color:border-color="#16181d" id="BPMNEdge_Flow_error">
         <di:waypoint x="749.7099609375" y="551.5"/>
         <di:waypoint x="749.7099609375" y="601.5"/>
         <di:waypoint x="1163.384765625" y="601.5"/>
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge bpmnElement="Flow_p1" id="BPMNEdge_Flow_p1">
+      <bpmndi:BPMNEdge bioc:stroke="#16181d" bpmnElement="Flow_p1" color:border-color="#16181d" id="BPMNEdge_Flow_p1">
         <di:waypoint x="109.021484375" y="1071.5"/>
         <di:waypoint x="210.04296875" y="1071.5"/>
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge bpmnElement="Flow_p2" id="BPMNEdge_Flow_p2">
+      <bpmndi:BPMNEdge bioc:stroke="#16181d" bpmnElement="Flow_p2" color:border-color="#16181d" id="BPMNEdge_Flow_p2">
         <di:waypoint x="310.04296875" y="1071.5"/>
         <di:waypoint x="400.04296875" y="1071.5"/>
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge bpmnElement="Flow_p3" id="BPMNEdge_Flow_p3">
+      <bpmndi:BPMNEdge bioc:stroke="#16181d" bpmnElement="Flow_p3" color:border-color="#16181d" id="BPMNEdge_Flow_p3">
         <di:waypoint x="500.04296875" y="1071.5"/>
         <di:waypoint x="597.3876953125" y="1071.5"/>
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge bpmnElement="Flow_r1" id="BPMNEdge_Flow_r1">
+      <bpmndi:BPMNEdge bioc:stroke="#16181d" bpmnElement="Flow_r1" color:border-color="#16181d" id="BPMNEdge_Flow_r1">
         <di:waypoint x="122.017578125" y="424.0"/>
         <di:waypoint x="236.03515625" y="424.0"/>
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge bpmnElement="Flow_r2" id="BPMNEdge_Flow_r2">
+      <bpmndi:BPMNEdge bioc:stroke="#16181d" bpmnElement="Flow_r2" color:border-color="#16181d" id="BPMNEdge_Flow_r2">
         <di:waypoint x="336.03515625" y="424.0"/>
         <di:waypoint x="426.03515625" y="424.0"/>
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge bpmnElement="Flow_r3" id="BPMNEdge_Flow_r3">
+      <bpmndi:BPMNEdge bioc:stroke="#16181d" bpmnElement="Flow_r3" color:border-color="#16181d" id="BPMNEdge_Flow_r3">
         <di:waypoint x="1073.384765625" y="424.0"/>
         <di:waypoint x="1373.0634765625" y="424.0"/>
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge bpmnElement="Flow_r4" id="BPMNEdge_Flow_r4">
+      <bpmndi:BPMNEdge bioc:stroke="#16181d" bpmnElement="Flow_r4" color:border-color="#16181d" id="BPMNEdge_Flow_r4">
         <di:waypoint x="1263.384765625" y="601.5"/>
         <di:waypoint x="1373.0634765625" y="601.5"/>
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge bpmnElement="Flow_w1" id="BPMNEdge_Flow_w1">
+      <bpmndi:BPMNEdge bioc:stroke="#16181d" bpmnElement="Flow_w1" color:border-color="#16181d" id="BPMNEdge_Flow_w1">
         <di:waypoint x="109.021484375" y="836.5"/>
         <di:waypoint x="210.04296875" y="836.5"/>
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge bpmnElement="Flow_w2" id="BPMNEdge_Flow_w2">
+      <bpmndi:BPMNEdge bioc:stroke="#16181d" bpmnElement="Flow_w2" color:border-color="#16181d" id="BPMNEdge_Flow_w2">
         <di:waypoint x="310.04296875" y="836.5"/>
         <di:waypoint x="407.7216796875" y="836.5"/>
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge bpmnElement="SubFlow_r1" id="BPMNEdge_SubFlow_r1">
+      <bpmndi:BPMNEdge bioc:stroke="#16181d" bpmnElement="SubFlow_r1" color:border-color="#16181d" id="BPMNEdge_SubFlow_r1">
         <di:waypoint x="512.03515625" y="416.5"/>
         <di:waypoint x="602.03515625" y="416.5"/>
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge bpmnElement="SubFlow_r2" id="BPMNEdge_SubFlow_r2">
+      <bpmndi:BPMNEdge bioc:stroke="#16181d" bpmnElement="SubFlow_r2" color:border-color="#16181d" id="BPMNEdge_SubFlow_r2">
         <di:waypoint x="702.03515625" y="416.5"/>
         <di:waypoint x="792.03515625" y="416.5"/>
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge bpmnElement="SubFlow_r3" id="BPMNEdge_SubFlow_r3">
+      <bpmndi:BPMNEdge bioc:stroke="#16181d" bpmnElement="SubFlow_r3" color:border-color="#16181d" id="BPMNEdge_SubFlow_r3">
         <di:waypoint x="892.03515625" y="416.5"/>
         <di:waypoint x="984.7099609375" y="416.5"/>
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge bpmnElement="MsgFlow_confirm" id="BPMNEdge_MsgFlow_confirm">
+      <bpmndi:BPMNEdge bioc:stroke="#16181d" bpmnElement="MsgFlow_confirm" color:border-color="#16181d" id="BPMNEdge_MsgFlow_confirm">
         <di:waypoint x="243.37630208333334" y="796.5"/>
         <di:waypoint x="243.37630208333334" y="611.5"/>
         <di:waypoint x="825.3684895833334" y="611.5"/>
@@ -464,7 +464,7 @@
           <dc:Bounds height="20.0" width="88.69921875" x="475.02278645833337" y="601.5"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge bpmnElement="MsgFlow_delivered" id="BPMNEdge_MsgFlow_delivered">
+      <bpmndi:BPMNEdge bioc:stroke="#16181d" bpmnElement="MsgFlow_delivered" color:border-color="#16181d" id="BPMNEdge_MsgFlow_delivered">
         <di:waypoint x="450.04296875" y="1031.5"/>
         <di:waypoint x="450.04296875" y="571.75"/>
         <di:waypoint x="459.376953125" y="571.75"/>
@@ -473,7 +473,7 @@
           <dc:Bounds height="20.0" width="50.689453125" x="429.365234375" y="561.75"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge bpmnElement="MsgFlow_dispatch" id="BPMNEdge_MsgFlow_dispatch">
+      <bpmndi:BPMNEdge bioc:stroke="#16181d" bpmnElement="MsgFlow_dispatch" color:border-color="#16181d" id="BPMNEdge_MsgFlow_dispatch">
         <di:waypoint x="858.7018229166666" y="456.5"/>
         <di:waypoint x="858.7018229166666" y="744.0"/>
         <di:waypoint x="260.04296875" y="744.0"/>
@@ -482,7 +482,7 @@
           <dc:Bounds height="20.0" width="94.716796875" x="512.0139973958334" y="734.0"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge bpmnElement="MsgFlow_order" id="BPMNEdge_MsgFlow_order">
+      <bpmndi:BPMNEdge bioc:stroke="#16181d" bpmnElement="MsgFlow_order" color:border-color="#16181d" id="BPMNEdge_MsgFlow_order">
         <di:waypoint x="269.376953125" y="112.0"/>
         <di:waypoint x="269.376953125" y="248.0"/>
         <di:waypoint x="286.03515625" y="248.0"/>
@@ -491,7 +491,7 @@
           <dc:Bounds height="20.0" width="30.673828125" x="262.369140625" y="238.0"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge bpmnElement="MsgFlow_reserve" id="BPMNEdge_MsgFlow_reserve">
+      <bpmndi:BPMNEdge bioc:stroke="#16181d" bpmnElement="MsgFlow_reserve" color:border-color="#16181d" id="BPMNEdge_MsgFlow_reserve">
         <di:waypoint x="652.03515625" y="456.5"/>
         <di:waypoint x="652.03515625" y="641.5"/>
         <di:waypoint x="276.7096354166667" y="641.5"/>

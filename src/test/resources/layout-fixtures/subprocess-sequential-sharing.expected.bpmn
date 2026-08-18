@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" expressionLanguage="http://www.w3.org/1999/XPath" id="D1" targetNamespace="https://groknull.dev/bpmner" typeLanguage="http://www.w3.org/2001/XMLSchema">
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bioc="http://bpmn.io/schema/bpmn/biocolor/1.0" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:color="http://www.omg.org/spec/BPMN/non-normative/color/1.0" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" expressionLanguage="http://www.w3.org/1999/XPath" id="D1" targetNamespace="https://groknull.dev/bpmner" typeLanguage="http://www.w3.org/2001/XMLSchema">
 
   <bpmn:process id="P1" isClosed="false" isExecutable="true" processType="None">
 
@@ -70,54 +70,54 @@
   </bpmn:process>
   <bpmndi:BPMNDiagram id="BPMNDiagram_1">
     <bpmndi:BPMNPlane bpmnElement="P1" id="BPMNPlane_1">
-      <bpmndi:BPMNShape bpmnElement="End_1" id="BPMNShape_End_1">
+      <bpmndi:BPMNShape bioc:fill="#ffffff" bioc:stroke="#16181d" bpmnElement="End_1" color:background-color="#ffffff" color:border-color="#16181d" id="BPMNShape_End_1">
         <dc:Bounds height="36.0" width="36.0" x="1160.0" y="84.0"/>
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape bpmnElement="IntermediateTask" id="BPMNShape_IntermediateTask">
+      <bpmndi:BPMNShape bioc:fill="#ffffff" bioc:stroke="#16181d" bpmnElement="IntermediateTask" color:background-color="#ffffff" color:border-color="#16181d" id="BPMNShape_IntermediateTask">
         <dc:Bounds height="80.0" width="100.0" x="554.0" y="62.0"/>
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape bpmnElement="Start_1" id="BPMNShape_Start_1">
+      <bpmndi:BPMNShape bioc:fill="#ffffff" bioc:stroke="#16181d" bpmnElement="Start_1" color:background-color="#ffffff" color:border-color="#16181d" id="BPMNShape_Start_1">
         <dc:Bounds height="36.0" width="36.0" x="12.0" y="84.0"/>
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape bpmnElement="Start_sub1" id="BPMNShape_Start_sub1">
+      <bpmndi:BPMNShape bioc:fill="#ffffff" bioc:stroke="#16181d" bpmnElement="Start_sub1" color:background-color="#ffffff" color:border-color="#16181d" id="BPMNShape_Start_sub1">
         <dc:Bounds height="36.0" width="36.0" x="188.0" y="84.0"/>
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape bpmnElement="Start_sub2" id="BPMNShape_Start_sub2">
+      <bpmndi:BPMNShape bioc:fill="#ffffff" bioc:stroke="#16181d" bpmnElement="Start_sub2" color:background-color="#ffffff" color:border-color="#16181d" id="BPMNShape_Start_sub2">
         <dc:Bounds height="36.0" width="36.0" x="794.0" y="84.0"/>
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape bpmnElement="Sub_1" id="BPMNShape_Sub_1" isExpanded="true">
+      <bpmndi:BPMNShape bioc:fill="#ffffff" bioc:stroke="#16181d" bpmnElement="Sub_1" color:background-color="#ffffff" color:border-color="#16181d" id="BPMNShape_Sub_1" isExpanded="true">
         <dc:Bounds height="180.0" width="326.0" x="138.0" y="12.0"/>
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape bpmnElement="Sub_2" id="BPMNShape_Sub_2" isExpanded="true">
+      <bpmndi:BPMNShape bioc:fill="#ffffff" bioc:stroke="#16181d" bpmnElement="Sub_2" color:background-color="#ffffff" color:border-color="#16181d" id="BPMNShape_Sub_2" isExpanded="true">
         <dc:Bounds height="180.0" width="326.0" x="744.0" y="12.0"/>
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape bpmnElement="Task_sub1" id="BPMNShape_Task_sub1">
+      <bpmndi:BPMNShape bioc:fill="#ffffff" bioc:stroke="#16181d" bpmnElement="Task_sub1" color:background-color="#ffffff" color:border-color="#16181d" id="BPMNShape_Task_sub1">
         <dc:Bounds height="80.0" width="100.0" x="314.0" y="62.0"/>
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape bpmnElement="Task_sub2" id="BPMNShape_Task_sub2">
+      <bpmndi:BPMNShape bioc:fill="#ffffff" bioc:stroke="#16181d" bpmnElement="Task_sub2" color:background-color="#ffffff" color:border-color="#16181d" id="BPMNShape_Task_sub2">
         <dc:Bounds height="80.0" width="100.0" x="920.0" y="62.0"/>
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNEdge bpmnElement="F1" id="BPMNEdge_F1">
+      <bpmndi:BPMNEdge bioc:stroke="#16181d" bpmnElement="F1" color:border-color="#16181d" id="BPMNEdge_F1">
         <di:waypoint x="48.0" y="102.0"/>
         <di:waypoint x="138.0" y="102.0"/>
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge bpmnElement="F2" id="BPMNEdge_F2">
+      <bpmndi:BPMNEdge bioc:stroke="#16181d" bpmnElement="F2" color:border-color="#16181d" id="BPMNEdge_F2">
         <di:waypoint x="464.0" y="102.0"/>
         <di:waypoint x="554.0" y="102.0"/>
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge bpmnElement="F3" id="BPMNEdge_F3">
+      <bpmndi:BPMNEdge bioc:stroke="#16181d" bpmnElement="F3" color:border-color="#16181d" id="BPMNEdge_F3">
         <di:waypoint x="654.0" y="102.0"/>
         <di:waypoint x="744.0" y="102.0"/>
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge bpmnElement="F4" id="BPMNEdge_F4">
+      <bpmndi:BPMNEdge bioc:stroke="#16181d" bpmnElement="F4" color:border-color="#16181d" id="BPMNEdge_F4">
         <di:waypoint x="1070.0" y="102.0"/>
         <di:waypoint x="1160.0" y="102.0"/>
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge bpmnElement="F_sub1" id="BPMNEdge_F_sub1">
+      <bpmndi:BPMNEdge bioc:stroke="#16181d" bpmnElement="F_sub1" color:border-color="#16181d" id="BPMNEdge_F_sub1">
         <di:waypoint x="224.0" y="102.0"/>
         <di:waypoint x="314.0" y="102.0"/>
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge bpmnElement="F_sub2" id="BPMNEdge_F_sub2">
+      <bpmndi:BPMNEdge bioc:stroke="#16181d" bpmnElement="F_sub2" color:border-color="#16181d" id="BPMNEdge_F_sub2">
         <di:waypoint x="830.0" y="102.0"/>
         <di:waypoint x="920.0" y="102.0"/>
       </bpmndi:BPMNEdge>

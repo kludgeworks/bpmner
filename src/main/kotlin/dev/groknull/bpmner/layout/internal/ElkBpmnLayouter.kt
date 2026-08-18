@@ -8,6 +8,7 @@ package dev.groknull.bpmner.layout.internal
 import dev.groknull.bpmner.layout.BpmnAutoLayoutException
 import dev.groknull.bpmner.layout.BpmnLayoutPort
 import dev.groknull.bpmner.layout.internal.adapter.inbound.referentialIntegrityErrors
+import dev.groknull.bpmner.ruleset.BpmnerLintConfig
 import jakarta.annotation.PostConstruct
 import org.camunda.bpm.model.bpmn.Bpmn
 import org.camunda.bpm.model.bpmn.BpmnModelInstance
@@ -27,7 +28,7 @@ import java.io.ByteArrayOutputStream
  */
 @InfrastructureRing
 @Service
-internal class ElkBpmnLayouter : BpmnLayoutPort {
+internal class ElkBpmnLayouter(private val lintConfig: BpmnerLintConfig = BpmnerLintConfig()) : BpmnLayoutPort {
 
     /**
      * ELK requires algorithm registration outside OSGi. [LayoutMetaDataService] is a
@@ -49,6 +50,7 @@ internal class ElkBpmnLayouter : BpmnLayoutPort {
         RecursiveGraphLayoutEngine().layout(skeleton.root, BasicProgressMonitor())
         val placed = BpmnPlacementPass.place(model, skeleton)
         ElkToBpmnDiWriter.write(model, placed, existingShapes, existingEdges)
+        ThemeDecorator.decorate(model, lintConfig.theme)
         val output = serializeXml(model)
         // Hard-fail here, at the sole BpmnLayoutPort implementation, so every layout call is guarded.
         val integrityErrors = referentialIntegrityErrors(output)

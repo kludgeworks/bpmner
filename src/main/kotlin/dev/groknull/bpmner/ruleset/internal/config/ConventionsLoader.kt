@@ -6,6 +6,7 @@
 package dev.groknull.bpmner.ruleset.internal.config
 
 import dev.groknull.bpmner.ruleset.BpmnerLintConfig
+import dev.groknull.bpmner.ruleset.ThemeConfig
 import dev.groknull.bpmner.ruleset.internal.BpmnRulesUriConfig
 import org.pkl.config.java.ConfigEvaluator
 import org.pkl.config.kotlin.forKotlin
@@ -57,6 +58,7 @@ internal class ConventionsLoader(private val config: BpmnRulesUriConfig) {
             allowedAcronyms = pkl.get("allowedAcronyms").to(),
             discouragedBpmnTypes = pkl.get("discouragedBpmnTypes").to(),
             abbreviationReplacements = pkl.get("abbreviationReplacements").to<Map<String, String>>(),
+            theme = pkl.get("theme").to<ThemeConfig>(),
         )
         logger.info(
             "BPMN lint conventions loaded from {} ({} element type word(s), {} allowed acronym(s))",
