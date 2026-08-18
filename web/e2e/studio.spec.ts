@@ -148,6 +148,44 @@ test("recovers from a dropped connection without losing the run", async ({
 	await expect(page.locator("#view-result")).toBeVisible()
 })
 
+test("collapses the run summary panel without clipping the toggle button", async ({
+	page,
+}) => {
+	await serveStudio(page)
+	await stubBackend(page, HAPPY_PATH)
+	await page.goto("/index.html")
+
+	await submitDescription(page, "Make toast for breakfast")
+	await expect(page.locator("#view-result")).toBeVisible()
+
+	const summaryPanel = page.locator("#summary-panel")
+	const summaryToggle = page.locator("#summary-toggle")
+
+	// Initially open
+	let panelBox = await summaryPanel.boundingBox()
+	expect(panelBox?.width).toBeGreaterThan(300)
+	await expect(summaryToggle).toBeVisible()
+
+	// Click to collapse
+	await summaryToggle.evaluate((el: HTMLElement) => el.click())
+
+	// The panel's content sections should be hidden immediately
+	await expect(page.locator(".summary-sections")).toBeHidden()
+	await expect(page.locator(".summary-section").first()).toBeHidden()
+
+	// Wait for the grid-template-columns CSS transition to finish
+	await page.waitForTimeout(300)
+
+	// Verify the panel collapsed completely to 0 width
+	panelBox = await summaryPanel.boundingBox()
+	expect(panelBox?.width).toBeLessThanOrEqual(1)
+
+	// The toggle button must still be visible and un-clipped outside the 0-width panel
+	await expect(summaryToggle).toBeVisible()
+	const toggleBox = await summaryToggle.boundingBox()
+	expect(toggleBox?.width).toBeGreaterThan(0)
+})
+
 test("treats an evicted run's stream as gone, not as reconnecting", async ({
 	page,
 }) => {
