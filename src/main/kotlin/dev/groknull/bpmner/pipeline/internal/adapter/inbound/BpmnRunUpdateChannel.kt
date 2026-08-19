@@ -19,11 +19,15 @@ import com.embabel.agent.core.hitl.FormBindingRequest
 import com.embabel.ux.form.RadioGroup
 import dev.groknull.bpmner.authoring.BpmnGenerationStatus
 import dev.groknull.bpmner.authoring.BpmnResult
+import dev.groknull.bpmner.authoring.ValidatedOutline
+import dev.groknull.bpmner.conformance.FinalValidatedBpmnXml
 import dev.groknull.bpmner.conformance.format
 import dev.groknull.bpmner.pipeline.ArtifactState
+import dev.groknull.bpmner.pipeline.BpmnPermalinkStore
 import dev.groknull.bpmner.pipeline.RunOutcome
 import dev.groknull.bpmner.pipeline.RunPhase
 import org.jmolecules.architecture.onion.simplified.InfrastructureRing
+import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 import java.util.concurrent.ConcurrentHashMap
 
@@ -43,8 +47,11 @@ import java.util.concurrent.ConcurrentHashMap
 @Component
 internal class BpmnRunUpdateChannel(
     private val registry: RunUpdateSinkRegistry,
+    private val permalinkStore: BpmnPermalinkStore,
 ) : OutputChannel,
     AgenticEventListener {
+    private val logger = LoggerFactory.getLogger(BpmnRunUpdateChannel::class.java)
+
     /** Clarification round counter keyed by process id, for the `AWAITING_INPUT` detail bag. */
     private val clarificationRounds = ConcurrentHashMap<String, Int>()
 
@@ -153,6 +160,13 @@ internal class BpmnRunUpdateChannel(
             )
             return
         }
+
+        val permalinkId = if (result.status == BpmnGenerationStatus.GENERATED && result.xml != null) {
+            savePermalink(process, result.xml)
+        } else {
+            null
+        }
+
         registry.emitTerminal(
             processId = process.id,
             artifactState = artifactStateFor(result.status),
@@ -160,6 +174,9 @@ internal class BpmnRunUpdateChannel(
             outcome = if (result.status == BpmnGenerationStatus.GENERATED) RunOutcome.COMPLETED else RunOutcome.FAILED,
             detail = buildMap {
                 put("status", result.status.name)
+                if (permalinkId != null) {
+                    put("permalinkId", permalinkId)
+                }
                 result.failureDetail?.takeIf { it.isNotBlank() }?.let { put("failureDetail", it) }
                 result.alignmentReport?.verdict?.name?.let { put("alignmentVerdict", it) }
                 result.alignmentReport?.rationale?.let { put("alignmentReport", it) }
@@ -170,10 +187,30 @@ internal class BpmnRunUpdateChannel(
         )
     }
 
+    private fun savePermalink(process: AgentProcess, xml: String): String? {
+        val definition = process.last(FinalValidatedBpmnXml::class.java)?.definition
+            ?: process.last(ValidatedOutline::class.java)?.definition
+        val processName = definition?.processName ?: "process"
+        val slug = processName.lowercase()
+            .replace(Regex("[^a-z0-9]+"), "-")
+            .trim('-')
+            .let { if (it.isBlank()) "process" else it }
+        val shortId = process.id.take(PERMALINK_SHORT_ID_LENGTH)
+        val pId = "$slug-$shortId"
+        return try {
+            permalinkStore.save(pId, xml)
+            pId
+        } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
+            logger.error("Failed to save BPMN permalink XML for process ${process.id}", e)
+            null
+        }
+    }
+
     private companion object {
         // Mirrors BpmnGenerationAgent.MAX_ROUNDS (private const = 3).
         private const val MAX_CLARIFICATION_ROUNDS = 3
         private const val OPTION_SEPARATOR = "|"
+        private const val PERMALINK_SHORT_ID_LENGTH = 8
 
         // @Agent declares no explicit name, so Embabel derives it from the class simple name.
         // Taken from the class rather than a literal so a rename cannot silently mute the stream.

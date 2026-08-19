@@ -9,6 +9,7 @@ import com.embabel.agent.core.AgentPlatform
 import com.embabel.agent.core.AgentProcessStatusCode
 import com.embabel.agent.core.hitl.FormBindingRequest
 import dev.groknull.bpmner.authoring.BpmnResult
+import dev.groknull.bpmner.pipeline.BpmnPermalinkStore
 import dev.groknull.bpmner.pipeline.RunUpdate
 import dev.groknull.bpmner.readiness.BpmnClarificationAnswers
 import jakarta.validation.Valid
@@ -56,6 +57,7 @@ internal class BpmnWebController(
     private val generationStarter: WebGenerationStarter,
     private val agentPlatform: AgentPlatform,
     private val runUpdates: RunUpdateSinkRegistry,
+    private val permalinkStore: BpmnPermalinkStore,
 ) {
     @PostMapping("/generations")
     fun startGeneration(
@@ -162,5 +164,22 @@ internal class BpmnWebController(
         form.bind(answers, process)
         agentPlatform.start(process)
         return ResponseEntity.accepted().build()
+    }
+
+    /**
+     * Retrieves the persisted BPMN XML for the given permalink [id].
+     *
+     * - `200`: XML found in the permalink store.
+     * - `404`: Permalinks ID does not exist or fails validation.
+     */
+    @GetMapping("/p/{id}", produces = [MediaType.APPLICATION_XML_VALUE])
+    fun getPermalink(@PathVariable id: String): ResponseEntity<String> {
+        val xml = permalinkStore.load(id) ?: return ResponseEntity.notFound().build()
+        return ResponseEntity.ok()
+            .header(
+                HttpHeaders.CONTENT_DISPOSITION,
+                ContentDisposition.inline().filename("$id.bpmn").build().toString(),
+            )
+            .body(xml)
     }
 }

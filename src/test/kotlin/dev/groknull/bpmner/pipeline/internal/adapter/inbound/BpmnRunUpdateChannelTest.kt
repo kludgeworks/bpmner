@@ -18,10 +18,13 @@ import com.embabel.ux.form.RadioGroup
 import com.embabel.ux.form.RadioOption
 import dev.groknull.bpmner.authoring.BpmnGenerationStatus
 import dev.groknull.bpmner.authoring.BpmnResult
+import dev.groknull.bpmner.bpmn.BpmnDefinition
 import dev.groknull.bpmner.conformance.BpmnDiagnostic
 import dev.groknull.bpmner.conformance.BpmnDiagnosticSeverity
 import dev.groknull.bpmner.conformance.BpmnDiagnosticSource
+import dev.groknull.bpmner.conformance.FinalValidatedBpmnXml
 import dev.groknull.bpmner.pipeline.ArtifactState
+import dev.groknull.bpmner.pipeline.BpmnPermalinkStore
 import dev.groknull.bpmner.pipeline.RunOutcome
 import dev.groknull.bpmner.pipeline.RunPhase
 import dev.groknull.bpmner.pipeline.RunUpdate
@@ -29,6 +32,7 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito.mock
+import org.mockito.Mockito.verify
 import org.mockito.Mockito.`when`
 import java.time.Duration
 
@@ -40,7 +44,8 @@ import java.time.Duration
  */
 class BpmnRunUpdateChannelTest {
     private val registry = RunUpdateSinkRegistry()
-    private val channel = BpmnRunUpdateChannel(registry)
+    private val permalinkStore = mock(BpmnPermalinkStore::class.java)
+    private val channel = BpmnRunUpdateChannel(registry, permalinkStore)
 
     @Test
     fun `send with a ProgressOutputChannelEvent narrates in the last-known phase`() {
@@ -271,6 +276,33 @@ class BpmnRunUpdateChannelTest {
         val update = registry.subscribe("proc-primary-empty").collectList().block(TIMEOUT)!!.single()
         assertEquals(RunOutcome.FAILED, (update as RunUpdate.Terminal).outcome)
         assertEquals("BPMN generation did not complete.", update.summary)
+    }
+
+    @Test
+    fun `a primary run finishing successfully saves XML and returns permalinkId in detail`() {
+        val process = primaryProcess("proc-id-long-1234abcd")
+        val result = BpmnResult(
+            outputFile = "test.bpmn",
+            status = BpmnGenerationStatus.GENERATED,
+            xml = "<definitions/>",
+        )
+        `when`(process.last(BpmnResult::class.java)).thenReturn(result)
+
+        val definition = mock(BpmnDefinition::class.java)
+        `when`(definition.processName).thenReturn("Employee Onboarding Process")
+
+        val finalXml = mock(FinalValidatedBpmnXml::class.java)
+        `when`(finalXml.definition).thenReturn(definition)
+
+        `when`(process.last(FinalValidatedBpmnXml::class.java)).thenReturn(finalXml)
+
+        channel.onProcessEvent(AgentProcessCompletedEvent(process))
+
+        verify(permalinkStore).save("employee-onboarding-process-proc-id-", "<definitions/>")
+
+        val update = registry.subscribe("proc-id-long-1234abcd").collectList().block(TIMEOUT)!!.single()
+        assertEquals(RunOutcome.COMPLETED, (update as RunUpdate.Terminal).outcome)
+        assertEquals("employee-onboarding-process-proc-id-", update.detail["permalinkId"])
     }
 
     /**

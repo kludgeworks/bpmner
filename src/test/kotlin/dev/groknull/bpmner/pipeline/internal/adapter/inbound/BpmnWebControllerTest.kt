@@ -11,6 +11,7 @@ import com.embabel.agent.core.AgentProcessStatusCode
 import com.embabel.agent.core.hitl.FormBindingRequest
 import dev.groknull.bpmner.authoring.BpmnGenerationStatus
 import dev.groknull.bpmner.authoring.BpmnResult
+import dev.groknull.bpmner.pipeline.BpmnPermalinkStore
 import dev.groknull.bpmner.readiness.BpmnClarificationAnswers
 import jakarta.validation.Validation
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -27,7 +28,8 @@ class BpmnWebControllerTest {
     private val generationStarter = mock(WebGenerationStarter::class.java)
     private val agentPlatform = mock(AgentPlatform::class.java)
     private val runUpdates = RunUpdateSinkRegistry()
-    private val controller = BpmnWebController(generationStarter, agentPlatform, runUpdates)
+    private val permalinkStore = mock(BpmnPermalinkStore::class.java)
+    private val controller = BpmnWebController(generationStarter, agentPlatform, runUpdates, permalinkStore)
 
     @Test
     fun `accepted with relative sseUrl when generation starts`() {
@@ -227,6 +229,26 @@ class BpmnWebControllerTest {
                 .validate(BpmnClarificationAnswers(""))
         assertEquals(1, violations.size, "expected one NotBlank violation for blank answers; got: $violations")
         assertEquals("answers", violations.first().propertyPath.toString())
+    }
+
+    @Test
+    fun `getPermalink returns XML when permalink exists`() {
+        `when`(permalinkStore.load("employee-onboarding-123")).thenReturn("<definitions/>")
+
+        val response = controller.getPermalink("employee-onboarding-123")
+
+        assertEquals(HttpStatus.OK, response.statusCode)
+        assertEquals("<definitions/>", response.body)
+        assertEquals("inline; filename=\"employee-onboarding-123.bpmn\"", response.headers.contentDisposition.toString())
+    }
+
+    @Test
+    fun `getPermalink returns 404 when permalink does not exist`() {
+        `when`(permalinkStore.load("missing")).thenReturn(null)
+
+        val response = controller.getPermalink("missing")
+
+        assertEquals(HttpStatus.NOT_FOUND, response.statusCode)
     }
 
     private fun processWithResult(result: BpmnResult?): AgentProcess {
