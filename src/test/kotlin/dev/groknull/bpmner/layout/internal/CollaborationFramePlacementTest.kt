@@ -26,29 +26,31 @@ class CollaborationFramePlacementTest {
         val model = PlacementTestSkeletons.parse(BpmnToElkMapperTest.COLLABORATION_LANES_XML)
         val root = ElkGraphUtil.createGraph()
         val participant = node(root, "Participant_1", Rect(10.0, 20.0, 500.0, 300.0))
-        val start = node(participant, "Start_1", Rect(60.0, 50.0, 36.0, 36.0))
-        val pick = node(participant, "Task_pick", Rect(60.0, 140.0, 100.0, 80.0))
-        val end = node(participant, "End_1", Rect(60.0, 230.0, 36.0, 36.0))
+        // Each member sits on its declared band's centreline (70/170/270 for three 100-high bands
+        // starting at the participant's top), which is what BpmnToElkMapper maps them onto.
+        val start = node(participant, "Start_1", Rect(60.0, 52.0, 36.0, 36.0))
+        val pick = node(participant, "Task_pick", Rect(60.0, 130.0, 100.0, 80.0))
+        val end = node(participant, "End_1", Rect(60.0, 252.0, 36.0, 36.0))
         val ctx = PlacementContext(
             model,
             PlacementTestSkeletons.skeleton(
                 root,
                 mapOf("Participant_1" to participant, "Start_1" to start, "Task_pick" to pick, "End_1" to end),
+                laneBandHeights = mapOf("Lane_sales" to 100.0, "Lane_warehouse" to 100.0, "Lane_delivery" to 100.0),
             ),
             mutableMapOf(
-                "Start_1" to Rect(60.0, 50.0, 36.0, 36.0),
-                "Task_pick" to Rect(60.0, 140.0, 100.0, 80.0),
-                "End_1" to Rect(60.0, 230.0, 36.0, 36.0),
+                "Start_1" to Rect(60.0, 52.0, 36.0, 36.0),
+                "Task_pick" to Rect(60.0, 130.0, 100.0, 80.0),
+                "End_1" to Rect(60.0, 252.0, 36.0, 36.0),
             ),
             mutableMapOf(),
-            mutableMapOf("Flow_1" to listOf(Point(78.0, 76.0), Point(110.0, 76.0), Point(110.0, 140.0))),
+            mutableMapOf("Flow_1" to listOf(Point(78.0, 70.0), Point(110.0, 70.0), Point(110.0, 130.0))),
             mutableSetOf(),
         )
 
         CollaborationFramePlacement.process(ctx)
 
-        // The participant's own ELK-provided bounds are untouched — no resizing to a re-summed
-        // lane-band height (that responsibility moved into BpmnToElkMapper's pre-layout offsets).
+        // The participant frame spans exactly the bands projected inside it.
         assertEquals(Rect(10.0, 20.0, 500.0, 300.0), ctx.shapes["Participant_1"])
         val sales = ctx.shapes.getValue("Lane_sales")
         val warehouse = ctx.shapes.getValue("Lane_warehouse")
@@ -59,13 +61,16 @@ class CollaborationFramePlacementTest {
         assertEquals(sales.y + sales.h, warehouse.y, "adjoining bands share one seam with no gap or overlap")
         assertEquals(warehouse.y + warehouse.h, delivery.y)
         assertEquals(20.0 + 300.0, delivery.y + delivery.h, "the last band extends to the participant's own bottom")
+        assertEquals(70.0, sales.y + sales.h / 2.0, "a band's midpoint is its members' shared centreline")
+        assertEquals(170.0, warehouse.y + warehouse.h / 2.0)
+        assertEquals(270.0, delivery.y + delivery.h / 2.0)
 
         // Members are never moved: no ledger entry, and their shapes are byte-identical to input.
-        assertEquals(Rect(60.0, 50.0, 36.0, 36.0), ctx.shapes["Start_1"])
+        assertEquals(Rect(60.0, 52.0, 36.0, 36.0), ctx.shapes["Start_1"])
         assertEquals(null, ctx.moves["Start_1"])
-        assertEquals(Rect(60.0, 140.0, 100.0, 80.0), ctx.shapes["Task_pick"])
+        assertEquals(Rect(60.0, 130.0, 100.0, 80.0), ctx.shapes["Task_pick"])
         assertEquals(
-            listOf(Point(78.0, 76.0), Point(110.0, 76.0), Point(110.0, 140.0)),
+            listOf(Point(78.0, 70.0), Point(110.0, 70.0), Point(110.0, 130.0)),
             ctx.edges["Flow_1"],
             "an untouched flow's already-final ELK route is left byte-for-byte unchanged",
         )
@@ -81,7 +86,7 @@ class CollaborationFramePlacementTest {
         val participant = node(root, "Participant_1", Rect(10.0, 20.0, 500.0, 300.0))
         val subprocess = node(participant, "SubProcess_1", Rect(60.0, 50.0, 200.0, 100.0))
         val child = node(subprocess, "Task_child", Rect(10.0, 10.0, 100.0, 80.0))
-        val handler = node(participant, "Task_handler", Rect(290.0, 50.0, 100.0, 80.0))
+        val handler = node(participant, "Task_handler", Rect(290.0, 60.0, 100.0, 80.0))
         val boundary = node(root, "Boundary_1", Rect(80.0, 100.0, 36.0, 36.0))
         val ctx = PlacementContext(
             model,
@@ -94,11 +99,12 @@ class CollaborationFramePlacementTest {
                     "Task_handler" to handler,
                     "Boundary_1" to boundary,
                 ),
+                laneBandHeights = mapOf("Lane_1" to 160.0),
             ),
             mutableMapOf(
                 "SubProcess_1" to Rect(60.0, 50.0, 200.0, 100.0),
                 "Task_child" to Rect(70.0, 60.0, 100.0, 80.0),
-                "Task_handler" to Rect(290.0, 50.0, 100.0, 80.0),
+                "Task_handler" to Rect(290.0, 60.0, 100.0, 80.0),
                 "Boundary_1" to Rect(80.0, 90.0, 36.0, 36.0),
             ),
             mutableMapOf(),

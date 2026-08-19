@@ -248,9 +248,7 @@ class ElkGoldenLayoutTest {
     @ValueSource(strings = ["collab-lanes-branch-rejoin"])
     fun `cross-lane fixture satisfies the AD-730-02 routing contract`(fixture: String) {
         val input = load("layout-fixtures/$fixture.bpmn")
-        val model = org.camunda.bpm.model.bpmn.Bpmn.readModelFromStream(
-            java.io.ByteArrayInputStream(input.toByteArray(Charsets.UTF_8)),
-        )
+        val model = parseBpmn(input)
         val result = layouter.layout(input)
         val doc = LayoutDiInspector.parse(result)
         val shapes = extractShapeRects(doc).associateBy { it.id }
@@ -309,6 +307,67 @@ class ElkGoldenLayoutTest {
         val overlaps = collinearOverlaps(sequenceEdges)
         assertTrue(overlaps.isEmpty(), "[$fixture] sequence flows share a non-zero collinear segment: $overlaps")
     }
+
+    /**
+     * A lane's members share one exact vertical midpoint, and it is their band's midpoint. Both
+     * held before lane membership became an ELK placement input and were lost when it did: an
+     * imported Y honoured verbatim by `NodePlacementStrategy.INTERACTIVE` top-aligns members
+     * unless they are mapped onto the band's centreline, and a band that reserves its label
+     * allowance only below its members sits lower than they do. Exact equality, not a tolerance —
+     * both are computed from one declared band height, so any drift is a real second authority.
+     */
+    @ParameterizedTest(name = "lane members are centred on their band: {0}")
+    @ValueSource(strings = ["collab-lanes", "collab-lanes-loopback", "collab-lanes-branch-rejoin"])
+    fun `every lane member shares its band's exact vertical midpoint`(fixture: String) {
+        val input = load("layout-fixtures/$fixture.bpmn")
+        val shapes = extractShapeRects(LayoutDiInspector.parse(layouter.layout(input))).associateBy { it.id }
+
+        parseBpmn(input).getModelElementsByType(org.camunda.bpm.model.bpmn.instance.Lane::class.java).forEach { lane ->
+            val band = shapes.getValue(lane.id)
+            val midpoints = lane.flowNodeRefs.map { shapes.getValue(it.id).let { rect -> rect.y + rect.h / 2.0 } }.distinct()
+            assertEquals(
+                1,
+                midpoints.size,
+                "[$fixture] lane '${lane.id}' members must share one vertical midpoint, got $midpoints",
+            )
+            assertEquals(
+                band.y + band.h / 2.0,
+                midpoints.single(),
+                "[$fixture] lane '${lane.id}' members' midpoint must be its own band's midpoint",
+            )
+        }
+    }
+
+    /**
+     * `InteractiveNodePlacer` keeps a node's imported Y but pushes it *down* when the node above it
+     * in the same layer does not clear it, silently overriding a declared centring for the second
+     * and later members of a shared layer. That push is the failure mode of under-reserved band
+     * separation, so declared and settled geometry are asserted equal rather than assumed to be.
+     */
+    @ParameterizedTest(name = "no interactive-placer push off the declared band: {0}")
+    @ValueSource(strings = ["collab-lanes", "collab-lanes-loopback", "collab-lanes-branch-rejoin"])
+    fun `every lane member settles on the band Y it was mapped onto`(fixture: String) {
+        val input = load("layout-fixtures/$fixture.bpmn")
+        val memberIds = parseBpmn(input)
+            .getModelElementsByType(org.camunda.bpm.model.bpmn.instance.Lane::class.java)
+            .flatMap { lane -> lane.flowNodeRefs.map { it.id } }
+        val declared = BpmnToElkMapper.map(parseBpmn(input))
+        val settled = BpmnToElkMapper.map(parseBpmn(input))
+        org.eclipse.elk.core.RecursiveGraphLayoutEngine()
+            .layout(settled.root, org.eclipse.elk.core.util.BasicProgressMonitor())
+
+        memberIds.forEach { id ->
+            assertEquals(
+                declared.nodeMap.getValue(id).y,
+                settled.nodeMap.getValue(id).y,
+                "[$fixture] lane member '$id' was pushed off its declared band Y by node placement",
+            )
+        }
+    }
+
+    private fun parseBpmn(xml: String) = org.camunda.bpm.model.bpmn.Bpmn.readModelFromStream(
+        java.io.ByteArrayInputStream(xml.toByteArray(Charsets.UTF_8)),
+    )
 
     private fun assertOneDiagram(doc: org.w3c.dom.Document, fixture: String) {
         val diagrams = doc.getElementsByTagNameNS(DI_NS, "BPMNDiagram")
