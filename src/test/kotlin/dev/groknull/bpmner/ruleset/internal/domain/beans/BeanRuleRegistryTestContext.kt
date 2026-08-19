@@ -11,6 +11,9 @@ import dev.groknull.bpmner.ruleset.internal.domain.compiled.DanglingEdgeRule
 import dev.groknull.bpmner.ruleset.internal.domain.compiled.DefaultFlowRule
 import dev.groknull.bpmner.ruleset.internal.domain.compiled.DuplicateIdRule
 import dev.groknull.bpmner.ruleset.internal.domain.compiled.EventDefinitionRule
+import dev.groknull.bpmner.ruleset.internal.domain.compiled.HeaderPresentRule
+import dev.groknull.bpmner.ruleset.internal.domain.compiled.LegendPresentRule
+import dev.groknull.bpmner.ruleset.internal.domain.compiled.NotesPresentRule
 import dev.groknull.bpmner.ruleset.internal.domain.compiled.RequiredEventsRule
 import dev.groknull.bpmner.ruleset.internal.domain.compiled.RequiredNameRule
 import dev.groknull.bpmner.ruleset.internal.domain.compiled.TaskPayloadRule
@@ -50,6 +53,9 @@ internal fun bpmnerKotlinRuleContext(
         DefaultFlowRule::class.java,
         DuplicateIdRule::class.java,
         EventDefinitionRule::class.java,
+        HeaderPresentRule::class.java,
+        LegendPresentRule::class.java,
+        NotesPresentRule::class.java,
         RequiredEventsRule::class.java,
         RequiredNameRule::class.java,
         TaskPayloadRule::class.java,

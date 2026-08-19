@@ -6,6 +6,7 @@
 package dev.groknull.bpmner.contract.internal.adapter.inbound
 
 import com.fasterxml.jackson.annotation.JsonClassDescription
+import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.annotation.JsonPropertyDescription
 import dev.groknull.bpmner.bpmn.BoundaryEventKind
 import dev.groknull.bpmner.bpmn.BpmnTimerKind
@@ -71,6 +72,7 @@ public enum class FlatTriggerKind {
     SIGNAL,
 }
 
+@JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonClassDescription(
     "Activity required by the extracted process contract. Set `kind` and populate the matching " +
         "kind-specific field: BUSINESS_RULE → decisionName, SEND/RECEIVE → messageName. Other kinds " +
@@ -142,6 +144,7 @@ public data class FlatContractActivity(
     val loop: FlatContractLoop? = null,
 )
 
+@JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonClassDescription(
     "Per-item iteration marker for an activity that repeats over a collection (multi-instance).",
 )
@@ -163,6 +166,7 @@ public data class FlatContractIteration(
     val completionCondition: String? = null,
 )
 
+@JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonClassDescription(
     "A boundary event on an activity: a timeout (TIMER), caught business error (ERROR), raised " +
         "escalation (ESCALATION), or an asynchronous message from another party (MESSAGE, e.g. a " +
@@ -193,6 +197,7 @@ public data class FlatContractBoundaryEvent(
     val id: String = "boundary-event",
 )
 
+@JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonClassDescription(
     "Standard-loop marker for an activity that repeats until a condition is met (while/until/retry).",
 )
@@ -209,6 +214,7 @@ public data class FlatContractLoop(
     val loopMaximum: Int? = null,
 )
 
+@JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonClassDescription(
     "Required end state. Set `kind` and populate the matching code/name field: ERROR → errorCode, " +
         "MESSAGE → messageName, SIGNAL → signalName, ESCALATION → escalationCode. NORMAL and " +
@@ -258,6 +264,7 @@ public data class FlatContractEndState(
     val escalationCode: String? = null,
 )
 
+@JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonClassDescription(
     "Intermediate throw event emitted in the middle of the process. Set `kind` and populate " +
         "the matching payload field: MESSAGE → messageName, SIGNAL → signalName, " +
@@ -293,6 +300,7 @@ public data class FlatContractIntermediateThrow(
     val escalationCode: String? = null,
 )
 
+@JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonClassDescription(
     "Branch out of a contract decision. Set `kind` to CONDITIONAL (populate condition) for " +
         "branches of EXCLUSIVE decisions, DEFAULT for the catch-all of an EXCLUSIVE decision, " +
@@ -336,6 +344,7 @@ public data class FlatContractBranch(
     val triggerDetail: String? = null,
 )
 
+@JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonClassDescription(
     "Typed process trigger. Set `type` and populate the matching kind-specific fields: TIMER → " +
         "timerKind + expression, MESSAGE → messageName, SIGNAL → signalName. NONE leaves them null.",
@@ -367,6 +376,7 @@ public data class FlatContractTrigger(
     val signalName: String? = null,
 )
 
+@JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonClassDescription("Source-grounded process start declaration")
 public data class FlatContractStart(
     @field:Valid
@@ -381,6 +391,7 @@ public data class FlatContractStart(
     val id: String = "start",
 )
 
+@JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonClassDescription(
     "One edge in the process topology. `branchId` is required when `from` is a decision (names " +
         "which of its declared branches this edge realises) and omitted for every other edge.",
@@ -407,6 +418,7 @@ public data class FlatContractFlow(
     val branchId: String? = null,
 )
 
+@JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonClassDescription(
     "Embedded subprocess — a named grouping of activities treated as a single composite step on the " +
         "main flow (cues: \"handled as one block\", \"the X process, which involves …\", \"contains " +
@@ -442,6 +454,7 @@ public data class FlatContractSubProcess(
  * already carries `@JsonClassDescription`/`@JsonPropertyDescription` worked instructions
  * and `@NotBlank`/`@NotEmpty`/`@Valid`/`@Size` bounds.
  */
+@JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonClassDescription(
     "Source-grounded process contract extracted before BPMN generation. Flat wire shape: each " +
         "sealed hierarchy is collapsed to a single object with a `kind` discriminator and optional " +
@@ -509,6 +522,7 @@ public data class FlatProcessContract(
     val flows: List<FlatContractFlow> = emptyList(),
 )
 
+@JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonClassDescription("Decision required by the extracted process contract")
 public data class FlatContractDecision(
     @field:NotBlank

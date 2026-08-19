@@ -65,7 +65,7 @@ class LiveLlmFullPipelineSmokeTest {
                     BpmnResult::class.java,
                     ProcessOptions(
                         budget = Budget(actions = 100),
-                        ephemeral = true,
+                        ephemeral = false,
                         listeners = listOf(SuiteCostCapturer),
                     ),
                 )
@@ -106,7 +106,7 @@ class LiveLlmFullPipelineSmokeTest {
                     BpmnResult::class.java,
                     ProcessOptions(
                         budget = Budget(actions = 100),
-                        ephemeral = true,
+                        ephemeral = false,
                         listeners = listOf(SuiteCostCapturer),
                     ),
                 )

@@ -80,7 +80,7 @@ class BpmnRunUpdateDeliveryTest : EmbabelMockitoIntegrationTest() {
         stubReadiness(readyAssessment())
         stubCannedStages()
 
-        val process = runGenerationAgent(ephemeral = true)
+        val process = runGenerationAgent(ephemeral = false)
         val updates = runUpdateSinkRegistry.subscribe(process.id).collectList().block(TIMEOUT)!!
 
         assertTrue(updates.isNotEmpty(), "expected at least one RunUpdate from a real run")
@@ -113,7 +113,7 @@ class BpmnRunUpdateDeliveryTest : EmbabelMockitoIntegrationTest() {
         stubReadiness(readyAssessment())
         stubCannedStages()
 
-        val process = runGenerationAgent(ephemeral = true)
+        val process = runGenerationAgent(ephemeral = false)
         val updates = runUpdateSinkRegistry.subscribe(process.id).collectList().block(TIMEOUT)!!
 
         // The client branches on this to know whether a question follows, so it must survive a
