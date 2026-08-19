@@ -35,6 +35,9 @@ class ElkGoldenLayoutTest {
         /** Shapes at or above this area (200×200) are containers (subprocess/lane/participant). */
         private const val CONTAINER_AREA = 40_000.0
 
+        /** Tolerance for "does not decrease/must advance" X comparisons, absorbing ELK round-off. */
+        private const val AXIS_TOLERANCE_FOR_TEST = 0.5
+
         /**
          * Known label/edge-waypoint overlaps (fixture, label owner id, edge id). Each pair traces
          * to one of two causes: a hand-routed message flow (or, since group E, an ELK
@@ -230,6 +233,81 @@ class ElkGoldenLayoutTest {
         val result = layouter.layout(input)
         assertXml(result).nodesByXPath("//bpmndi:BPMNShape[@bioc:stroke]").exist()
         assertXml(result).nodesByXPath("//bpmndi:BPMNShape[@bioc:fill]").exist()
+    }
+
+    /**
+     * REVIEW-730-2 #1: generic shape/label invariants are not the AD-730-02 routing contract.
+     * Asserts, on the new reduced regression fixture specifically: the start event is leftmost
+     * and declared in the first lane; no normal sequence flow decreases X end-to-end; a cross-lane
+     * flow advances rightward at *every* waypoint, not just overall; no flow intersects an
+     * unrelated flow node; no proper crossings; and no non-zero collinear overlap between
+     * distinct sequence flows (which [assertLabelsClearEdgeGeometry]'s corpus-wide checks do not
+     * cover — [collinearOverlaps] is a dedicated predicate for exactly this).
+     */
+    @ParameterizedTest(name = "AD-730-02 cross-lane routing contract: {0}")
+    @ValueSource(strings = ["collab-lanes-branch-rejoin"])
+    fun `cross-lane fixture satisfies the AD-730-02 routing contract`(fixture: String) {
+        val input = load("layout-fixtures/$fixture.bpmn")
+        val model = org.camunda.bpm.model.bpmn.Bpmn.readModelFromStream(
+            java.io.ByteArrayInputStream(input.toByteArray(Charsets.UTF_8)),
+        )
+        val result = layouter.layout(input)
+        val doc = LayoutDiInspector.parse(result)
+        val shapes = extractShapeRects(doc).associateBy { it.id }
+
+        val flowNodes = model.getModelElementsByType(org.camunda.bpm.model.bpmn.instance.FlowNode::class.java)
+        val start = model.getModelElementsByType(org.camunda.bpm.model.bpmn.instance.StartEvent::class.java).single()
+        val laneOf = model.getModelElementsByType(org.camunda.bpm.model.bpmn.instance.Lane::class.java)
+            .withIndex()
+            .flatMap { (index, lane) -> lane.flowNodeRefs.map { it.id to index } }
+            .toMap()
+        val sequenceFlows = model.getModelElementsByType(org.camunda.bpm.model.bpmn.instance.SequenceFlow::class.java)
+        val edgesById = extractEdges(doc).associateBy { it.id }
+
+        val startX = shapes.getValue(start.id).x
+        assertTrue(
+            flowNodes.all { (shapes[it.id]?.x ?: startX) >= startX },
+            "[$fixture] start event must be leftmost among the process's flow nodes",
+        )
+        assertEquals(0, laneOf.getValue(start.id), "[$fixture] start event must be declared in the first lane")
+
+        sequenceFlows.forEach { flow ->
+            val edge = edgesById.getValue(flow.id)
+            val first = edge.waypoints.first()
+            val last = edge.waypoints.last()
+            assertTrue(
+                last.x >= first.x - AXIS_TOLERANCE_FOR_TEST,
+                "[$fixture] sequence flow '${flow.id}' must not decrease X (first=$first last=$last)",
+            )
+            if (laneOf[flow.source?.id] != laneOf[flow.target?.id]) {
+                edge.waypoints.zipWithNext().forEach { (a, b) ->
+                    assertTrue(
+                        b.x >= a.x - AXIS_TOLERANCE_FOR_TEST,
+                        "[$fixture] cross-lane flow '${flow.id}' must advance rightward at every " +
+                            "segment while changing lane, not just overall (segment $a -> $b)",
+                    )
+                }
+            }
+        }
+
+        val flowNodeRects = flowNodes.mapNotNull { shapes[it.id] }
+        sequenceFlows.forEach { flow ->
+            val edge = edgesById.getValue(flow.id)
+            val unrelated = flowNodeRects.filter { it.id != flow.source?.id && it.id != flow.target?.id }
+            edge.waypoints.zipWithNext().forEach { (a, b) ->
+                unrelated.forEach { rect ->
+                    assertTrue(
+                        !segmentIntersectsRect(a, b, rect),
+                        "[$fixture] flow '${flow.id}' must not intersect unrelated node '${rect.id}'",
+                    )
+                }
+            }
+        }
+
+        val sequenceEdges = sequenceFlows.map { edgesById.getValue(it.id) }
+        assertEquals(0, countCrossings(sequenceEdges), "[$fixture] sequence flows must not properly cross")
+        val overlaps = collinearOverlaps(sequenceEdges)
+        assertTrue(overlaps.isEmpty(), "[$fixture] sequence flows share a non-zero collinear segment: $overlaps")
     }
 
     private fun assertOneDiagram(doc: org.w3c.dom.Document, fixture: String) {

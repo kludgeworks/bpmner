@@ -5,6 +5,7 @@
 
 package dev.groknull.bpmner.layout.internal
 
+import dev.groknull.bpmner.layout.BpmnAutoLayoutException
 import org.camunda.bpm.model.bpmn.Bpmn
 import org.camunda.bpm.model.bpmn.BpmnModelInstance
 import org.eclipse.elk.alg.layered.options.CenterEdgeLabelPlacementStrategy
@@ -20,6 +21,7 @@ import org.eclipse.elk.core.options.SizeConstraint
 import org.junit.jupiter.api.Test
 import java.io.ByteArrayInputStream
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -461,6 +463,45 @@ class BpmnToElkMapperTest {
             "the unlabelled lane's declared band offset must clear the labelled lane's member height " +
                 "plus its label allowance, not just its member height",
         )
+    }
+
+    @Test
+    fun `an empty lane is rejected rather than silently blanking every sibling lane's DI output`() {
+        // REVIEW-730-2 #4: CollaborationFramePlacement.projectLaneBands has no member geometry to
+        // derive an empty lane's band from after layout, and previously suppressed every sibling
+        // lane's shape rather than just the empty one — reject the model here instead.
+        val xml = """<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="D" targetNamespace="https://groknull.dev/bpmner">
+  <bpmn:collaboration id="C"><bpmn:participant id="Participant_1" processRef="P"/></bpmn:collaboration>
+  <bpmn:process id="P"><bpmn:laneSet id="LS">
+    <bpmn:lane id="Lane_populated"><bpmn:flowNodeRef>Task_1</bpmn:flowNodeRef></bpmn:lane>
+    <bpmn:lane id="Lane_empty"/>
+  </bpmn:laneSet>
+    <bpmn:serviceTask id="Task_1"/>
+  </bpmn:process>
+</bpmn:definitions>"""
+
+        val error = assertFailsWith<BpmnAutoLayoutException> { BpmnToElkMapper.map(parseXml(xml)) }
+        assertTrue(error.message?.contains("Lane_empty") == true, "error must name the offending lane")
+    }
+
+    @Test
+    fun `a SubProcess directly in a lane is rejected rather than underestimating its band height`() {
+        // REVIEW-730-2 #3: a SubProcess's expanded extent depends on its own children and padding,
+        // which is unknowable before ELK lays it out — reserving the fixed task height would let a
+        // tall subprocess overflow into the next lane's band.
+        val xml = """<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="D" targetNamespace="https://groknull.dev/bpmner">
+  <bpmn:collaboration id="C"><bpmn:participant id="Participant_1" processRef="P"/></bpmn:collaboration>
+  <bpmn:process id="P"><bpmn:laneSet id="LS">
+    <bpmn:lane id="Lane_1"><bpmn:flowNodeRef>SubProcess_1</bpmn:flowNodeRef></bpmn:lane>
+  </bpmn:laneSet>
+    <bpmn:subProcess id="SubProcess_1"><bpmn:serviceTask id="Task_child"/></bpmn:subProcess>
+  </bpmn:process>
+</bpmn:definitions>"""
+
+        val error = assertFailsWith<BpmnAutoLayoutException> { BpmnToElkMapper.map(parseXml(xml)) }
+        assertTrue(error.message?.contains("SubProcess_1") == true, "error must name the offending subprocess")
     }
 
     // ── Artifacts (annotations via ELK comment attachment) ─────────────────────

@@ -14,6 +14,7 @@ import org.eclipse.elk.core.math.KVector
 import org.eclipse.elk.core.options.CoreOptions
 import org.eclipse.elk.core.options.Direction
 import org.eclipse.elk.core.options.EdgeRouting
+import org.eclipse.elk.core.options.HierarchyHandling
 import org.eclipse.elk.core.util.BasicProgressMonitor
 import org.eclipse.elk.graph.ElkNode
 import org.eclipse.elk.graph.util.ElkGraphUtil
@@ -23,13 +24,15 @@ import kotlin.test.assertTrue
 /**
  * AD-730-06 decision spike: which stock `elk.layered` mechanism, if any, can express BPMN lane
  * bands as a routing input (declared before phase-5 edge routing) rather than a post-layout
- * translation. Builds the ELK graph directly (bypassing [BpmnToElkMapper]) so flow nodes sit
- * directly under one parent with no lane compound — the AD-730-06 target shape — letting each
- * candidate's properties be tested in isolation before any production code changes.
+ * translation. Every graph below is wrapped exactly as production maps a lane-carrying
+ * participant ([BpmnToElkMapper.applyParticipantProfile]): an outer root containing one compound
+ * with `HIERARCHY_HANDLING = INCLUDE_CHILDREN`, flow nodes as its direct children, no lane
+ * compound — so `GraphConfigurator`'s hierarchical branches (greedy switch, long-edge handling)
+ * exercise the same code path production uses, not a simplified non-hierarchical stand-in.
  *
- * Topology mirrors the reduced branch/rejoin regression fixture: a top-lane start/prepare, a
- * split, a top-lane branch and a lower-lane branch, a top-lane rejoin, and an end — two lanes,
- * one cross-lane branch, one cross-lane rejoin.
+ * Topology has two split/rejoin pairs in series (two separate cross-lane crossings at different
+ * absolute layers) plus one layer-spanning edge, so a candidate's banding claim can be measured
+ * globally across the whole diagram and against a long-edge dummy node, not just within one layer.
  */
 class LaneConstraintSpikeTest {
 
@@ -44,16 +47,16 @@ class LaneConstraintSpikeTest {
      */
     @Test
     fun `partitioning under Direction RIGHT orders lanes horizontally, not vertically`() {
-        val root = buildFlatGraph()
-        root.children.forEach { node ->
+        val (_, participant) = buildHierarchicalGraph()
+        participant.children.forEach { node ->
             val laneIndex = node.identifier.laneIndexOf()
             node.setProperty(LayeredOptions.PARTITIONING_ACTIVATE, true)
             node.setProperty(LayeredOptions.PARTITIONING_PARTITION, laneIndex)
         }
-        RecursiveGraphLayoutEngine().layout(root, BasicProgressMonitor())
+        RecursiveGraphLayoutEngine().layout(participant.parent, BasicProgressMonitor())
 
-        val topX = root.children.first { it.identifier == "top_prepare" }.x
-        val lowerX = root.children.first { it.identifier == "lower_task" }.x
+        val topX = participant.children.first { it.identifier == "top_a1" }.x
+        val lowerX = participant.children.first { it.identifier == "lower_b1" }.x
         assertTrue(
             topX != lowerX,
             "expected partitioning to separate lanes on X (the flow axis) under Direction.RIGHT, " +
@@ -63,112 +66,180 @@ class LaneConstraintSpikeTest {
 
     /**
      * A1 — ordering only: `POSITION.y` = lane order key + `crossingMinimization.semiInteractive`.
-     * Proves whether `SemiInteractiveCrossMinProcessor` orders each layer by declared lane index.
-     * This alone does not guarantee cross-layer Y alignment (banding); it only orders within a
-     * layer. Measured, not assumed, per AD-730-05.
+     *
+     * Measured, not assumed (both a symmetric and a hop-asymmetric two-crossing variant of this
+     * topology were tried): on this class of graph, ELK's default global node placer keeps the
+     * two crossings *ordered* correctly on its own — A1 does not reliably fail simple ordering,
+     * contradicting the original hypothesis. The property that actually distinguishes A1 from A2,
+     * and that production genuinely depends on, is *controllable separation*: BPMN lane heights
+     * vary by each lane's real content ([BpmnToElkMapper.computeLaneBands]), so the gap between
+     * lane groups must equal that *declared* height, not whatever the generic node-node spacing
+     * default happens to produce. A1 has no channel to communicate a per-lane declared height; it
+     * can only order. This test measures that gap directly.
      */
     @Test
-    fun `A1 semiInteractive ordering sorts each layer by lane position but does not band across layers`() {
-        val root = buildFlatGraph()
-        applyA1(root)
+    fun `A1 ordering alone cannot enforce a declared per-lane band height`() {
+        val (root, participant) = buildHierarchicalGraph()
+        applyA1(participant)
         RecursiveGraphLayoutEngine().layout(root, BasicProgressMonitor())
 
-        val topTaskY = root.children.first { it.identifier == "top_review" }.y
-        val lowerTaskY = root.children.first { it.identifier == "lower_task" }.y
-        // A1's contract is ordering, not banding: assert the mechanism ran (order held within the
-        // layer that contains both), not that the two arbitrary-layer Y values line up as bands.
+        val maxTopY = participant.children.filter { it.identifier.laneIndexOf() == 0 }.maxOf { it.y }
+        val minLowerY = participant.children.filter { it.identifier.laneIndexOf() == 1 }.minOf { it.y }
+        val actualGap = minLowerY - maxTopY
         assertTrue(
-            topTaskY < lowerTaskY,
-            "expected A1 in-layer ordering to place the top-lane node above the lower-lane node " +
-                "within their shared layer — got topTaskY=$topTaskY lowerTaskY=$lowerTaskY",
+            actualGap < LANE_BAND_HEIGHT,
+            "A1 ordering-only produced gap=$actualGap between lane groups; expected it to fall " +
+                "well short of the declared LANE_BAND_HEIGHT=$LANE_BAND_HEIGHT (A1 has no channel " +
+                "to communicate a lane's real declared height, only generic node-node spacing) — " +
+                "if this gap already matched the declared height, A1 alone would be sufficient",
         )
     }
 
     /**
      * A2 — ordering + banding: A1 plus each node's *input* `y` set to its lane band offset, with
-     * `nodePlacement.strategy = INTERACTIVE`. Per the verified ELK 0.12.0 mechanics
-     * (`InteractiveNodePlacer` keeps a normal node's imported `y` and only pushes down on
-     * overlap), this should yield true cross-layer banding: every top-lane node lands above every
-     * lower-lane node, in every layer.
+     * `nodePlacement.strategy = INTERACTIVE`. Measured on the full two-crossing hierarchical
+     * graph: every top-lane node's Y must stay below every lower-lane node's Y everywhere in the
+     * diagram, not just within one shared layer.
      */
     @Test
-    fun `A2 interactive placement bands every lane member across all layers`() {
-        val root = buildFlatGraph()
-        applyA1(root)
-        root.setProperty(LayeredOptions.NODE_PLACEMENT_STRATEGY, NodePlacementStrategy.INTERACTIVE)
-        root.children.forEach { node -> node.y = node.identifier.laneIndexOf() * LANE_BAND_HEIGHT }
+    fun `A2 interactive placement bands every lane member across all layers on the hierarchical graph`() {
+        val (root, participant) = buildHierarchicalGraph()
+        applyA2(participant)
         RecursiveGraphLayoutEngine().layout(root, BasicProgressMonitor())
 
-        val topYs = root.children.filter { it.identifier.laneIndexOf() == 0 }.map { it.y }
-        val lowerYs = root.children.filter { it.identifier.laneIndexOf() == 1 }.map { it.y }
-        val maxTopY = topYs.max()
-        val minLowerY = lowerYs.min()
+        val maxTopY = participant.children.filter { it.identifier.laneIndexOf() == 0 }.maxOf { it.y }
+        val minLowerY = participant.children.filter { it.identifier.laneIndexOf() == 1 }.minOf { it.y }
         assertTrue(
             maxTopY < minLowerY,
-            "expected every top-lane node's Y to stay below every lower-lane node's Y (true " +
-                "banding) — got maxTopY=$maxTopY minLowerY=$minLowerY, topYs=$topYs lowerYs=$lowerYs",
+            "expected every top-lane node's Y to stay below every lower-lane node's Y across both " +
+                "crossings — got maxTopY=$maxTopY minLowerY=$minLowerY",
         )
     }
 
     /**
-     * Greedy-switch risk (AD-730-05): the hierarchical greedy switch is inactive by default and
-     * only activates on an `INCLUDE_CHILDREN` root; this graph has no compound hierarchy at all
-     * (AD-730-06's target — flow nodes sit directly under one parent), so the plain non-hierarchical
-     * greedy switch is the only one that can run, and it must not undo A2's banding.
+     * Greedy-switch risk (AD-730-05), measured on the *actual* production shape this time: the
+     * participant compound has `HIERARCHY_HANDLING = INCLUDE_CHILDREN`
+     * ([BpmnToElkMapper.applyParticipantProfile]), so `GraphConfigurator.activateGreedySwitchFor`
+     * takes its hierarchical branch (`CROSSING_MINIMIZATION_GREEDY_SWITCH_HIERARCHICAL_TYPE`), not
+     * the non-hierarchical one the original spike measured.
      */
     @Test
-    fun `A2 banding survives the default greedy switch on a non-hierarchical graph`() {
-        val root = buildFlatGraph()
-        applyA1(root)
-        root.setProperty(LayeredOptions.NODE_PLACEMENT_STRATEGY, NodePlacementStrategy.INTERACTIVE)
-        root.children.forEach { node -> node.y = node.identifier.laneIndexOf() * LANE_BAND_HEIGHT }
-        // Defaults only: no HIERARCHY_HANDLING is set on this graph, so greedy switch activation
-        // follows the plain non-hierarchical branch of GraphConfigurator.activateGreedySwitchFor.
+    fun `A2 banding survives the default greedy switch on the hierarchical participant graph`() {
+        val (root, participant) = buildHierarchicalGraph()
+        applyA2(participant)
         RecursiveGraphLayoutEngine().layout(root, BasicProgressMonitor())
 
-        val maxTopY = root.children.filter { it.identifier.laneIndexOf() == 0 }.maxOf { it.y }
-        val minLowerY = root.children.filter { it.identifier.laneIndexOf() == 1 }.minOf { it.y }
+        val maxTopY = participant.children.filter { it.identifier.laneIndexOf() == 0 }.maxOf { it.y }
+        val minLowerY = participant.children.filter { it.identifier.laneIndexOf() == 1 }.minOf { it.y }
         assertTrue(
             maxTopY < minLowerY,
-            "expected the default greedy switch to leave A2's lane banding intact — got " +
-                "maxTopY=$maxTopY minLowerY=$minLowerY",
+            "expected the default hierarchical greedy switch to leave A2's lane banding intact " +
+                "on the INCLUDE_CHILDREN graph — got maxTopY=$maxTopY minLowerY=$minLowerY",
         )
     }
 
-    private fun applyA1(root: ElkNode) {
-        root.setProperty(LayeredOptions.CROSSING_MINIMIZATION_SEMI_INTERACTIVE, true)
-        root.children.forEach { node ->
+    /**
+     * Long-edge-dummy risk (AD-730-05): an edge spanning several layers (`top_start` direct to
+     * `top_end`, skipping every intermediate layer) forces ELK to insert and then remove internal
+     * long-edge dummy nodes. A2's banding of the real nodes must survive that insertion/removal.
+     */
+    @Test
+    fun `A2 banding survives a layer-spanning edge that forces long-edge dummy insertion`() {
+        val (root, participant) = buildHierarchicalGraph()
+        val start = participant.children.first { it.identifier == "top_start" }
+        val end = participant.children.first { it.identifier == "top_end" }
+        ElkGraphUtil.createSimpleEdge(start, end)
+        applyA2(participant)
+        RecursiveGraphLayoutEngine().layout(root, BasicProgressMonitor())
+
+        val maxTopY = participant.children.filter { it.identifier.laneIndexOf() == 0 }.maxOf { it.y }
+        val minLowerY = participant.children.filter { it.identifier.laneIndexOf() == 1 }.minOf { it.y }
+        assertTrue(
+            maxTopY < minLowerY,
+            "expected A2's banding to survive a layer-spanning edge's dummy-node insertion and " +
+                "removal — got maxTopY=$maxTopY minLowerY=$minLowerY",
+        )
+    }
+
+    /**
+     * The mechanism-selection gate requires more than banded node positions: it requires evidence
+     * that a *cross-lane edge's routed section* is derived from those final normalized positions,
+     * not a stale or independently repaired route (AD-730-01). After layout, a cross-lane edge's
+     * section must start/end within its source/target node's actual settled bounds.
+     */
+    @Test
+    fun `a cross-lane edge's routed section terminates at the final banded node positions`() {
+        val (root, participant) = buildHierarchicalGraph()
+        applyA2(participant)
+        RecursiveGraphLayoutEngine().layout(root, BasicProgressMonitor())
+
+        val split = participant.children.first { it.identifier == "top_splitA" }
+        val lower = participant.children.first { it.identifier == "lower_b1" }
+        val edge = split.outgoingEdges.first { it.targets.contains(lower) }
+        val section = edge.sections.single()
+
+        // ELK reports edge coordinates relative to the edge's containing node; both endpoints
+        // here share the participant as their lowest common ancestor, so no further offset walk
+        // is needed to compare directly against each node's own (participant-relative) x/y.
+        assertTrue(
+            section.startX >= split.x && section.startX <= split.x + split.width,
+            "the edge's start X must fall within its source node's final settled bounds",
+        )
+        assertTrue(
+            section.endY >= lower.y && section.endY <= lower.y + lower.height,
+            "the edge's end Y must fall within its target node's final banded position, not a " +
+                "stale pre-banding Y",
+        )
+    }
+
+    private fun applyA1(participant: ElkNode) {
+        participant.setProperty(LayeredOptions.CROSSING_MINIMIZATION_SEMI_INTERACTIVE, true)
+        participant.children.forEach { node ->
             node.setProperty(LayeredOptions.POSITION, KVector(0.0, node.identifier.laneIndexOf().toDouble()))
         }
+    }
+
+    private fun applyA2(participant: ElkNode) {
+        applyA1(participant)
+        participant.setProperty(LayeredOptions.NODE_PLACEMENT_STRATEGY, NodePlacementStrategy.INTERACTIVE)
+        participant.children.forEach { node -> node.y = node.identifier.laneIndexOf() * LANE_BAND_HEIGHT }
     }
 
     /** `top_*` nodes are lane 0; `lower_*` nodes are lane 1 — mirrors the regression fixture. */
     private fun String.laneIndexOf(): Int = if (startsWith("lower")) 1 else 0
 
     /**
-     * Builds the branch/rejoin topology with every flow node as a direct child of the root graph
-     * — no lane compound, no participant compound — the AD-730-06 target shape for Candidate A.
+     * Builds an outer root containing one participant-shaped compound
+     * (`HIERARCHY_HANDLING = INCLUDE_CHILDREN`, algorithm/direction/routing set exactly as
+     * [BpmnToElkMapper.applyParticipantProfile]/`applyRootLayoutOptions` do), with the
+     * two-crossing branch/rejoin topology as its direct children — the AD-730-06 target shape:
+     * no lane compound, real hierarchical nesting matching production.
+     *
+     * @return (outer root to hand to the layout engine, the participant compound to configure).
      */
-    private fun buildFlatGraph(): ElkNode {
+    private fun buildHierarchicalGraph(): Pair<ElkNode, ElkNode> {
         val root = ElkGraphUtil.createGraph()
-        root.setProperty(CoreOptions.ALGORITHM, LayeredOptions.ALGORITHM_ID)
-        root.setProperty(CoreOptions.DIRECTION, Direction.RIGHT)
-        root.setProperty(CoreOptions.EDGE_ROUTING, EdgeRouting.ORTHOGONAL)
-        root.setProperty(CoreOptions.RANDOM_SEED, 1)
-        root.setProperty(CoreOptions.SPACING_NODE_NODE, 60.0)
-        root.setProperty(LayeredOptions.SPACING_NODE_NODE_BETWEEN_LAYERS, 90.0)
+        val participant = ElkGraphUtil.createNode(root)
+        participant.setProperty(CoreOptions.ALGORITHM, LayeredOptions.ALGORITHM_ID)
+        participant.setProperty(CoreOptions.DIRECTION, Direction.RIGHT)
+        participant.setProperty(CoreOptions.EDGE_ROUTING, EdgeRouting.ORTHOGONAL)
+        participant.setProperty(CoreOptions.RANDOM_SEED, 1)
+        participant.setProperty(CoreOptions.HIERARCHY_HANDLING, HierarchyHandling.INCLUDE_CHILDREN)
+        participant.setProperty(CoreOptions.SPACING_NODE_NODE, 60.0)
+        participant.setProperty(LayeredOptions.SPACING_NODE_NODE_BETWEEN_LAYERS, 90.0)
 
+        // Deliberately asymmetric: crossing A's top branch takes an extra hop (top_b1 ->
+        // top_b1x -> join) while its lower branch takes one hop directly to the join; crossing
+        // B is the reverse (extra hop on its lower branch, one hop on top). A perfectly
+        // symmetric two-crossing graph let a non-interactive placer coincidentally align both
+        // crossings (measured, then rejected as unrepresentative) — real BPMN branches are not
+        // hop-symmetric, so this shape is the fairer adversarial test of A1 alone.
         val ids = listOf(
-            "top_start",
-            "top_prepare",
-            "top_split",
-            "top_review",
-            "top_join",
-            "top_end",
-            "lower_task",
+            "top_start", "top_a1", "top_splitA", "top_b1", "top_b1x", "lower_b1", "top_joinA",
+            "top_a2", "top_splitB", "top_b2", "lower_b2", "lower_b2x", "top_joinB", "top_end",
         )
         val nodes = ids.associateWith { id ->
-            ElkGraphUtil.createNode(root).also {
+            ElkGraphUtil.createNode(participant).also {
                 it.identifier = id
                 it.width = 60.0
                 it.height = 40.0
@@ -176,15 +247,23 @@ class LaneConstraintSpikeTest {
         }
 
         fun edge(fromId: String, toId: String) = ElkGraphUtil.createSimpleEdge(nodes.getValue(fromId), nodes.getValue(toId))
-        edge("top_start", "top_prepare")
-        edge("top_prepare", "top_split")
-        edge("top_split", "top_review")
-        edge("top_split", "lower_task")
-        edge("top_review", "top_join")
-        edge("lower_task", "top_join")
-        edge("top_join", "top_end")
+        edge("top_start", "top_a1")
+        edge("top_a1", "top_splitA")
+        edge("top_splitA", "top_b1")
+        edge("top_b1", "top_b1x")
+        edge("top_splitA", "lower_b1")
+        edge("top_b1x", "top_joinA")
+        edge("lower_b1", "top_joinA")
+        edge("top_joinA", "top_a2")
+        edge("top_a2", "top_splitB")
+        edge("top_splitB", "top_b2")
+        edge("top_splitB", "lower_b2")
+        edge("lower_b2", "lower_b2x")
+        edge("top_b2", "top_joinB")
+        edge("lower_b2x", "top_joinB")
+        edge("top_joinB", "top_end")
 
-        return root
+        return root to participant
     }
 
     private companion object {

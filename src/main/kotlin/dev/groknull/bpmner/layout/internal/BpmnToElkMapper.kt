@@ -181,24 +181,56 @@ internal object BpmnToElkMapper {
      * sizing while remaining computable before ELK runs (every node dimension is a fixed
      * constant from [nodeDimensions]).
      *
-     * Nested lanes (a lane with a childLaneSet) are not supported — a lane that delegates to a
-     * childLaneSet carries no flowNodeRefs of its own, so silently continuing would leave its
-     * descendants unbanded with no error. Fail loudly instead.
+     * Three lane shapes are rejected rather than silently mis-banded, matching the existing
+     * nested-lane failure style:
+     * - a nested lane (a lane with a childLaneSet) carries no flowNodeRefs of its own, so
+     *   continuing would leave its descendants unbanded with no error;
+     * - an empty lane (no flowNodeRefs) has no member geometry for
+     *   [dev.groknull.bpmner.layout.internal.placement.CollaborationFramePlacement] to derive its
+     *   band from after layout, which would otherwise suppress every populated sibling lane's
+     *   BPMN-DI shape too;
+     * - a [SubProcess] lane member's declared band height would be [TASK_HEIGHT], understating
+     *   its real expanded extent (which depends on its own children and padding, unknowable
+     *   before ELK lays it out) and risking an overlap with the next lane's band.
      */
     private fun computeLaneBands(lanes: List<Lane>): Map<String, LaneBand> {
         val bands = mutableMapOf<String, LaneBand>()
         var nextY = LANE_PADDING
         lanes.forEachIndexed { index, lane ->
-            if (lane.childLaneSet != null) {
-                throw BpmnAutoLayoutException("ELK layout: nested lanes (lane '${lane.id}' has a childLaneSet) are not supported")
-            }
-            val members = lane.flowNodeRefs.toList()
-            val maxHeight = members.maxOfOrNull { nodeDimensions(it).second } ?: TASK_HEIGHT
+            val members = validatedLaneMembers(lane)
+            val maxHeight = members.maxOf { nodeDimensions(it).second }
             val maxLabel = tallestLabelHeight(members.map { it.name })
             members.forEach { bands[it.id] = LaneBand(index, nextY) }
             nextY += maxHeight + maxLabel + LANE_PADDING * 2
         }
         return bands
+    }
+
+    /** [lane]'s own flowNodeRefs, or throws one of the three rejections documented on [computeLaneBands]. */
+    private fun validatedLaneMembers(lane: Lane): List<FlowNode> {
+        val members = validatedLaneStructure(lane)
+        rejectSubProcessMember(lane, members)
+        return members
+    }
+
+    private fun validatedLaneStructure(lane: Lane): List<FlowNode> {
+        if (lane.childLaneSet != null) {
+            throw BpmnAutoLayoutException("ELK layout: nested lanes (lane '${lane.id}' has a childLaneSet) are not supported")
+        }
+        val members = lane.flowNodeRefs.toList()
+        if (members.isEmpty()) {
+            throw BpmnAutoLayoutException("ELK layout: an empty lane (lane '${lane.id}' has no flowNodeRef) is not supported")
+        }
+        return members
+    }
+
+    private fun rejectSubProcessMember(lane: Lane, members: List<FlowNode>) {
+        val subProcessMember = members.filterIsInstance<SubProcess>().firstOrNull() ?: return
+        throw BpmnAutoLayoutException(
+            "ELK layout: a SubProcess directly in a lane (lane '${lane.id}', subprocess " +
+                "'${subProcessMember.id}') is not supported — its expanded extent cannot be " +
+                "reserved in the lane's band before layout",
+        )
     }
 
     /**

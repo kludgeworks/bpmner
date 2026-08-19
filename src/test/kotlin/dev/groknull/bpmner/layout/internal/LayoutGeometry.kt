@@ -191,6 +191,60 @@ internal fun segmentIntersectsRect(a: DiPoint, b: DiPoint, r: DiRect): Boolean {
     }
 }
 
+/** Tolerance for "non-zero collinear overlap" checks, absorbing floating-point rounding. */
+private const val COLLINEAR_OVERLAP_TOLERANCE = 1.0
+
+/**
+ * The length of collinear overlap between axis-aligned segments `a`-`b` and `c`-`d`, or `0.0` if
+ * they are not on the same axis-aligned line, or only touch at a shared endpoint. A shared
+ * endpoint alone (zero-length overlap) is a legitimate junction/terminus, not a defect —
+ * [countCrossings]/[segmentsCross] deliberately exclude it too; this is its collinear
+ * counterpart, which those helpers do not detect (AD-730-02).
+ */
+internal fun collinearOverlapLength(a: DiPoint, b: DiPoint, c: DiPoint, d: DiPoint): Double {
+    val abVertical = a.x == b.x
+    val cdVertical = c.x == d.x
+    if (abVertical != cdVertical) return 0.0
+    return if (abVertical) {
+        if (a.x != c.x) return 0.0
+        overlapOnAxis(minOf(a.y, b.y), maxOf(a.y, b.y), minOf(c.y, d.y), maxOf(c.y, d.y))
+    } else {
+        if (a.y != c.y) return 0.0
+        overlapOnAxis(minOf(a.x, b.x), maxOf(a.x, b.x), minOf(c.x, d.x), maxOf(c.x, d.x))
+    }
+}
+
+private fun overlapOnAxis(aMin: Double, aMax: Double, bMin: Double, bMax: Double): Double =
+    maxOf(0.0, minOf(aMax, bMax) - maxOf(aMin, bMin))
+
+/**
+ * Every distinct pair of edges (by id) with a non-zero collinear overlap between any pair of
+ * their axis-aligned segments, and the overlap's length — empty means the corpus-required
+ * "no non-zero collinear shared segment" invariant holds (AD-730-02).
+ */
+private fun maxCollinearOverlap(a: DiEdge, b: DiEdge): Double {
+    var maxOverlap = 0.0
+    for (i in 0 until a.waypoints.size - 1) {
+        for (j in 0 until b.waypoints.size - 1) {
+            val overlap = collinearOverlapLength(a.waypoints[i], a.waypoints[i + 1], b.waypoints[j], b.waypoints[j + 1])
+            maxOverlap = maxOf(maxOverlap, overlap)
+        }
+    }
+    return maxOverlap
+}
+
+internal fun collinearOverlaps(edges: List<DiEdge>): List<Triple<String, String, Double>> {
+    val result = mutableListOf<Triple<String, String, Double>>()
+    for (i in edges.indices) {
+        for (j in i + 1 until edges.size) {
+            if (edges[i].id == edges[j].id) continue
+            val maxOverlap = maxCollinearOverlap(edges[i], edges[j])
+            if (maxOverlap > COLLINEAR_OVERLAP_TOLERANCE) result += Triple(edges[i].id, edges[j].id, maxOverlap)
+        }
+    }
+    return result
+}
+
 /** Whether [p] lies on (or within [BOUNDARY_TOLERANCE] of) one of [r]'s four sides. */
 internal fun isOnRectBoundary(p: DiPoint, r: DiRect): Boolean {
     val withinX = p.x in (r.x - BOUNDARY_TOLERANCE)..(r.right + BOUNDARY_TOLERANCE)
