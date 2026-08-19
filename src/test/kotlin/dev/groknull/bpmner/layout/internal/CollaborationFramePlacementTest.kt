@@ -18,68 +18,70 @@ import kotlin.test.assertTrue
 class CollaborationFramePlacementTest {
 
     @Test
-    fun `projects ordered full-width lane bands and ledgers member translations`() {
+    fun `projects ordered full-width lane bands from already-banded member shapes without moving them`() {
+        // AD-730-06: lanes are never their own ELK node (BpmnToElkMapper's declared band offsets
+        // already order and separate members before this pass runs), so the skeleton has no lane
+        // compounds, and every member shape below is already in its own lane's final position —
+        // this pass only reads that geometry to derive each lane's band rectangle; it moves nothing.
         val model = PlacementTestSkeletons.parse(BpmnToElkMapperTest.COLLABORATION_LANES_XML)
         val root = ElkGraphUtil.createGraph()
         val participant = node(root, "Participant_1", Rect(10.0, 20.0, 500.0, 300.0))
-        val sales = node(participant, "Lane_sales", Rect(30.0, 10.0, 400.0, 80.0))
-        val warehouse = node(participant, "Lane_warehouse", Rect(30.0, 100.0, 400.0, 80.0))
-        val delivery = node(participant, "Lane_delivery", Rect(30.0, 190.0, 400.0, 80.0))
-        val start = node(sales, "Start_1", Rect(20.0, 20.0, 36.0, 36.0))
-        val pick = node(warehouse, "Task_pick", Rect(20.0, 20.0, 100.0, 80.0))
+        val start = node(participant, "Start_1", Rect(60.0, 50.0, 36.0, 36.0))
+        val pick = node(participant, "Task_pick", Rect(60.0, 140.0, 100.0, 80.0))
+        val end = node(participant, "End_1", Rect(60.0, 230.0, 36.0, 36.0))
         val ctx = PlacementContext(
             model,
             PlacementTestSkeletons.skeleton(
                 root,
-                mapOf(
-                    "Participant_1" to participant,
-                    "Lane_sales" to sales,
-                    "Lane_warehouse" to warehouse,
-                    "Lane_delivery" to delivery,
-                    "Start_1" to start,
-                    "Task_pick" to pick,
-                ),
+                mapOf("Participant_1" to participant, "Start_1" to start, "Task_pick" to pick, "End_1" to end),
             ),
             mutableMapOf(
                 "Start_1" to Rect(60.0, 50.0, 36.0, 36.0),
                 "Task_pick" to Rect(60.0, 140.0, 100.0, 80.0),
+                "End_1" to Rect(60.0, 230.0, 36.0, 36.0),
             ),
             mutableMapOf(),
-            mutableMapOf(),
+            mutableMapOf("Flow_1" to listOf(Point(78.0, 76.0), Point(110.0, 76.0), Point(110.0, 140.0))),
             mutableSetOf(),
         )
 
         CollaborationFramePlacement.process(ctx)
 
-        assertEquals(Rect(10.0, 20.0, 500.0, 240.0), ctx.shapes["Participant_1"])
-        assertEquals(Rect(40.0, 20.0, 470.0, 80.0), ctx.shapes["Lane_sales"])
-        assertEquals(Rect(40.0, 100.0, 470.0, 80.0), ctx.shapes["Lane_warehouse"])
-        assertEquals(Rect(40.0, 180.0, 470.0, 80.0), ctx.shapes["Lane_delivery"])
-        assertEquals(Rect(10.0, 20.0, 30.0, 240.0), ctx.labels["Participant_1"])
-        assertEquals(Rect(40.0, 20.0, 30.0, 80.0), ctx.labels["Lane_sales"])
-        assertEquals(Rect(60.0, 40.0, 36.0, 36.0), ctx.shapes["Start_1"])
-        assertEquals(MoveRecord("CollaborationFramePlacement", 0.0, -10.0), ctx.moves["Start_1"])
-        assertEquals(Rect(60.0, 120.0, 100.0, 80.0), ctx.shapes["Task_pick"])
+        // The participant's own ELK-provided bounds are untouched — no resizing to a re-summed
+        // lane-band height (that responsibility moved into BpmnToElkMapper's pre-layout offsets).
+        assertEquals(Rect(10.0, 20.0, 500.0, 300.0), ctx.shapes["Participant_1"])
+        val sales = ctx.shapes.getValue("Lane_sales")
+        val warehouse = ctx.shapes.getValue("Lane_warehouse")
+        val delivery = ctx.shapes.getValue("Lane_delivery")
+        assertEquals(40.0, sales.x)
+        assertEquals(20.0, sales.y, "the first lane's band starts at the participant's own top")
+        assertEquals(470.0, sales.w)
+        assertEquals(sales.y + sales.h, warehouse.y, "adjoining bands share one seam with no gap or overlap")
+        assertEquals(warehouse.y + warehouse.h, delivery.y)
+        assertEquals(20.0 + 300.0, delivery.y + delivery.h, "the last band extends to the participant's own bottom")
+
+        // Members are never moved: no ledger entry, and their shapes are byte-identical to input.
+        assertEquals(Rect(60.0, 50.0, 36.0, 36.0), ctx.shapes["Start_1"])
+        assertEquals(null, ctx.moves["Start_1"])
+        assertEquals(Rect(60.0, 140.0, 100.0, 80.0), ctx.shapes["Task_pick"])
         assertEquals(
-            listOf(
-                Point(78.0, 76.0),
-                Point(78.0, 98.0),
-                Point(110.0, 98.0),
-                Point(110.0, 120.0),
-            ),
+            listOf(Point(78.0, 76.0), Point(110.0, 76.0), Point(110.0, 140.0)),
             ctx.edges["Flow_1"],
+            "an untouched flow's already-final ELK route is left byte-for-byte unchanged",
         )
     }
 
     @Test
-    fun `translates lane subprocess descendants boundary attachments and their route`() {
+    fun `derives a lane band from a subprocess member without moving it, its descendants, or its boundary event`() {
+        // AD-730-06: a lane never moves its members — BpmnToElkMapper already declared
+        // SubProcess_1's band offset before layout, so its own shape, its descendant, and its
+        // attached boundary event's exception route all arrive here already final.
         val model = PlacementTestSkeletons.parse(LANED_SUBPROCESS_WITH_BOUNDARY_XML)
         val root = ElkGraphUtil.createGraph()
         val participant = node(root, "Participant_1", Rect(10.0, 20.0, 500.0, 300.0))
-        val lane = node(participant, "Lane_1", Rect(30.0, 10.0, 400.0, 80.0))
-        val subprocess = node(lane, "SubProcess_1", Rect(20.0, 20.0, 200.0, 100.0))
+        val subprocess = node(participant, "SubProcess_1", Rect(60.0, 50.0, 200.0, 100.0))
         val child = node(subprocess, "Task_child", Rect(10.0, 10.0, 100.0, 80.0))
-        val handler = node(lane, "Task_handler", Rect(250.0, 20.0, 100.0, 80.0))
+        val handler = node(participant, "Task_handler", Rect(290.0, 50.0, 100.0, 80.0))
         val boundary = node(root, "Boundary_1", Rect(80.0, 100.0, 36.0, 36.0))
         val ctx = PlacementContext(
             model,
@@ -87,7 +89,6 @@ class CollaborationFramePlacementTest {
                 root,
                 mapOf(
                     "Participant_1" to participant,
-                    "Lane_1" to lane,
                     "SubProcess_1" to subprocess,
                     "Task_child" to child,
                     "Task_handler" to handler,
@@ -98,73 +99,23 @@ class CollaborationFramePlacementTest {
                 "SubProcess_1" to Rect(60.0, 50.0, 200.0, 100.0),
                 "Task_child" to Rect(70.0, 60.0, 100.0, 80.0),
                 "Task_handler" to Rect(290.0, 50.0, 100.0, 80.0),
-                "Boundary_1" to Rect(80.0, 100.0, 36.0, 36.0),
+                "Boundary_1" to Rect(80.0, 90.0, 36.0, 36.0),
             ),
             mutableMapOf(),
-            mutableMapOf("Flow_exception" to listOf(Point(98.0, 118.0), Point(290.0, 90.0))),
+            mutableMapOf("Flow_exception" to listOf(Point(98.0, 126.0), Point(290.0, 90.0))),
             mutableSetOf(),
         )
 
         CollaborationFramePlacement.process(ctx)
 
-        assertEquals(Rect(70.0, 50.0, 100.0, 80.0), ctx.shapes["Task_child"])
+        assertEquals(Rect(70.0, 60.0, 100.0, 80.0), ctx.shapes["Task_child"])
         assertEquals(Rect(80.0, 90.0, 36.0, 36.0), ctx.shapes["Boundary_1"])
-        assertEquals(MoveRecord("CollaborationFramePlacement", 0.0, -10.0), ctx.moves["Task_child"])
-        assertEquals(MoveRecord("CollaborationFramePlacement", 0.0, -10.0), ctx.moves["Boundary_1"])
-        assertEquals(
-            listOf(Point(98.0, 108.0), Point(290.0, 80.0)),
-            ctx.edges["Flow_exception"],
-        )
-    }
-
-    @Test
-    fun `re-anchors an exception edge whose host and handler shift by different amounts`() {
-        // Boundary_1's host (SubProcess_1) is in Lane_1, so it shifts by the lane's translation;
-        // Task_handler is an unassigned process member (no lane), so it does not shift at all —
-        // this mismatch is what routes the flow through the reroute path rather than the simple
-        // same-vector translate.
-        val model = PlacementTestSkeletons.parse(LANED_SUBPROCESS_UNASSIGNED_HANDLER_XML)
-        val root = ElkGraphUtil.createGraph()
-        val participant = node(root, "Participant_1", Rect(10.0, 20.0, 500.0, 300.0))
-        val lane = node(participant, "Lane_1", Rect(30.0, 10.0, 400.0, 80.0))
-        val subprocess = node(lane, "SubProcess_1", Rect(20.0, 20.0, 200.0, 100.0))
-        val handler = node(participant, "Task_handler", Rect(290.0, 230.0, 100.0, 80.0))
-        val boundary = node(root, "Boundary_1", Rect(80.0, 100.0, 36.0, 36.0))
-        val ctx = PlacementContext(
-            model,
-            PlacementTestSkeletons.skeleton(
-                root,
-                mapOf(
-                    "Participant_1" to participant,
-                    "Lane_1" to lane,
-                    "SubProcess_1" to subprocess,
-                    "Task_handler" to handler,
-                    "Boundary_1" to boundary,
-                ),
-            ),
-            mutableMapOf(
-                "SubProcess_1" to Rect(60.0, 50.0, 200.0, 100.0),
-                "Task_handler" to Rect(300.0, 250.0, 100.0, 80.0),
-                "Boundary_1" to Rect(80.0, 100.0, 36.0, 36.0),
-            ),
-            mutableMapOf(),
-            mutableMapOf(),
-            mutableSetOf(),
-        )
-
-        CollaborationFramePlacement.process(ctx)
-
-        // Boundary_1 shifts with its host's lane (0,-10); Task_handler is unassigned and stays put.
-        assertEquals(Rect(80.0, 90.0, 36.0, 36.0), ctx.shapes["Boundary_1"])
-        assertEquals(Rect(300.0, 250.0, 100.0, 80.0), ctx.shapes["Task_handler"])
-        assertEquals(
-            listOf(
-                Point(98.0, 126.0),
-                Point(98.0, 290.0),
-                Point(300.0, 290.0),
-            ),
-            ctx.edges["Flow_exception"],
-        )
+        assertEquals(null, ctx.moves["Task_child"])
+        assertEquals(null, ctx.moves["Boundary_1"])
+        assertEquals(listOf(Point(98.0, 126.0), Point(290.0, 90.0)), ctx.edges["Flow_exception"])
+        val lane = ctx.shapes.getValue("Lane_1")
+        assertEquals(40.0, lane.x)
+        assertEquals(470.0, lane.w)
     }
 
     @Test
@@ -404,15 +355,6 @@ class CollaborationFramePlacementTest {
   <bpmn:collaboration id="C"><bpmn:participant id="Participant_1" name="Participant" processRef="P"/></bpmn:collaboration>
   <bpmn:process id="P"><bpmn:laneSet id="LS"><bpmn:lane id="Lane_1" name="Lane"><bpmn:flowNodeRef>SubProcess_1</bpmn:flowNodeRef><bpmn:flowNodeRef>Task_handler</bpmn:flowNodeRef></bpmn:lane></bpmn:laneSet>
     <bpmn:subProcess id="SubProcess_1"><bpmn:serviceTask id="Task_child"/></bpmn:subProcess>
-    <bpmn:serviceTask id="Task_handler"/><bpmn:boundaryEvent id="Boundary_1" attachedToRef="SubProcess_1"/><bpmn:sequenceFlow id="Flow_exception" sourceRef="Boundary_1" targetRef="Task_handler"/>
-  </bpmn:process>
-</bpmn:definitions>"""
-
-        const val LANED_SUBPROCESS_UNASSIGNED_HANDLER_XML = """<?xml version="1.0" encoding="UTF-8"?>
-<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="D" targetNamespace="https://groknull.dev/bpmner">
-  <bpmn:collaboration id="C"><bpmn:participant id="Participant_1" name="Participant" processRef="P"/></bpmn:collaboration>
-  <bpmn:process id="P"><bpmn:laneSet id="LS"><bpmn:lane id="Lane_1" name="Lane"><bpmn:flowNodeRef>SubProcess_1</bpmn:flowNodeRef></bpmn:lane></bpmn:laneSet>
-    <bpmn:subProcess id="SubProcess_1"/>
     <bpmn:serviceTask id="Task_handler"/><bpmn:boundaryEvent id="Boundary_1" attachedToRef="SubProcess_1"/><bpmn:sequenceFlow id="Flow_exception" sourceRef="Boundary_1" targetRef="Task_handler"/>
   </bpmn:process>
 </bpmn:definitions>"""

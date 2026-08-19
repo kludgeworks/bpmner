@@ -153,17 +153,13 @@ internal object BpmnToElkMapper {
                 nodeMap[participant.id] = compound
 
                 val topLevelElements = process.flowElements.toList()
-                val laneMemberIds = mutableSetOf<String>()
-                process.laneSets.flatMap { it.lanes.toList() }.forEach { lane ->
-                    laneMemberIds.addAll(lane.flowNodeRefs.map { it.id })
-                    mapLane(compound, lane, nodeMap, model)
-                }
-                mapProcess(
-                    compound,
-                    topLevelElements.filter { it !is FlowNode || it.id !in laneMemberIds },
-                    nodeMap,
-                    model,
-                )
+                val lanes = process.laneSets.flatMap { it.lanes.toList() }
+                // Lanes are a routing constraint (AD-730-06), not ELK containment: members map
+                // directly under the participant, and each declared lane contributes an ordered
+                // band via applyLaneConstraint, not a compound child of its own.
+                val laneBands = computeLaneBands(lanes)
+                if (laneBands.isNotEmpty()) applyLaneConstraint(compound)
+                mapProcess(compound, topLevelElements, nodeMap, model, laneBands)
             } else {
                 // Black-box participants participate in collaboration-level message edges.
                 val bb = ElkGraphUtil.createNode(root)
@@ -175,36 +171,70 @@ internal object BpmnToElkMapper {
         }
     }
 
-    // Nested lanes (a lane with a childLaneSet) are not supported. A lane that delegates to a
-    // childLaneSet carries no flowNodeRefs of its own, so mapping it unguarded would silently
-    // produce a zero-height ghost lane while its descendants escape to the top level — a broken
-    // diagram with no error. Fail loudly instead.
-    private fun mapLane(
-        participant: ElkNode,
-        lane: Lane,
-        nodeMap: MutableMap<String, ElkNode>,
-        model: BpmnModelInstance,
-    ) {
-        if (lane.childLaneSet != null) {
-            throw BpmnAutoLayoutException("ELK layout: nested lanes (lane '${lane.id}' has a childLaneSet) are not supported")
+    /** A declared lane's routing constraint for one member: its 0-based declaration order and its band's input Y offset. */
+    private data class LaneBand(val index: Int, val yOffset: Double)
+
+    /**
+     * Computes each lane's declaration-order index and deterministic input-Y band offset for
+     * every member (AD-730-06/AD-730-05 Candidate A2). Band height is each lane's own tallest
+     * member plus its tallest label, so lanes stay as tightly packed as the former compound
+     * sizing while remaining computable before ELK runs (every node dimension is a fixed
+     * constant from [nodeDimensions]).
+     *
+     * Nested lanes (a lane with a childLaneSet) are not supported — a lane that delegates to a
+     * childLaneSet carries no flowNodeRefs of its own, so silently continuing would leave its
+     * descendants unbanded with no error. Fail loudly instead.
+     */
+    private fun computeLaneBands(lanes: List<Lane>): Map<String, LaneBand> {
+        val bands = mutableMapOf<String, LaneBand>()
+        var nextY = LANE_PADDING
+        lanes.forEachIndexed { index, lane ->
+            if (lane.childLaneSet != null) {
+                throw BpmnAutoLayoutException("ELK layout: nested lanes (lane '${lane.id}' has a childLaneSet) are not supported")
+            }
+            val members = lane.flowNodeRefs.toList()
+            val maxHeight = members.maxOfOrNull { nodeDimensions(it).second } ?: TASK_HEIGHT
+            val maxLabel = tallestLabelHeight(members.map { it.name })
+            members.forEach { bands[it.id] = LaneBand(index, nextY) }
+            nextY += maxHeight + maxLabel + LANE_PADDING * 2
         }
-        val compound = ElkGraphUtil.createNode(participant)
-        compound.identifier = lane.id
-        applyLaneProfile(compound, lane)
-        nodeMap[lane.id] = compound
-        mapProcess(compound, lane.flowNodeRefs.toList(), nodeMap, model)
+        return bands
+    }
+
+    /**
+     * Declares the pseudo-interactive stock encoding (AD-730-05 Candidate A2): semi-interactive
+     * crossing minimisation orders each layer by [LaneBand.index] via the public `POSITION`
+     * property, and interactive node placement keeps a normal node's imported Y (its
+     * [LaneBand.yOffset]) rather than recomputing it — so declared lane order becomes a
+     * placement input ELK itself honours before phase-5 routing, not a post-layout translation.
+     */
+    private fun applyLaneConstraint(compound: ElkNode) {
+        compound.setProperty(LayeredOptions.CROSSING_MINIMIZATION_SEMI_INTERACTIVE, true)
+        compound.setProperty(LayeredOptions.NODE_PLACEMENT_STRATEGY, NodePlacementStrategy.INTERACTIVE)
+    }
+
+    /** Applies [elementId]'s [LaneBand], if any, as the node's declared position and input Y. */
+    private fun applyLaneBand(node: ElkNode, elementId: String, laneBands: Map<String, LaneBand>) {
+        val band = laneBands[elementId] ?: return
+        node.setProperty(LayeredOptions.POSITION, KVector(0.0, band.index.toDouble()))
+        node.y = band.yOffset
     }
 
     /**
      * Recursively maps flow elements into the given [container].
      * SubProcesses become compound ELK nodes and recurse; BoundaryEvents are skipped
      * (handled in pass 2); other FlowNodes become flat leaf nodes.
+     *
+     * [laneBands] applies only to [elements] directly (a lane's own declared members); it is not
+     * threaded into a [SubProcess]'s recursive call — a lane bands its own process's direct
+     * children, not a nested subprocess's internal flow.
      */
     private fun mapProcess(
         container: ElkNode,
         elements: List<FlowElement>,
         nodeMap: MutableMap<String, ElkNode>,
         model: BpmnModelInstance,
+        laneBands: Map<String, LaneBand> = emptyMap(),
     ) {
         // Iterate in document order (elements list preserves Camunda's XML parse order).
         for (element in elements) {
@@ -214,6 +244,7 @@ internal object BpmnToElkMapper {
                 is SubProcess -> {
                     val compound = ElkGraphUtil.createNode(container)
                     compound.identifier = element.id
+                    applyLaneBand(compound, element.id, laneBands)
                     compound.setProperty(CoreOptions.HIERARCHY_HANDLING, HierarchyHandling.INCLUDE_CHILDREN)
                     // Extra top padding equal to the direct children's tallest label makes the
                     // node row itself land on the compound's centre, rather than the
@@ -243,6 +274,7 @@ internal object BpmnToElkMapper {
                     val (w, h) = nodeDimensions(element)
                     elkNode.width = w
                     elkNode.height = h
+                    applyLaneBand(elkNode, element.id, laneBands)
                     // Pin start events to the first layer, end events to the last.
                     when (element) {
                         is StartEvent -> elkNode.setProperty(
@@ -708,25 +740,6 @@ internal object BpmnToElkMapper {
                 PARTICIPANT_CONTENT_PADDING,
                 PARTICIPANT_HEADER_WIDTH + PARTICIPANT_CONTENT_PADDING,
             ),
-        )
-        applyCompoundProfile(node)
-    }
-
-    /**
-     * `NODE_LABELS_PLACEMENT = outsideBottomCenter` makes a compound's content bbox the node row
-     * plus the label strip below it, so symmetric padding centres that combined box rather than
-     * the node row — the row ends up sitting half the label height above the band's visual
-     * centre. Declaring extra top padding equal to the lane's own direct children's tallest
-     * label, rather than translating content after the fact, makes the node row itself land on
-     * the band's centre.
-     */
-    private fun applyLaneProfile(node: ElkNode, lane: Lane) {
-        node.setProperty(CoreOptions.HIERARCHY_HANDLING, HierarchyHandling.INCLUDE_CHILDREN)
-        node.setProperty(CoreOptions.SEPARATE_CONNECTED_COMPONENTS, false)
-        val maxLabelHeight = tallestLabelHeight(lane.flowNodeRefs.map { it.name })
-        node.setProperty(
-            CoreOptions.PADDING,
-            ElkPadding(LANE_PADDING + maxLabelHeight, LANE_PADDING, LANE_PADDING, LANE_PADDING),
         )
         applyCompoundProfile(node)
     }

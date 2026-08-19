@@ -44,6 +44,7 @@ internal val LAYOUT_CORPUS_FIXTURES = listOf(
     "collab-subprocess",
     "collab-bioc",
     "collab-lanes-loopback",
+    "collab-lanes-branch-rejoin",
     "miwg-c2-four-pools",
     "miwg-a2-1",
     "miwg-a3-0",

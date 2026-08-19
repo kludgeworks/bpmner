@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  id="Definitions_collab_lanes_branch_rejoin" targetNamespace="https://groknull.dev/bpmner">
+  <bpmn:collaboration id="Collab_lanes_branch_rejoin">
+    <bpmn:participant id="Participant_1" name="Change Request Handling" processRef="Process_1"/>
+  </bpmn:collaboration>
+  <bpmn:process id="Process_1" name="Change Request Handling" isExecutable="true">
+    <bpmn:laneSet id="LaneSet_1">
+      <bpmn:lane id="Lane_top" name="Requester">
+        <bpmn:flowNodeRef>Start_1</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_prepare</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gw_split</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_review</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gw_join</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_1</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_lower" name="Approver">
+        <bpmn:flowNodeRef>Task_approve</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="Start_1" name="Request Submitted">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:userTask id="Task_prepare" name="Prepare Request">
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="Gw_split" name="Needs Approval?">
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+      <bpmn:outgoing>Flow_3</bpmn:outgoing>
+      <bpmn:outgoing>Flow_4</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:userTask id="Task_review" name="Review Request">
+      <bpmn:incoming>Flow_3</bpmn:incoming>
+      <bpmn:outgoing>Flow_5</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:userTask id="Task_approve" name="Approve Request">
+      <bpmn:incoming>Flow_4</bpmn:incoming>
+      <bpmn:outgoing>Flow_6</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="Gw_join" name="Requirements Met?">
+      <bpmn:incoming>Flow_5</bpmn:incoming>
+      <bpmn:incoming>Flow_6</bpmn:incoming>
+      <bpmn:outgoing>Flow_7</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:endEvent id="End_1" name="Request Closed">
+      <bpmn:incoming>Flow_7</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="Start_1" targetRef="Task_prepare"/>
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="Task_prepare" targetRef="Gw_split"/>
+    <bpmn:sequenceFlow id="Flow_3" name="No" sourceRef="Gw_split" targetRef="Task_review"/>
+    <bpmn:sequenceFlow id="Flow_4" name="Yes" sourceRef="Gw_split" targetRef="Task_approve"/>
+    <bpmn:sequenceFlow id="Flow_5" sourceRef="Task_review" targetRef="Gw_join"/>
+    <bpmn:sequenceFlow id="Flow_6" sourceRef="Task_approve" targetRef="Gw_join"/>
+    <bpmn:sequenceFlow id="Flow_7" sourceRef="Gw_join" targetRef="End_1"/>
+  </bpmn:process>
+</bpmn:definitions>

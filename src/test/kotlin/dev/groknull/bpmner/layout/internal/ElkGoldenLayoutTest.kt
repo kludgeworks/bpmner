@@ -62,9 +62,6 @@ class ElkGoldenLayoutTest {
             Triple("collab-subprocess", "Task_prepare", "MsgFlow_1"),
             Triple("collab-bioc", "Task_1", "MsgFlow_1"),
             Triple("annotation-and-group", "Task_1", "Assoc_1"),
-            Triple("collab-lanes", "Gw_split", "Flow_3"),
-            Triple("collab-lanes", "Task_pack", "Flow_5"),
-            Triple("collab-lanes-loopback", "Gw_check", "Flow_ok"),
             Triple("miwg-c2-four-pools", "End_warehouse", "MsgFlow_delivered"),
             Triple("miwg-c2-four-pools", "Task_confirm_order", "MsgFlow_confirm"),
             Triple("miwg-c2-four-pools", "Task_confirm_order", "MsgFlow_dispatch"),
@@ -131,6 +128,7 @@ class ElkGoldenLayoutTest {
             "collab-subprocess",
             "collab-bioc",
             "collab-lanes-loopback",
+            "collab-lanes-branch-rejoin",
         ],
     )
     fun `collaboration fixture plane bpmnElement references the Collaboration`(fixture: String) {
@@ -167,6 +165,7 @@ class ElkGoldenLayoutTest {
             "collab-subprocess",
             "collab-bioc",
             "collab-lanes-loopback",
+            "collab-lanes-branch-rejoin",
         ],
     )
     fun `collaboration fixture has BPMNShape for each participant`(fixture: String) {

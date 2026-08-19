@@ -1,0 +1,226 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bioc="http://bpmn.io/schema/bpmn/biocolor/1.0" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:color="http://www.omg.org/spec/BPMN/non-normative/color/1.0" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" expressionLanguage="http://www.w3.org/1999/XPath" id="Definitions_collab_lanes_branch_rejoin" targetNamespace="https://groknull.dev/bpmner" typeLanguage="http://www.w3.org/2001/XMLSchema">
+
+  <bpmn:collaboration id="Collab_lanes_branch_rejoin" isClosed="false">
+
+    <bpmn:participant id="Participant_1" name="Change Request Handling" processRef="Process_1"/>
+
+  </bpmn:collaboration>
+
+  <bpmn:process id="Process_1" isClosed="false" isExecutable="true" name="Change Request Handling" processType="None">
+
+    <bpmn:laneSet id="LaneSet_1">
+
+      <bpmn:lane id="Lane_top" name="Requester">
+
+        <bpmn:flowNodeRef>Start_1</bpmn:flowNodeRef>
+
+        <bpmn:flowNodeRef>Task_prepare</bpmn:flowNodeRef>
+
+        <bpmn:flowNodeRef>Gw_split</bpmn:flowNodeRef>
+
+        <bpmn:flowNodeRef>Task_review</bpmn:flowNodeRef>
+
+        <bpmn:flowNodeRef>Gw_join</bpmn:flowNodeRef>
+
+        <bpmn:flowNodeRef>End_1</bpmn:flowNodeRef>
+
+      </bpmn:lane>
+
+      <bpmn:lane id="Lane_lower" name="Approver">
+
+        <bpmn:flowNodeRef>Task_approve</bpmn:flowNodeRef>
+
+      </bpmn:lane>
+
+    </bpmn:laneSet>
+
+    <bpmn:startEvent id="Start_1" isInterrupting="true" name="Request Submitted" parallelMultiple="false">
+
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+
+    </bpmn:startEvent>
+
+    <bpmn:userTask completionQuantity="1" id="Task_prepare" implementation="##unspecified" isForCompensation="false" name="Prepare Request" startQuantity="1">
+
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+
+    </bpmn:userTask>
+
+    <bpmn:exclusiveGateway gatewayDirection="Unspecified" id="Gw_split" name="Needs Approval?">
+
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+
+      <bpmn:outgoing>Flow_3</bpmn:outgoing>
+
+      <bpmn:outgoing>Flow_4</bpmn:outgoing>
+
+    </bpmn:exclusiveGateway>
+
+    <bpmn:userTask completionQuantity="1" id="Task_review" implementation="##unspecified" isForCompensation="false" name="Review Request" startQuantity="1">
+
+      <bpmn:incoming>Flow_3</bpmn:incoming>
+
+      <bpmn:outgoing>Flow_5</bpmn:outgoing>
+
+    </bpmn:userTask>
+
+    <bpmn:userTask completionQuantity="1" id="Task_approve" implementation="##unspecified" isForCompensation="false" name="Approve Request" startQuantity="1">
+
+      <bpmn:incoming>Flow_4</bpmn:incoming>
+
+      <bpmn:outgoing>Flow_6</bpmn:outgoing>
+
+    </bpmn:userTask>
+
+    <bpmn:exclusiveGateway gatewayDirection="Unspecified" id="Gw_join" name="Requirements Met?">
+
+      <bpmn:incoming>Flow_5</bpmn:incoming>
+
+      <bpmn:incoming>Flow_6</bpmn:incoming>
+
+      <bpmn:outgoing>Flow_7</bpmn:outgoing>
+
+    </bpmn:exclusiveGateway>
+
+    <bpmn:endEvent id="End_1" name="Request Closed">
+
+      <bpmn:incoming>Flow_7</bpmn:incoming>
+
+    </bpmn:endEvent>
+
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="Start_1" targetRef="Task_prepare"/>
+
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="Task_prepare" targetRef="Gw_split"/>
+
+    <bpmn:sequenceFlow id="Flow_3" name="No" sourceRef="Gw_split" targetRef="Task_review"/>
+
+    <bpmn:sequenceFlow id="Flow_4" name="Yes" sourceRef="Gw_split" targetRef="Task_approve"/>
+
+    <bpmn:sequenceFlow id="Flow_5" sourceRef="Task_review" targetRef="Gw_join"/>
+
+    <bpmn:sequenceFlow id="Flow_6" sourceRef="Task_approve" targetRef="Gw_join"/>
+
+    <bpmn:sequenceFlow id="Flow_7" sourceRef="Gw_join" targetRef="End_1"/>
+
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane bpmnElement="Collab_lanes_branch_rejoin" id="BPMNPlane_1">
+      <bpmndi:BPMNShape bioc:fill="#ffffff" bioc:stroke="#16181d" bpmnElement="Participant_1" color:background-color="#ffffff" color:border-color="#16181d" id="BPMNShape_Participant_1" isHorizontal="true">
+        <dc:Bounds height="338.0" width="1098.826171875" x="12.0" y="12.0"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_Participant_1">
+          <dc:Bounds height="338.0" width="30.0" x="12.0" y="12.0"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bioc:fill="#ffffff" bioc:stroke="#16181d" bpmnElement="Lane_lower" color:background-color="#ffffff" color:border-color="#16181d" id="BPMNShape_Lane_lower" isHorizontal="true">
+        <dc:Bounds height="190.5" width="1068.826171875" x="42.0" y="159.5"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_Lane_lower">
+          <dc:Bounds height="190.5" width="30.0" x="42.0" y="159.5"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bioc:fill="#ffffff" bioc:stroke="#16181d" bpmnElement="Lane_top" color:background-color="#ffffff" color:border-color="#16181d" id="BPMNShape_Lane_top" isHorizontal="true">
+        <dc:Bounds height="147.5" width="1068.826171875" x="42.0" y="12.0"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_Lane_top">
+          <dc:Bounds height="147.5" width="30.0" x="42.0" y="12.0"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bioc:fill="#ffffff" bioc:stroke="#16181d" bpmnElement="End_1" color:background-color="#ffffff" color:border-color="#16181d" id="BPMNShape_End_1">
+        <dc:Bounds height="36.0" width="36.0" x="1030.134765625" y="32.0"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_End_1">
+          <dc:Bounds height="20.0" width="85.3828125" x="1005.443359375" y="83.0"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bioc:fill="#ffffff" bioc:stroke="#16181d" bpmnElement="Gw_join" color:background-color="#ffffff" color:border-color="#16181d" id="BPMNShape_Gw_join">
+        <dc:Bounds height="50.0" width="50.0" x="853.0927734375" y="32.0"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_Gw_join">
+          <dc:Bounds height="28.0" width="74.701171875" x="840.7421875" y="97.0"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bioc:fill="#ffffff" bioc:stroke="#16181d" bpmnElement="Gw_split" color:background-color="#ffffff" color:border-color="#16181d" id="BPMNShape_Gw_split">
+        <dc:Bounds height="50.0" width="50.0" x="398.046875" y="32.0"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_Gw_split">
+          <dc:Bounds height="28.0" width="54.03515625" x="396.029296875" y="97.0"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bioc:fill="#ffffff" bioc:stroke="#16181d" bpmnElement="Start_1" color:background-color="#ffffff" color:border-color="#16181d" id="BPMNShape_Start_1">
+        <dc:Bounds height="36.0" width="36.0" x="71.0146484375" y="32.0"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_Start_1">
+          <dc:Bounds height="28.0" width="54.029296875" x="62.0" y="83.0"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bioc:fill="#ffffff" bioc:stroke="#16181d" bpmnElement="Task_approve" color:background-color="#ffffff" color:border-color="#16181d" id="BPMNShape_Task_approve">
+        <dc:Bounds height="80.0" width="100.0" x="650.7421875" y="207.0"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_Task_approve">
+          <dc:Bounds height="28.0" width="44.6953125" x="678.39453125" y="302.0"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bioc:fill="#ffffff" bioc:stroke="#16181d" bpmnElement="Task_prepare" color:background-color="#ffffff" color:border-color="#16181d" id="BPMNShape_Task_prepare">
+        <dc:Bounds height="80.0" width="100.0" x="206.029296875" y="32.0"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_Task_prepare">
+          <dc:Bounds height="28.0" width="44.6953125" x="233.681640625" y="127.0"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bioc:fill="#ffffff" bioc:stroke="#16181d" bpmnElement="Task_review" color:background-color="#ffffff" color:border-color="#16181d" id="BPMNShape_Task_review">
+        <dc:Bounds height="80.0" width="100.0" x="650.7421875" y="32.0"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_Task_review">
+          <dc:Bounds height="20.0" width="87.375" x="657.0546875" y="127.0"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge bioc:stroke="#16181d" bpmnElement="Flow_1" color:border-color="#16181d" id="BPMNEdge_Flow_1">
+        <di:waypoint x="107.0146484375" y="50.0"/>
+        <di:waypoint x="141.029296875" y="50.0"/>
+        <di:waypoint x="141.029296875" y="72.0"/>
+        <di:waypoint x="206.029296875" y="72.0"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bioc:stroke="#16181d" bpmnElement="Flow_2" color:border-color="#16181d" id="BPMNEdge_Flow_2">
+        <di:waypoint x="306.029296875" y="72.0"/>
+        <di:waypoint x="331.029296875" y="72.0"/>
+        <di:waypoint x="331.029296875" y="57.0"/>
+        <di:waypoint x="398.046875" y="57.0"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bioc:stroke="#16181d" bpmnElement="Flow_3" color:border-color="#16181d" id="BPMNEdge_Flow_3">
+        <di:waypoint x="448.046875" y="48.666666666666664"/>
+        <di:waypoint x="505.064453125" y="48.666666666666664"/>
+        <di:waypoint x="505.064453125" y="99.0"/>
+        <di:waypoint x="585.7421875" y="99.0"/>
+        <di:waypoint x="585.7421875" y="72.0"/>
+        <di:waypoint x="650.7421875" y="72.0"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_Flow_3">
+          <dc:Bounds height="20.0" width="15.33984375" x="542.7333984375" y="72.0"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bioc:stroke="#16181d" bpmnElement="Flow_4" color:border-color="#16181d" id="BPMNEdge_Flow_4">
+        <di:waypoint x="448.046875" y="65.33333333333333"/>
+        <di:waypoint x="475.064453125" y="65.33333333333333"/>
+        <di:waypoint x="475.064453125" y="130.0"/>
+        <di:waypoint x="585.7421875" y="130.0"/>
+        <di:waypoint x="585.7421875" y="247.0"/>
+        <di:waypoint x="650.7421875" y="247.0"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_Flow_4">
+          <dc:Bounds height="20.0" width="20.677734375" x="540.064453125" y="137.0"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bioc:stroke="#16181d" bpmnElement="Flow_5" color:border-color="#16181d" id="BPMNEdge_Flow_5">
+        <di:waypoint x="750.7421875" y="72.0"/>
+        <di:waypoint x="775.7421875" y="72.0"/>
+        <di:waypoint x="775.7421875" y="48.666666666666664"/>
+        <di:waypoint x="853.0927734375" y="48.666666666666664"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bioc:stroke="#16181d" bpmnElement="Flow_6" color:border-color="#16181d" id="BPMNEdge_Flow_6">
+        <di:waypoint x="750.7421875" y="247.0"/>
+        <di:waypoint x="805.7421875" y="247.0"/>
+        <di:waypoint x="805.7421875" y="65.33333333333333"/>
+        <di:waypoint x="853.0927734375" y="65.33333333333333"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bioc:stroke="#16181d" bpmnElement="Flow_7" color:border-color="#16181d" id="BPMNEdge_Flow_7">
+        <di:waypoint x="903.0927734375" y="57.0"/>
+        <di:waypoint x="940.443359375" y="57.0"/>
+        <di:waypoint x="940.443359375" y="50.0"/>
+        <di:waypoint x="1030.134765625" y="50.0"/>
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+
+</bpmn:definitions>

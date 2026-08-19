@@ -407,37 +407,60 @@ class BpmnToElkMapperTest {
     }
 
     @Test
-    fun `collaboration maps participant lanes members and crossing edge containment`() {
+    fun `collaboration maps lane members directly under the participant with declared band constraints`() {
+        // AD-730-06: lanes are a routing constraint, not ELK containment — a lane never becomes
+        // its own ELK compound node, so its members are direct children of the participant, each
+        // carrying the pseudo-interactive stock encoding (AD-730-05 Candidate A2): a declared
+        // POSITION ordering key and an input Y equal to its lane's band offset.
         val result = BpmnToElkMapper.map(parseXml(COLLABORATION_LANES_XML))
 
         val participant = result.nodeMap.getValue("Participant_1")
-        val sales = result.nodeMap.getValue("Lane_sales")
-        val warehouse = result.nodeMap.getValue("Lane_warehouse")
-        val delivery = result.nodeMap.getValue("Lane_delivery")
+        val start = result.nodeMap.getValue("Start_1")
+        val pick = result.nodeMap.getValue("Task_pick")
+        val end = result.nodeMap.getValue("End_1")
         assertEquals(result.root, participant.parent)
-        assertEquals(participant, sales.parent)
-        assertEquals(participant, warehouse.parent)
-        assertEquals(participant, delivery.parent)
-        assertEquals(sales, result.nodeMap.getValue("Start_1").parent)
-        assertEquals(warehouse, result.nodeMap.getValue("Task_pick").parent)
-        assertEquals(delivery, result.nodeMap.getValue("End_1").parent)
+        assertEquals(participant, start.parent, "lane member must be a direct child of the participant")
+        assertEquals(participant, pick.parent)
+        assertEquals(participant, end.parent)
+        assertTrue("Lane_sales" !in result.nodeMap, "a lane must not become its own ELK node")
+
+        val startPosition = start.getProperty(LayeredOptions.POSITION)
+        val pickPosition = pick.getProperty(LayeredOptions.POSITION)
+        val endPosition = end.getProperty(LayeredOptions.POSITION)
+        assertTrue(startPosition.y < pickPosition.y, "declared lane order must increase across Sales -> Warehouse")
+        assertTrue(pickPosition.y < endPosition.y, "declared lane order must increase across Warehouse -> Delivery")
+        assertTrue(start.y < pick.y, "the earlier lane's declared input Y band must sit above the later lane's")
+        assertTrue(pick.y < end.y)
+
         assertEquals(participant, result.edgeMap.getValue("Flow_3").containingNode)
     }
 
     @Test
-    fun `lane padding grows on top by its own members' tallest label height (AD-622-28)`() {
-        // Lane_sales has a named member (label height > 0); Lane_empty has none. Both keep the
-        // same base padding on every other side — only top grows, and only where a label exists.
+    fun `applyLaneConstraint declares the pseudo-interactive stock encoding on the participant`() {
+        // AD-730-05 Candidate A2: semi-interactive crossing minimisation orders each layer by
+        // POSITION, and interactive node placement keeps the declared input Y band — both must be
+        // declared on the participant compound whenever it carries lanes.
+        val result = BpmnToElkMapper.map(parseXml(COLLABORATION_LANES_XML))
+
+        val participant = result.nodeMap.getValue("Participant_1")
+        assertTrue(participant.getProperty(LayeredOptions.CROSSING_MINIMIZATION_SEMI_INTERACTIVE))
+        assertEquals(NodePlacementStrategy.INTERACTIVE, participant.getProperty(LayeredOptions.NODE_PLACEMENT_STRATEGY))
+    }
+
+    @Test
+    fun `a lane with a labelled member reserves a larger declared input-Y band than an unlabelled one`() {
+        // Lane_sales has a named member (label height > 0); Lane_empty has none — the labelled
+        // lane's declared band must be tall enough to include that label allowance, so the next
+        // lane's members receive a correspondingly larger Y offset.
         val result = BpmnToElkMapper.map(parseXml(LANE_LABEL_PADDING_XML))
 
-        val labelled = result.nodeMap.getValue("Lane_sales").getProperty(CoreOptions.PADDING)
-        val unlabelled = result.nodeMap.getValue("Lane_empty").getProperty(CoreOptions.PADDING)
-
-        assertTrue(labelled.top > unlabelled.top, "a lane with a named member must reserve extra top padding")
-        assertEquals(unlabelled.top, unlabelled.bottom, "an unlabelled lane's padding is symmetric (no correction needed)")
-        assertEquals(labelled.right, unlabelled.right)
-        assertEquals(labelled.bottom, unlabelled.bottom)
-        assertEquals(labelled.left, unlabelled.left)
+        val labelledMemberY = result.nodeMap.getValue("Task_review").y
+        val unlabelledMemberY = result.nodeMap.getValue("Start_1").y
+        assertTrue(
+            unlabelledMemberY - labelledMemberY > TASK_HEIGHT_FOR_TEST,
+            "the unlabelled lane's declared band offset must clear the labelled lane's member height " +
+                "plus its label allowance, not just its member height",
+        )
     }
 
     // ── Artifacts (annotations via ELK comment attachment) ─────────────────────
@@ -520,6 +543,10 @@ class BpmnToElkMapperTest {
     private fun parseXml(xml: String): BpmnModelInstance = Bpmn.readModelFromStream(ByteArrayInputStream(xml.toByteArray(Charsets.UTF_8)))
 
     companion object {
+        // Mirrors BpmnToElkMapper's private TASK_HEIGHT — the tallest normal node dimension a
+        // lane band offset must clear before its label allowance on top of that.
+        const val TASK_HEIGHT_FOR_TEST = 80.0
+
         const val COLLABORATION_LANES_XML = """<?xml version="1.0" encoding="UTF-8"?>
 <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="D2" targetNamespace="https://groknull.dev/bpmner">
   <bpmn:collaboration id="C1"><bpmn:participant id="Participant_1" name="Participant" processRef="P1"/></bpmn:collaboration>

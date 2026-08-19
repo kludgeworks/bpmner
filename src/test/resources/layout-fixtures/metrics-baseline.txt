@@ -6,8 +6,9 @@ boundary-on-subprocess 0 1 4
 boundary-timer-task 0 1 1
 collab-bioc 0 0 6
 collab-blackbox 0 0 4
-collab-lanes 0 4 17
-collab-lanes-loopback 0 6 12
+collab-lanes 0 10 17
+collab-lanes-branch-rejoin 0 18 16
+collab-lanes-loopback 0 16 12
 collab-msg-endpoint 0 0 8
 collab-msg-label 0 4 8
 collab-subprocess 0 4 14
