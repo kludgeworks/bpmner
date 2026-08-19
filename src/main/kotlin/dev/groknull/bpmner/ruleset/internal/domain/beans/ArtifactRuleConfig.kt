@@ -49,6 +49,7 @@ internal class ArtifactRuleConfig {
         check = RequiredAssociationCheckConfig(
             association = "bpmn:Association",
             direction = AssociationDirection.INBOUND,
+            excludeIdPrefix = "bpmner-diagram-",
         ),
         nlp = nlp,
         severity = RuleSeverity.WARNING,
