@@ -164,7 +164,7 @@ generateBtn.addEventListener("click", async () => {
 	composeError.textContent = ""
 
 	try {
-		const response = await fetch("api/bpmn/generations", {
+		const response = await fetch("/api/bpmn/generations", {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
 			body: JSON.stringify({ processDescription: description }),
@@ -324,7 +324,7 @@ function showClarify(update: RunUpdate): void {
 		renderClarifyForm(clarifyRegion, { ...base, submitting: true }, submit)
 		try {
 			const response = await fetch(
-				`api/bpmn/generations/${processId}/answers`,
+				`/api/bpmn/generations/${processId}/answers`,
 				{
 					method: "POST",
 					headers: { "Content-Type": "application/json" },
@@ -463,7 +463,7 @@ function headlineFor(status: string, update: RunUpdate): string {
 async function loadDiagram(token: number, retried = false): Promise<void> {
 	const id = processId
 	try {
-		const response = await fetch(`api/bpmn/generations/${id}/bpmn`)
+		const response = await fetch(`/api/bpmn/generations/${id}/bpmn`)
 		if (token !== runToken) return
 		const outcome = classifyArtifactResponse(response.status)
 		if (outcome === "retry" && !retried) {

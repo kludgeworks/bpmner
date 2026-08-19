@@ -67,7 +67,7 @@ internal class BpmnWebController(
         return ResponseEntity.accepted().body(
             WebGenerationResponse(
                 processId = processId,
-                sseUrl = "api/bpmn/generations/$processId/updates",
+                sseUrl = "/api/bpmn/generations/$processId/updates",
             ),
         )
     }

@@ -32,7 +32,7 @@ class BpmnWebControllerTest {
     private val controller = BpmnWebController(generationStarter, agentPlatform, runUpdates, permalinkStore)
 
     @Test
-    fun `accepted with relative sseUrl when generation starts`() {
+    fun `accepted with absolute sseUrl when generation starts`() {
         `when`(generationStarter.start(any() ?: WebGenerationRequest("fallback")))
             .thenReturn("test-process-123")
 
@@ -41,7 +41,7 @@ class BpmnWebControllerTest {
         assertEquals(HttpStatus.ACCEPTED, response.statusCode)
         val body = response.body!!
         assertEquals("test-process-123", body.processId)
-        assertEquals("api/bpmn/generations/test-process-123/updates", body.sseUrl)
+        assertEquals("/api/bpmn/generations/test-process-123/updates", body.sseUrl)
     }
 
     @Test
