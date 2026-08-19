@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.0](https://github.com/kludgeworks/bpmner/compare/bpmner-v0.7.0...bpmner-v0.8.0) (2026-08-19)
+
+
+### Features
+
+* synthesize diagram metadata ([#733](https://github.com/kludgeworks/bpmner/issues/733)) ([4c4916a](https://github.com/kludgeworks/bpmner/commit/4c4916a3ecd27acded3c9ca4211ac66da282ac2b))
+
 ## [0.7.0](https://github.com/kludgeworks/bpmner/compare/bpmner-v0.6.0...bpmner-v0.7.0) (2026-08-19)
 
 
