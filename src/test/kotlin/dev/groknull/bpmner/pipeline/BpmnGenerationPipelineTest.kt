@@ -166,7 +166,7 @@ class BpmnGenerationPipelineTest : EmbabelMockitoIntegrationTest() {
             // Headroom over the happy path, not a budget assertion. Each stage that can fail
             // returns a sealed ready/failed pair, so its success branch costs one extra action to
             // unwrap; production runs on a far larger budget.
-            ProcessOptions(budget = Budget(actions = 25), ephemeral = true),
+            ProcessOptions(budget = Budget(actions = 25), ephemeral = false),
             PromptFixtures.canonicalRequest,
         ).run()
     }
