@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.7.0](https://github.com/kludgeworks/bpmner/compare/bpmner-v0.6.0...bpmner-v0.7.0) (2026-08-19)
+
+
+### Features
+
+* addressable permalinks for generated BPMN processes ([#731](https://github.com/kludgeworks/bpmner/issues/731)) ([#734](https://github.com/kludgeworks/bpmner/issues/734)) ([b781420](https://github.com/kludgeworks/bpmner/commit/b781420fa717052dcfcb5289aed6c3660c63e95d))
+* **layout:** theme config schema and ThemeDecorator DI colour injection ([#727](https://github.com/kludgeworks/bpmner/issues/727)) ([d780502](https://github.com/kludgeworks/bpmner/commit/d780502f0b084740106e6fa667bb517a8f607d14))
+* **ruleset:** relocate bpmner.pkl to classpath resources, config-driven abbreviations ([#724](https://github.com/kludgeworks/bpmner/issues/724)) ([cd887a4](https://github.com/kludgeworks/bpmner/commit/cd887a48e7d711507efb47afa4aa593cef2c5e8f))
+* support target language configuration for generated BPMN diagrams ([#710](https://github.com/kludgeworks/bpmner/issues/710)) ([79cbad5](https://github.com/kludgeworks/bpmner/commit/79cbad5acf669f0031e152b33824af38facd896b)), closes [#709](https://github.com/kludgeworks/bpmner/issues/709)
+* upgrade Embabel to 1.5 ([#713](https://github.com/kludgeworks/bpmner/issues/713)) ([f97c70a](https://github.com/kludgeworks/bpmner/commit/f97c70a179e230eaf430fb0267acd9f5c4034032))
+* **web:** refresh the generation studio, and fix the run-updates behind it ([#712](https://github.com/kludgeworks/bpmner/issues/712)) ([4cf1d57](https://github.com/kludgeworks/bpmner/commit/4cf1d57d3b51f0d6b6b26d21d1b0585747b87572))
+
+
+### Bug Fixes
+
+* make run summary panel fully collapse to the right rail ([#729](https://github.com/kludgeworks/bpmner/issues/729)) ([f7d1de8](https://github.com/kludgeworks/bpmner/commit/f7d1de8f00192edc24637243774dfbdb66113a54))
+* omit null contract example fields ([#737](https://github.com/kludgeworks/bpmner/issues/737)) ([267ff6a](https://github.com/kludgeworks/bpmner/commit/267ff6a393fb7a60cc4e74f5457d9288b68e7e53))
+
 ## [0.6.0](https://github.com/kludgeworks/bpmner/compare/bpmner-v0.5.0...bpmner-v0.6.0) (2026-08-15)
 
 
