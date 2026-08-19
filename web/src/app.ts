@@ -164,7 +164,7 @@ generateBtn.addEventListener("click", async () => {
 	composeError.textContent = ""
 
 	try {
-		const response = await fetch("api/bpmn/generations", {
+		const response = await fetch("/api/bpmn/generations", {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
 			body: JSON.stringify({ processDescription: description }),
@@ -324,7 +324,7 @@ function showClarify(update: RunUpdate): void {
 		renderClarifyForm(clarifyRegion, { ...base, submitting: true }, submit)
 		try {
 			const response = await fetch(
-				`api/bpmn/generations/${processId}/answers`,
+				`/api/bpmn/generations/${processId}/answers`,
 				{
 					method: "POST",
 					headers: { "Content-Type": "application/json" },
@@ -418,6 +418,11 @@ async function finish(update: RunUpdate): Promise<void> {
 	resultBadge.dataset.status = status
 	resultHeadline.textContent = headlineFor(status, update)
 	resultMeta.textContent = `run ${processId ?? "—"} · ${formatElapsed(elapsed())} total`
+
+	if (update.detail?.permalinkId && update.outcome === "COMPLETED") {
+		history.replaceState(null, "", `/p/${update.detail.permalinkId}`)
+	}
+
 	showView("result")
 	announce(resultHeadline.textContent)
 
@@ -458,7 +463,7 @@ function headlineFor(status: string, update: RunUpdate): string {
 async function loadDiagram(token: number, retried = false): Promise<void> {
 	const id = processId
 	try {
-		const response = await fetch(`api/bpmn/generations/${id}/bpmn`)
+		const response = await fetch(`/api/bpmn/generations/${id}/bpmn`)
 		if (token !== runToken) return
 		const outcome = classifyArtifactResponse(response.status)
 		if (outcome === "retry" && !retried) {
@@ -548,6 +553,9 @@ function backToCompose(): void {
 	eventSource?.close()
 	startedAt = 0
 	state = initialRunState()
+	if (window.location.pathname !== "/") {
+		history.pushState(null, "", "/")
+	}
 	showView("compose")
 	descriptionEl.focus()
 	refreshCount()
@@ -559,8 +567,57 @@ newRunBtn.addEventListener("click", () => {
 })
 emptyBack.addEventListener("click", backToCompose)
 
+async function hydrateFromPermalink(id: string): Promise<void> {
+	resultBadge.textContent = "generated"
+	resultBadge.dataset.status = "GENERATED"
+	resultHeadline.textContent = "Diagram ready"
+	resultMeta.textContent = `permalink: ${id}`
+	showView("result")
+
+	const body = document.querySelector(".result-body") as HTMLElement | null
+	if (body) body.dataset.empty = "false"
+	emptyResult.hidden = true
+	canvasStatus.hidden = true
+
+	try {
+		const response = await fetch(`/api/bpmn/p/${id}`)
+		if (response.status === 200) {
+			const xml = await response.text()
+			const imported = await importSnapshot(
+				{ importXML: (x) => modeler.importXML(x) },
+				xml,
+			)
+			if (imported.status !== "drawn") {
+				canvasStatus.textContent = "Diagram unavailable"
+				canvasStatus.hidden = false
+				return
+			}
+			canvasEl.classList.add("canvas--entrance")
+			requestAnimationFrame(() => {
+				canvasEl.classList.remove("canvas--entrance")
+				fitInitialViewport(canvasViewport)
+				setCanvasReady(true)
+			})
+		} else {
+			showEmptyResult(
+				"The diagram is no longer available",
+				"Permalink not found or diagram has expired. Start a new run from your description.",
+			)
+		}
+	} catch {
+		canvasStatus.textContent = "Diagram unavailable"
+		canvasStatus.hidden = false
+	}
+}
+
 setCanvasReady(false)
-showView("compose")
+
+const pathMatch = window.location.pathname.match(/^\/p\/([a-z0-9-]+)$/i)
+if (pathMatch) {
+	void hydrateFromPermalink(pathMatch[1])
+} else {
+	showView("compose")
+}
 
 summaryToggle.addEventListener("click", () => {
 	const collapsed = summaryPanel.classList.toggle("collapsed")
