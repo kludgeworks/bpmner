@@ -195,7 +195,10 @@ internal class BpmnRunUpdateChannel(
             .replace(Regex("[^a-z0-9]+"), "-")
             .trim('-')
             .let { if (it.isBlank()) "process" else it }
-        val shortId = process.id.take(PERMALINK_SHORT_ID_LENGTH)
+        val shortId = process.id.lowercase()
+            .replace(Regex("[^a-z0-9]+"), "-")
+            .take(PERMALINK_SHORT_ID_LENGTH)
+            .trim('-')
         val pId = "$slug-$shortId"
         return try {
             permalinkStore.save(pId, xml)

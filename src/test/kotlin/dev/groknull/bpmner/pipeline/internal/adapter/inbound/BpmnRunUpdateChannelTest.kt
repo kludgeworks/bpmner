@@ -298,11 +298,11 @@ class BpmnRunUpdateChannelTest {
 
         channel.onProcessEvent(AgentProcessCompletedEvent(process))
 
-        verify(permalinkStore).save("employee-onboarding-process-proc-id-", "<definitions/>")
+        verify(permalinkStore).save("employee-onboarding-process-proc-id", "<definitions/>")
 
         val update = registry.subscribe("proc-id-long-1234abcd").collectList().block(TIMEOUT)!!.single()
         assertEquals(RunOutcome.COMPLETED, (update as RunUpdate.Terminal).outcome)
-        assertEquals("employee-onboarding-process-proc-id-", update.detail["permalinkId"])
+        assertEquals("employee-onboarding-process-proc-id", update.detail["permalinkId"])
     }
 
     /**
