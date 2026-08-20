@@ -50,7 +50,7 @@ internal object MetadataSynthesis {
 
     fun reserveTopPadding(model: BpmnModelInstance, root: ElkNode) {
         val annotations = model.getModelElementsByType(TextAnnotation::class.java).filter { it.id in markerIds }
-        val height = annotations.sumOf { LabelMetrics.LINE_HEIGHT + 2 * VERTICAL_PADDING }
+        val height = annotations.sumOf(::annotationHeight)
         root.setProperty(CoreOptions.PADDING, ElkPadding(height, 0.0, 0.0, 0.0))
     }
 
@@ -71,8 +71,13 @@ internal object MetadataSynthesis {
     private data class AnnotationContent(val id: String, val text: String, val valid: (String) -> Boolean)
 
     internal val markerIds = DiagramMetadata.markerIds
-    internal fun annotationHeight(): Double =
-        LabelMetrics.LINE_HEIGHT + 2 * VERTICAL_PADDING
+    internal fun annotationHeight(annotation: TextAnnotation): Double =
+        annotation.textContent().lineSequence().count().coerceAtLeast(1) * LabelMetrics.LINE_HEIGHT + 2 * VERTICAL_PADDING
+
     internal fun annotationWidth(annotation: TextAnnotation): Double =
-        LabelMetrics.width(annotation.text?.textContent.orEmpty()) + 2 * HORIZONTAL_PADDING
+        annotation.textContent().lineSequence().maxOfOrNull(LabelMetrics::width).orZero() + 2 * HORIZONTAL_PADDING
+
+    private fun TextAnnotation.textContent(): String = text?.textContent.orEmpty()
+
+    private fun Double?.orZero(): Double = this ?: 0.0
 }

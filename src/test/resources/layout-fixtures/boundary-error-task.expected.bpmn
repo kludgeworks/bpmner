@@ -62,82 +62,89 @@
       <text>Boundary Error (Process_1)</text>
     </textAnnotation>
     <textAnnotation id="bpmner-diagram-notes" xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL">
-      <text>Diagram notes: review this process with its stakeholders.</text>
+      <text>Process: Boundary Error
+Author: Unknown
+Version: 1
+Created: 2026-08-20T12:00:00Z
+Updated: 2026-08-20T12:00:00Z</text>
     </textAnnotation>
     <textAnnotation id="bpmner-diagram-legend" xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL">
-      <text>Legend: BPMN symbols describe the process flow.</text>
+      <text>Draft: #2b6cb0
+Proposed: #c77d12
+Implemented: #2f7a43
+Out of production / To be removed: #cf3a22</text>
     </textAnnotation>
 
   </bpmn:process>
   <bpmndi:BPMNDiagram id="BPMNDiagram_1">
     <bpmndi:BPMNPlane bpmnElement="Process_1" id="BPMNPlane_1">
       <bpmndi:BPMNShape bioc:fill="#ffffff" bioc:stroke="#16181d" bpmnElement="End_1" color:background-color="#ffffff" color:border-color="#16181d" id="BPMNShape_End_1">
-        <dc:Bounds height="36.0" width="36.0" x="696.0" y="137.0"/>
+        <dc:Bounds height="36.0" width="36.0" x="696.0" y="235.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_End_1">
-          <dc:Bounds height="20.0" width="21.3515625" x="703.32421875" y="188.0"/>
+          <dc:Bounds height="20.0" width="21.3515625" x="703.32421875" y="286.0"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bioc:fill="#ffffff" bioc:stroke="#16181d" bpmnElement="Start_1" color:background-color="#ffffff" color:border-color="#16181d" id="BPMNShape_Start_1">
-        <dc:Bounds height="36.0" width="36.0" x="0.0" y="124.0"/>
+        <dc:Bounds height="36.0" width="36.0" x="0.0" y="222.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_Start_1">
-          <dc:Bounds height="20.0" width="25.341796875" x="5.3291015625" y="175.0"/>
+          <dc:Bounds height="20.0" width="25.341796875" x="5.3291015625" y="273.0"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bioc:fill="#ffffff" bioc:stroke="#16181d" bpmnElement="Task_confirm" color:background-color="#ffffff" color:border-color="#16181d" id="BPMNShape_Task_confirm">
-        <dc:Bounds height="80.0" width="100.0" x="506.0" y="115.0"/>
+        <dc:Bounds height="80.0" width="100.0" x="506.0" y="213.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_Task_confirm">
-          <dc:Bounds height="20.0" width="42.005859375" x="534.9970703125" y="210.0"/>
+          <dc:Bounds height="20.0" width="42.005859375" x="534.9970703125" y="308.0"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bioc:fill="#ffffff" bioc:stroke="#16181d" bpmnElement="Task_handle" color:background-color="#ffffff" color:border-color="#16181d" id="BPMNShape_Task_handle">
-        <dc:Bounds height="80.0" width="100.0" x="316.0" y="210.0"/>
+        <dc:Bounds height="80.0" width="100.0" x="316.0" y="308.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_Task_handle">
-          <dc:Bounds height="20.0" width="68.02734375" x="331.986328125" y="305.0"/>
+          <dc:Bounds height="20.0" width="68.02734375" x="331.986328125" y="403.0"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bioc:fill="#ffffff" bioc:stroke="#16181d" bpmnElement="Task_process" color:background-color="#ffffff" color:border-color="#16181d" id="BPMNShape_Task_process">
-        <dc:Bounds height="80.0" width="100.0" x="126.0" y="102.0"/>
+        <dc:Bounds height="80.0" width="100.0" x="126.0" y="200.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_Task_process">
-          <dc:Bounds height="28.0" width="47.35546875" x="152.322265625" y="272.0"/>
+          <dc:Bounds height="28.0" width="47.35546875" x="152.322265625" y="370.0"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bioc:fill="#ffffff" bioc:stroke="#16181d" bpmnElement="Boundary_error" color:background-color="#ffffff" color:border-color="#16181d" id="BPMNShape_Boundary_error">
-        <dc:Bounds height="36.0" width="36.0" x="158.0" y="156.0"/>
+        <dc:Bounds height="36.0" width="36.0" x="158.0" y="254.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_Boundary_error">
-          <dc:Bounds height="20.0" width="77.35546875" x="137.322265625" y="252.0"/>
+          <dc:Bounds height="20.0" width="77.35546875" x="137.322265625" y="350.0"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bioc:fill="#ffffff" bioc:stroke="#16181d" bpmnElement="bpmner-diagram-header" color:background-color="#ffffff" color:border-color="#16181d" id="BPMNShape_bpmner-diagram-header">
         <dc:Bounds height="34.0" width="732.0" x="0.0" y="0.0"/>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bioc:fill="#ffffff" bioc:stroke="#16181d" bpmnElement="bpmner-diagram-legend" color:background-color="#ffffff" color:border-color="#16181d" id="BPMNShape_bpmner-diagram-legend">
-        <dc:Bounds height="34.0" width="310.791015625" x="0.0" y="68.0"/>
+        <dc:Bounds height="76.0" width="272.13671875" x="0.0" y="124.0"/>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bioc:fill="#ffffff" bioc:stroke="#16181d" bpmnElement="bpmner-diagram-notes" color:background-color="#ffffff" color:border-color="#16181d" id="BPMNShape_bpmner-diagram-notes">
-        <dc:Bounds height="34.0" width="341.453125" x="0.0" y="34.0"/>
+        <dc:Bounds height="90.0" width="214.791015625" x="0.0" y="34.0"/>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNEdge bioc:stroke="#16181d" bpmnElement="Flow_1" color:border-color="#16181d" id="BPMNEdge_Flow_1">
-        <di:waypoint x="36.0" y="142.0"/>
-        <di:waypoint x="126.0" y="142.0"/>
+        <di:waypoint x="36.0" y="240.0"/>
+        <di:waypoint x="126.0" y="240.0"/>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bioc:stroke="#16181d" bpmnElement="Flow_2" color:border-color="#16181d" id="BPMNEdge_Flow_2">
-        <di:waypoint x="606.0" y="155.0"/>
-        <di:waypoint x="696.0" y="155.0"/>
+        <di:waypoint x="606.0" y="253.0"/>
+        <di:waypoint x="696.0" y="253.0"/>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bioc:stroke="#16181d" bpmnElement="Flow_error" color:border-color="#16181d" id="BPMNEdge_Flow_error">
-        <di:waypoint x="176.0" y="192.0"/>
-        <di:waypoint x="176.0" y="250.0"/>
-        <di:waypoint x="316.0" y="250.0"/>
+        <di:waypoint x="176.0" y="290.0"/>
+        <di:waypoint x="176.0" y="348.0"/>
+        <di:waypoint x="316.0" y="348.0"/>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bioc:stroke="#16181d" bpmnElement="Flow_normal" color:border-color="#16181d" id="BPMNEdge_Flow_normal">
-        <di:waypoint x="226.0" y="142.0"/>
-        <di:waypoint x="506.0" y="142.0"/>
+        <di:waypoint x="226.0" y="240.0"/>
+        <di:waypoint x="506.0" y="240.0"/>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bioc:stroke="#16181d" bpmnElement="Flow_rejoin" color:border-color="#16181d" id="BPMNEdge_Flow_rejoin">
-        <di:waypoint x="416.0" y="250.0"/>
-        <di:waypoint x="441.0" y="250.0"/>
-        <di:waypoint x="441.0" y="168.0"/>
-        <di:waypoint x="506.0" y="168.0"/>
+        <di:waypoint x="416.0" y="348.0"/>
+        <di:waypoint x="441.0" y="348.0"/>
+        <di:waypoint x="441.0" y="266.0"/>
+        <di:waypoint x="506.0" y="266.0"/>
       </bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>

@@ -49,7 +49,7 @@ internal object ArtifactPlacement : PlacementProcessor {
         val skeletonWidth = (ctx.shapes.values.maxOfOrNull { it.x + it.w } ?: 0.0) - skeletonMinX
         var y = 0.0
         metadata.forEach { annotation ->
-            val height = MetadataSynthesis.annotationHeight()
+            val height = MetadataSynthesis.annotationHeight(annotation)
             val width = if (annotation.id == MetadataSynthesis.HEADER_ID) {
                 skeletonWidth
             } else {
