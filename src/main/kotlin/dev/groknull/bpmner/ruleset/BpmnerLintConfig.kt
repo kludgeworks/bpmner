@@ -74,5 +74,9 @@ data class ThemeConfig(
     val backgroundColor: String = "#ffffff",
     val fontName: String? = null,
     val fontSize: Double? = null,
+    val draftStatusColor: String = "#2b6cb0",
+    val proposedStatusColor: String = "#c77d12",
+    val implementedStatusColor: String = "#2f7a43",
+    val outOfProductionStatusColor: String = "#cf3a22",
     val shapeOverrides: Map<String, ShapeStyle> = emptyMap(),
 )

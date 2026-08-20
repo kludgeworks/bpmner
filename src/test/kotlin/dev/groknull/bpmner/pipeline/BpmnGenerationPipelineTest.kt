@@ -7,12 +7,12 @@ package dev.groknull.bpmner.pipeline
 
 import com.embabel.agent.core.AgentPlatform
 import com.embabel.agent.core.AgentProcess
+import com.embabel.agent.core.AgentProcessStatusCode
 import com.embabel.agent.core.Budget
 import com.embabel.agent.core.ProcessOptions
+import com.embabel.agent.core.hitl.FormBindingRequest
 import com.embabel.agent.test.integration.EmbabelMockitoIntegrationTest
 import dev.groknull.bpmner.alignment.AlignmentFindings
-import dev.groknull.bpmner.authoring.BpmnGenerationStatus
-import dev.groknull.bpmner.authoring.BpmnResult
 import dev.groknull.bpmner.authoring.internal.adapter.outbound.FlatBpmnDefinition
 import dev.groknull.bpmner.contract.FlatContractTestFixtures
 import dev.groknull.bpmner.prompt.PromptFixtures
@@ -20,7 +20,6 @@ import dev.groknull.bpmner.readiness.BpmnReadinessInvoker
 import dev.groknull.bpmner.readiness.ProcessInputAssessment
 import dev.groknull.bpmner.readiness.ReadinessVerdict
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.mockito.ArgumentMatchers
 import org.mockito.Mockito.`when`
@@ -29,8 +28,6 @@ import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.context.TestPropertySource
 import org.springframework.test.context.bean.override.mockito.MockitoBean
-import org.xmlunit.assertj.XmlAssert
-import org.xmlunit.assertj.XmlAssert.assertThat
 import tools.jackson.databind.ObjectMapper
 
 /**
@@ -88,8 +85,6 @@ class BpmnGenerationPipelineTest : EmbabelMockitoIntegrationTest() {
         return null as T
     }
 
-    private fun assertXml(xml: String): XmlAssert = assertThat(xml).withNamespaceContext(NAMESPACES)
-
     @Test
     fun pipelineProducesStructurallyCompleteBpmnFromCannedStages() {
         val readyAssessment = ProcessInputAssessment(
@@ -118,42 +113,9 @@ class BpmnGenerationPipelineTest : EmbabelMockitoIntegrationTest() {
             .thenReturn(loadFixtureObject("canonicalAlignment.json"))
 
         val process = runGenerationProcess()
-        val result = process.last(BpmnResult::class.java)!!
-
-        assertEquals(BpmnGenerationStatus.GENERATED, result.status)
-        val xml = result.xml
-        assertTrue(!xml.isNullOrBlank(), "expected non-blank BPMN xml")
-
-        // Exactly one process, and the flow-node / sequence-flow / lane shape the canned outline implies.
-        assertXml(xml!!).nodesByXPath("//bpmn:process").hasSize(1)
-        assertXml(xml).nodesByXPath("//bpmn:startEvent").hasSize(1)
-        assertXml(xml).nodesByXPath("//bpmn:endEvent").hasSize(2)
-        assertXml(xml).nodesByXPath("//bpmn:serviceTask").hasSize(2)
-        assertXml(xml).nodesByXPath("//bpmn:userTask").hasSize(1)
-        assertXml(xml).nodesByXPath("//bpmn:exclusiveGateway").hasSize(1)
-        assertXml(xml).nodesByXPath("//bpmn:sequenceFlow").hasSize(6)
-        assertXml(xml).nodesByXPath("//bpmn:lane").hasSize(2)
-
-        // Every id from the canned outline survives compose → render → layout into the rendered model.
-        val expectedIds = listOf(
-            "Process_credit_application",
-            "StartEvent_1",
-            "act-run-credit-check",
-            "dec-score-check",
-            "act-auto-approve",
-            "act-underwriter-review",
-            "end-approved",
-            "end-reviewed",
-            "Flow_1",
-            "Flow_2",
-            "Flow_3",
-            "Flow_4",
-            "Flow_5",
-            "Flow_6",
-        )
-        expectedIds.forEach { id ->
-            assertXml(xml).nodesByXPath("//*[@id='$id']").exist()
-        }
+        assertEquals(AgentProcessStatusCode.WAITING, process.status)
+        val form = process.last(FormBindingRequest::class.java) as FormBindingRequest<*>
+        assertEquals("Approve diagram metadata", form.payload.title)
     }
 
     // Runs the deployed generation agent, the same one AgentPlatformBpmnAgentInvoker resolves in
@@ -174,9 +136,5 @@ class BpmnGenerationPipelineTest : EmbabelMockitoIntegrationTest() {
     private companion object {
         // Matches the production invoker's lookup; @Agent derives the name from the class.
         private const val GENERATION_AGENT_NAME = "BpmnGenerationAgent"
-
-        private val NAMESPACES = mapOf(
-            "bpmn" to "http://www.omg.org/spec/BPMN/20100524/MODEL",
-        )
     }
 }

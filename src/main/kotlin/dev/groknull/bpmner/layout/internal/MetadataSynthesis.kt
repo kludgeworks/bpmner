@@ -5,6 +5,8 @@
 
 package dev.groknull.bpmner.layout.internal
 
+import dev.groknull.bpmner.bpmn.DiagramMetadata
+import dev.groknull.bpmner.bpmn.DiagramStatusColors
 import dev.groknull.bpmner.layout.internal.placement.LabelMetrics
 import org.camunda.bpm.model.bpmn.BpmnModelInstance
 import org.camunda.bpm.model.bpmn.instance.Participant
@@ -14,24 +16,36 @@ import org.camunda.bpm.model.bpmn.instance.TextAnnotation
 import org.eclipse.elk.core.math.ElkPadding
 import org.eclipse.elk.core.options.CoreOptions
 import org.eclipse.elk.graph.ElkNode
+import java.time.Instant
 
 internal object MetadataSynthesis {
-    // These marker IDs must stay in sync with MetadataPresenceRules.
-    const val HEADER_ID = "bpmner-diagram-header"
-    const val NOTES_ID = "bpmner-diagram-notes"
-    const val LEGEND_ID = "bpmner-diagram-legend"
+    const val HEADER_ID = DiagramMetadata.HEADER_ID
+    const val NOTES_ID = DiagramMetadata.NOTES_ID
+    const val LEGEND_ID = DiagramMetadata.LEGEND_ID
 
     private const val HORIZONTAL_PADDING = 20.0
     private const val VERTICAL_PADDING = 10.0
 
-    fun addMissingAnnotations(model: BpmnModelInstance) {
+    fun addMissingAnnotations(model: BpmnModelInstance, instant: Instant, colors: DiagramStatusColors) {
         val process = model.getModelElementsByType(Process::class.java).first()
-        val existingIds = model.getModelElementsByType(TextAnnotation::class.java).mapTo(mutableSetOf()) { it.id }
         val participant = model.getModelElementsByType(Participant::class.java).singleOrNull()
-        val header = participant?.let { "${it.name ?: it.id} (${it.id})" } ?: "${process.name ?: process.id} (${process.id})"
-        addAnnotation(model, process, existingIds, HEADER_ID, header)
-        addAnnotation(model, process, existingIds, NOTES_ID, "Diagram notes: review this process with its stakeholders.")
-        addAnnotation(model, process, existingIds, LEGEND_ID, "Legend: BPMN symbols describe the process flow.")
+        val processName = participant?.name ?: process.name ?: process.id
+        val annotations = model.getModelElementsByType(TextAnnotation::class.java).associateBy { it.id }
+        val content = listOf(
+            AnnotationContent(HEADER_ID, DiagramMetadata.header(processName, process.id)) {
+                DiagramMetadata.hasValidHeader(it, processName, process.id)
+            },
+            AnnotationContent(
+                NOTES_ID,
+                DiagramMetadata.completeNotes(annotations[NOTES_ID]?.text?.textContent, processName, instant),
+            ) {
+                DiagramMetadata.hasValidNotes(it)
+            },
+            AnnotationContent(LEGEND_ID, DiagramMetadata.completeLegend(annotations[LEGEND_ID]?.text?.textContent, colors)) {
+                DiagramMetadata.hasValidLegend(it)
+            },
+        )
+        content.forEach { addOrReplaceAnnotation(model, process, annotations[it.id], it) }
     }
 
     fun reserveTopPadding(model: BpmnModelInstance, root: ElkNode) {
@@ -40,23 +54,23 @@ internal object MetadataSynthesis {
         root.setProperty(CoreOptions.PADDING, ElkPadding(height, 0.0, 0.0, 0.0))
     }
 
-    private fun addAnnotation(
+    private fun addOrReplaceAnnotation(
         model: BpmnModelInstance,
         process: Process,
-        existingIds: MutableSet<String>,
-        id: String,
-        text: String,
+        existing: TextAnnotation?,
+        content: AnnotationContent,
     ) {
-        if (!existingIds.add(id)) return
-        process.addChildElement(
-            model.newInstance(TextAnnotation::class.java).also {
-                it.id = id
-                it.text = model.newInstance(Text::class.java).also { content -> content.textContent = text }
-            },
-        )
+        if (existing?.text?.textContent?.let(content.valid) == true) return
+        val annotation = existing ?: model.newInstance(TextAnnotation::class.java).also {
+            it.id = content.id
+            process.addChildElement(it)
+        }
+        annotation.text = model.newInstance(Text::class.java).also { it.textContent = content.text }
     }
 
-    internal val markerIds = setOf(HEADER_ID, NOTES_ID, LEGEND_ID)
+    private data class AnnotationContent(val id: String, val text: String, val valid: (String) -> Boolean)
+
+    internal val markerIds = DiagramMetadata.markerIds
     internal fun annotationHeight(): Double =
         LabelMetrics.LINE_HEIGHT + 2 * VERTICAL_PADDING
     internal fun annotationWidth(annotation: TextAnnotation): Double =

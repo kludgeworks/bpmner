@@ -7,6 +7,7 @@ package dev.groknull.bpmner.ruleset.internal.domain.compiled
 
 import dev.groknull.bpmner.bpmn.BpmnDefinitionContext
 import dev.groknull.bpmner.bpmn.BpmnRule
+import dev.groknull.bpmner.bpmn.DiagramMetadata
 import dev.groknull.bpmner.bpmn.RepairKind
 import dev.groknull.bpmner.bpmn.RepairMetadata
 import dev.groknull.bpmner.bpmn.RepairSafety
@@ -16,30 +17,42 @@ import dev.groknull.bpmner.bpmn.RuleMetadata
 import dev.groknull.bpmner.bpmn.RuleSeverity
 import org.springframework.stereotype.Component
 
-// These marker IDs must stay in sync with MetadataSynthesis.
-private const val HEADER_ID = "bpmner-diagram-header"
-private const val NOTES_ID = "bpmner-diagram-notes"
-private const val LEGEND_ID = "bpmner-diagram-legend"
-
 @Component
 internal class HeaderPresentRule : BpmnRule {
     override val id = "def-header-present"
     override val metadata = metadata(id, "Header Present", "Add a diagram header.")
-    override fun evaluate(ctx: BpmnDefinitionContext): List<RuleDiagnostic> = diagnosticWhenAbsent(ctx, HEADER_ID, id, metadata)
+    override fun evaluate(ctx: BpmnDefinitionContext): List<RuleDiagnostic> = diagnosticWhenInvalid(
+        ctx,
+        DiagramMetadata.HEADER_ID,
+        id,
+        metadata,
+    ) { DiagramMetadata.hasValidHeader(it, ctx.definition.processName, ctx.definition.processId) }
 }
 
 @Component
 internal class NotesPresentRule : BpmnRule {
     override val id = "def-notes-present"
     override val metadata = metadata(id, "Notes Present", "Add diagram notes.")
-    override fun evaluate(ctx: BpmnDefinitionContext): List<RuleDiagnostic> = diagnosticWhenAbsent(ctx, NOTES_ID, id, metadata)
+    override fun evaluate(ctx: BpmnDefinitionContext): List<RuleDiagnostic> = diagnosticWhenInvalid(
+        ctx,
+        DiagramMetadata.NOTES_ID,
+        id,
+        metadata,
+        DiagramMetadata::hasValidNotes,
+    )
 }
 
 @Component
 internal class LegendPresentRule : BpmnRule {
     override val id = "def-legend-present"
     override val metadata = metadata(id, "Legend Present", "Add a diagram legend.")
-    override fun evaluate(ctx: BpmnDefinitionContext): List<RuleDiagnostic> = diagnosticWhenAbsent(ctx, LEGEND_ID, id, metadata)
+    override fun evaluate(ctx: BpmnDefinitionContext): List<RuleDiagnostic> = diagnosticWhenInvalid(
+        ctx,
+        DiagramMetadata.LEGEND_ID,
+        id,
+        metadata,
+        DiagramMetadata::hasValidLegend,
+    )
 }
 
 private fun metadata(id: String, name: String, intent: String) = RuleMetadata(
@@ -56,12 +69,13 @@ private fun metadata(id: String, name: String, intent: String) = RuleMetadata(
     repair = RepairMetadata(kind = RepairKind.LLM_MODEL_PATCH, safety = RepairSafety.LLM_ONLY),
 )
 
-private fun diagnosticWhenAbsent(
+private fun diagnosticWhenInvalid(
     ctx: BpmnDefinitionContext,
     markerId: String,
     ruleId: String,
     metadata: RuleMetadata,
-): List<RuleDiagnostic> = if (ctx.definition.annotations.none { it.id == markerId }) {
+    valid: (String?) -> Boolean,
+): List<RuleDiagnostic> = if (ctx.definition.annotations.none { it.id == markerId && valid(it.text) }) {
     listOf(
         RuleDiagnostic(
             ruleId,

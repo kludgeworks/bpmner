@@ -27,6 +27,10 @@ internal class ConventionsLoaderTest {
         assertThat(config.discouragedBpmnTypes).contains("bpmn:Transaction")
         assertThat(config.abbreviationReplacements).containsEntry("REQ", "request")
         assertThat(config.theme.backgroundColor).isEqualTo("#ffffff")
+        assertThat(config.theme.draftStatusColor).isEqualTo("#2b6cb0")
+        assertThat(config.theme.proposedStatusColor).isEqualTo("#c77d12")
+        assertThat(config.theme.implementedStatusColor).isEqualTo("#2f7a43")
+        assertThat(config.theme.outOfProductionStatusColor).isEqualTo("#cf3a22")
         assertThat(config.theme.shapeOverrides).isEmpty()
     }
 
@@ -48,6 +52,10 @@ internal class ConventionsLoaderTest {
                 backgroundColor = "#abcdef"
                 fontName = null
                 fontSize = null
+                draftStatusColor = "#111111"
+                proposedStatusColor = "#222222"
+                implementedStatusColor = "#333333"
+                outOfProductionStatusColor = "#444444"
                 shapeOverrides = new Mapping<String, Dynamic> {
                     ["bpmn:Task"] = new {
                         fill = "#00ff00"
@@ -72,6 +80,10 @@ internal class ConventionsLoaderTest {
         assertThat(config.discouragedBpmnTypes).containsExactly("bpmn:Transaction")
         assertThat(config.abbreviationReplacements).isEmpty()
         assertThat(config.theme.primaryColor).isEqualTo("#123456")
+        assertThat(config.theme.draftStatusColor).isEqualTo("#111111")
+        assertThat(config.theme.proposedStatusColor).isEqualTo("#222222")
+        assertThat(config.theme.implementedStatusColor).isEqualTo("#333333")
+        assertThat(config.theme.outOfProductionStatusColor).isEqualTo("#444444")
         assertThat(config.theme.shapeOverrides).containsKey("bpmn:Task")
         assertThat(config.theme.shapeOverrides.getValue("bpmn:Task").fill).isEqualTo("#00ff00")
     }

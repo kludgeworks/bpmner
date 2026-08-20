@@ -27,6 +27,7 @@ import org.junit.jupiter.api.Test
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.verifyNoInteractions
 import org.springframework.context.ApplicationEventPublisher
+import kotlin.test.assertEquals
 import kotlin.test.assertIs
 
 class BpmnGenerationAgentTest {
@@ -68,6 +69,41 @@ class BpmnGenerationAgentTest {
         )
 
         assertIs<ValidationFailed>(stage)
+        verifyNoInteractions(layoutPort)
+    }
+
+    @Test
+    fun `metadata changes wait for approval and rejection leaves BPMN unchanged`() {
+        val layoutPort = mock(BpmnLayoutPort::class.java)
+        val validated = ValidatedBpmnXml(
+            definition = minimalDefinition(),
+            xml = "<definitions/>",
+            diagnostics = listOf(
+                BpmnDiagnostic(
+                    source = BpmnDiagnosticSource.LINT,
+                    severity = BpmnDiagnosticSeverity.INFO,
+                    rule = "def-notes-present",
+                    message = "Add diagram notes.",
+                ),
+            ),
+        )
+        val agent = BpmnGenerationAgent(
+            requestDrafter = mock(BpmnRequestDrafter::class.java),
+            requestResolver = mock(BpmnRequestResolutionPort::class.java),
+            readinessInvoker = mock(BpmnReadinessInvoker::class.java),
+            contractExtractor = mock(ProcessContractExtractor::class.java),
+            processGenerator = mock(BpmnProcessGenerator::class.java),
+            repairer = BpmnRepairer { _, _, _, _, _ -> validated },
+            layoutPort = layoutPort,
+            xsdValidationPort = mock(BpmnXsdValidationPort::class.java),
+            aligner = mock(BpmnAligner::class.java),
+            eventPublisher = mock(ApplicationEventPublisher::class.java),
+        )
+
+        val approval = agent.beginMetadataApproval(ValidationPassed(mock(), validated))
+        val result = agent.resolveMetadataApproval(assertIs<MetadataApprovalRequired>(approval), MetadataApproval(false))
+
+        assertEquals(validated.xml, assertIs<LayoutReady>(result).laidOut.xml)
         verifyNoInteractions(layoutPort)
     }
 
