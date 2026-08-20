@@ -39,6 +39,16 @@ data class BpmnerLintConfig(
         "bpmn:DataInputAssociation",
         "bpmn:DataOutputAssociation",
     ),
+    val styleGuideDiscouragedBpmnTypes: List<String> = discouragedBpmnTypes + listOf(
+        "bpmn:UserTask",
+        "bpmn:ServiceTask",
+        "bpmn:ManualTask",
+        "bpmn:ScriptTask",
+        "bpmn:BusinessRuleTask",
+        "bpmn:SendTask",
+        "bpmn:ReceiveTask",
+        "bpmn:ComplexGateway",
+    ),
     val abbreviationReplacements: Map<String, String> = mapOf(
         "REQ" to "request",
         "RESP" to "response",
@@ -49,7 +59,10 @@ data class BpmnerLintConfig(
         "ITBL" to "itinerary block",
     ),
     val theme: ThemeConfig = ThemeConfig(),
-)
+) {
+    fun discouragedBpmnTypesForProfile(): List<String> =
+        if (profile.trim() == "style-guide") styleGuideDiscouragedBpmnTypes else discouragedBpmnTypes
+}
 
 /**
  * Per-shape visual style override. All properties are optional; unset properties fall back to
