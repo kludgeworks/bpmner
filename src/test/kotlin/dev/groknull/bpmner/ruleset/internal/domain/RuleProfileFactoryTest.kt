@@ -296,6 +296,16 @@ class RuleProfileFactoryTest {
     }
 
     @Test
+    fun `style-guide profile overrides metadata rules to WARNING`() {
+        val profile = build(profile = "style-guide")
+
+        assertEquals(RuleSeverity.WARNING, profile.severityOverrides["def-header-present"])
+        assertEquals(RuleSeverity.WARNING, profile.severityOverrides["def-notes-present"])
+        assertEquals(RuleSeverity.WARNING, profile.severityOverrides["def-legend-present"])
+        assertThat(profile.disabledRuleIds).isEmpty()
+    }
+
+    @Test
     fun `unknown profile name fails startup with the list of available profiles`() {
         val factory = RuleProfileFactory(noCallProvider())
         val lintConfig = BpmnerLintConfig(profile = "definitely-not-a-real-profile")
@@ -305,6 +315,7 @@ class RuleProfileFactoryTest {
         assertTrue(error.message!!.contains("definitely-not-a-real-profile"))
         assertTrue(error.message!!.contains("recommended"))
         assertTrue(error.message!!.contains("strict"))
+        assertTrue(error.message!!.contains("style-guide"))
     }
 
     @Test
