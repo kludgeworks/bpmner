@@ -284,13 +284,19 @@ internal object BpmnToElkMapper {
      * **Known limitation (D1, AD-730-09/AD-730-07, recorded rather than fixed).** A layer-spanning
      * cross-lane sequence flow can route through an unpositioned long-edge dummy node instead of
      * taking a direct inter-lane channel. The only writer of the dummy's placement hint
-     * (`ORIGINAL_DUMMY_NODE_POSITION`) is `InteractiveCrossingMinimizer`, which ELK documents as
-     * inapplicable to hierarchical layout — every lane-carrying participant is
-     * `HIERARCHY_HANDLING.INCLUDE_CHILDREN`, so that processor is out of reach here. Dropping
-     * `INCLUDE_CHILDREN` for participants was measured as a possible unlock (AD-730-12) and
-     * rejected: it perturbs unrelated non-lane collaboration layout (see
-     * `LaneConstraintSpikeTest`'s AD-730-12 spike record). D1 has no reachable fix under the
-     * selected mechanism (A2) and must be named for human bpmn-js review, not patched post-layout.
+     * (`ORIGINAL_DUMMY_NODE_POSITION`) is `InteractiveCrossingMinimizer`.
+     *
+     * Five configurations were measured against the full corpus; each left every golden
+     * byte-identical, so none moves D1 (see `LaneConstraintSpikeTest`'s AD-730-12 record for the
+     * control that proves options set here do take effect):
+     * `HIERARCHY_HANDLING = SEPARATE_CHILDREN`; `CROSSING_MINIMIZATION_STRATEGY = INTERACTIVE`,
+     * both with and without the `semiInteractive` its `requires` clause forbids;
+     * `CONSIDER_MODEL_ORDER_STRATEGY = NONE`; and
+     * `CONSIDER_MODEL_ORDER_LONG_EDGE_STRATEGY = DUMMY_NODE_UNDER`.
+     *
+     * D1 therefore has no fix among the mechanisms tried, which is weaker than "no fix exists":
+     * `Layered.melk` declares 78 options and roughly a quarter remain unexamined. It is named for
+     * human bpmn-js review (gate 6) rather than patched post-layout, which AD-730-01 forbids.
      */
     private fun applyLaneConstraint(compound: ElkNode, bands: LaneBands) {
         compound.setProperty(LayeredOptions.CROSSING_MINIMIZATION_SEMI_INTERACTIVE, true)

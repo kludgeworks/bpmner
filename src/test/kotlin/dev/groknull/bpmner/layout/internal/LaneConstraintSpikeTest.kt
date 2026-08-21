@@ -45,15 +45,26 @@ import kotlin.test.assertTrue
  * can splice a lane-ordering processor into a hierarchical run. There is nothing to assert
  * against a mechanism that cannot be constructed.
  *
- * **AD-730-12 spike record.** Flipping [BpmnToElkMapper.applyParticipantProfile]'s
- * `HIERARCHY_HANDLING` to `SEPARATE_CHILDREN` was measured directly against the full corpus, not
- * against a synthetic graph: it changed `miwg-c2-four-pools` — a non-lane, message-flow-carrying
- * fixture with no cross-participant ELK edge — moving `Task_receive_order` ~40px within its own
- * pool and failing the pinned `CrossParticipantMessageFlowProbeTest` regression guard. Every lane
- * fixture stayed byte-identical. So the hierarchy is not vestigial in the way AD-730-12 hoped:
- * something beyond the excluded message-flow edges still depends on it, even confined to one
- * participant with no compound child of its own. The change was reverted; D1 stands as a known
- * limitation under AD-730-07 (gate 11), and this is not re-attempted without new evidence.
+ * **AD-730-12 spike record.** Applied to *every* participant, `SEPARATE_CHILDREN` regresses
+ * `miwg-c2-four-pools` (moving `Task_receive_order` ~40px inside its own pool, failing the pinned
+ * `CrossParticipantMessageFlowProbeTest`). That fixture declares **no lanes**, so the correct
+ * scope is this function, which runs only when a participant carries lanes. Scoped that way the
+ * whole corpus stays byte-identical: the hierarchy is vestigial for lane participants, as
+ * AD-730-12 suspected — but flipping it does not move D1, because nothing writes
+ * `ORIGINAL_DUMMY_NODE_POSITION` regardless.
+ *
+ * Four further configurations were measured the same way, each byte-identical corpus-wide:
+ * `CROSSING_MINIMIZATION_STRATEGY = INTERACTIVE` with and without the `semiInteractive` that
+ * option's `requires crossingMinimization.strategy == LAYER_SWEEP` clause forbids;
+ * `CONSIDER_MODEL_ORDER_STRATEGY = NONE`; and `CONSIDER_MODEL_ORDER_LONG_EDGE_STRATEGY`.
+ *
+ * **The control that makes those null results meaningful:** swapping this function's
+ * `NODE_PLACEMENT_STRATEGY` to `NETWORK_SIMPLEX` changes all three lane goldens, proving options
+ * set on the participant compound are read. So the null results are genuine no-ops, not silent
+ * ignores. One consequence is recorded rather than acted on here: removing
+ * `CROSSING_MINIMIZATION_SEMI_INTERACTIVE` changes nothing, so A2's ordering half is **inert** —
+ * the banding half carries the mechanism alone. AD-730-08 flagged exactly this as needing
+ * verification rather than assumption; it is now verified, and deleting it is its own change.
  */
 class LaneConstraintSpikeTest {
 
