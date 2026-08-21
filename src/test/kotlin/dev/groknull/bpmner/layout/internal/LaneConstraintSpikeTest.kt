@@ -5,9 +5,11 @@
 
 package dev.groknull.bpmner.layout.internal
 
+import org.eclipse.elk.alg.layered.options.GroupOrderStrategy
 import org.eclipse.elk.alg.layered.options.LayeredMetaDataProvider
 import org.eclipse.elk.alg.layered.options.LayeredOptions
 import org.eclipse.elk.alg.layered.options.NodePlacementStrategy
+import org.eclipse.elk.alg.layered.options.OrderingStrategy
 import org.eclipse.elk.core.RecursiveGraphLayoutEngine
 import org.eclipse.elk.core.data.LayoutMetaDataService
 import org.eclipse.elk.core.math.KVector
@@ -15,10 +17,12 @@ import org.eclipse.elk.core.options.CoreOptions
 import org.eclipse.elk.core.options.Direction
 import org.eclipse.elk.core.options.EdgeRouting
 import org.eclipse.elk.core.options.HierarchyHandling
+import org.eclipse.elk.core.options.PortAlignment
 import org.eclipse.elk.core.util.BasicProgressMonitor
 import org.eclipse.elk.graph.ElkNode
 import org.eclipse.elk.graph.util.ElkGraphUtil
 import org.junit.jupiter.api.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 /**
@@ -33,6 +37,23 @@ import kotlin.test.assertTrue
  * Topology has two split/rejoin pairs in series (two separate cross-lane crossings at different
  * absolute layers) plus one layer-spanning edge, so a candidate's banding claim can be measured
  * globally across the whole diagram and against a long-edge dummy node, not just within one layer.
+ *
+ * Candidate B (AD-730-06, withdrawn by AD-730-07) has no test below because it is not
+ * executable: `javap` on the pinned `org.eclipse.elk.alg.layered-0.12.0.jar` confirms
+ * `ElkLayered.hierarchicalLayout` is `private` and `GraphConfigurator` carries no access
+ * modifier (package-private), so no public composition of `AlgorithmAssembler`/`LayeredPhases`
+ * can splice a lane-ordering processor into a hierarchical run. There is nothing to assert
+ * against a mechanism that cannot be constructed.
+ *
+ * **AD-730-12 spike record.** Flipping [BpmnToElkMapper.applyParticipantProfile]'s
+ * `HIERARCHY_HANDLING` to `SEPARATE_CHILDREN` was measured directly against the full corpus, not
+ * against a synthetic graph: it changed `miwg-c2-four-pools` — a non-lane, message-flow-carrying
+ * fixture with no cross-participant ELK edge — moving `Task_receive_order` ~40px within its own
+ * pool and failing the pinned `CrossParticipantMessageFlowProbeTest` regression guard. Every lane
+ * fixture stayed byte-identical. So the hierarchy is not vestigial in the way AD-730-12 hoped:
+ * something beyond the excluded message-flow edges still depends on it, even confined to one
+ * participant with no compound child of its own. The change was reverted; D1 stands as a known
+ * limitation under AD-730-07 (gate 11), and this is not re-attempted without new evidence.
  */
 class LaneConstraintSpikeTest {
 
@@ -189,6 +210,118 @@ class LaneConstraintSpikeTest {
             section.endY >= lower.y && section.endY <= lower.y + lower.height,
             "the edge's end Y must fall within its target node's final banded position, not a " +
                 "stale pre-banding Y",
+        )
+    }
+
+    /**
+     * Candidate C (AD-730-10, closed) — group model order as an in-layer sort key, with node
+     * placement left stock (`NETWORK_SIMPLEX`). AD-730-11's structural argument is that this
+     * cannot band a **serial** chain: phase 3 only orders nodes that already share a layer, and a
+     * serial flow has exactly one node per layer, so there is nothing for it to order. This is
+     * deliberately a different graph from [buildHierarchicalGraph]: that graph's split/join pairs
+     * put a `top_*` and `lower_*` node in the *same* layer at each crossing, which gives group
+     * order something to act on and is not the degenerate case AD-730-11 describes. A strictly
+     * alternating serial chain — one node per layer throughout, matching `collab-lanes` — is.
+     * Measured here directly so a future re-proposal fails immediately rather than being
+     * re-measured. Full corpus evidence — `collab-lanes` producing a zero-height
+     * `Lane_warehouse` band under the identical configuration — is in `plans/730/BLOCKER-730-2.md`.
+     */
+    @Test
+    fun `Candidate C group model order cannot separate lane members of a serial chain`() {
+        val root = ElkGraphUtil.createGraph()
+        val participant = ElkGraphUtil.createNode(root)
+        participant.setProperty(CoreOptions.ALGORITHM, LayeredOptions.ALGORITHM_ID)
+        participant.setProperty(CoreOptions.DIRECTION, Direction.RIGHT)
+        participant.setProperty(CoreOptions.EDGE_ROUTING, EdgeRouting.ORTHOGONAL)
+        participant.setProperty(CoreOptions.RANDOM_SEED, 1)
+        participant.setProperty(CoreOptions.HIERARCHY_HANDLING, HierarchyHandling.INCLUDE_CHILDREN)
+        participant.setProperty(CoreOptions.SPACING_NODE_NODE, 60.0)
+        participant.setProperty(LayeredOptions.SPACING_NODE_NODE_BETWEEN_LAYERS, 90.0)
+        participant.setProperty(LayeredOptions.CONSIDER_MODEL_ORDER_STRATEGY, OrderingStrategy.NODES_AND_EDGES)
+        participant.setProperty(
+            LayeredOptions.CONSIDER_MODEL_ORDER_GROUP_MODEL_ORDER_CM_GROUP_ORDER_STRATEGY,
+            GroupOrderStrategy.ENFORCED,
+        )
+        participant.setProperty(
+            LayeredOptions.CONSIDER_MODEL_ORDER_GROUP_MODEL_ORDER_CM_ENFORCED_GROUP_ORDERS,
+            listOf(0, 1),
+        )
+
+        // top_1 -> lower_1 -> top_2 -> lower_2: strictly serial, one node per layer, alternating
+        // lanes at every step — the degenerate case AD-730-11 argues group order cannot band.
+        val ids = listOf("top_1", "lower_1", "top_2", "lower_2")
+        val nodes = ids.associateWith { id ->
+            ElkGraphUtil.createNode(participant).also {
+                it.identifier = id
+                it.width = 60.0
+                it.height = 40.0
+                it.setProperty(
+                    LayeredOptions.CONSIDER_MODEL_ORDER_GROUP_MODEL_ORDER_CROSSING_MINIMIZATION_ID,
+                    id.laneIndexOf(),
+                )
+            }
+        }
+        ids.zipWithNext().forEach { (a, b) -> ElkGraphUtil.createSimpleEdge(nodes.getValue(a), nodes.getValue(b)) }
+        RecursiveGraphLayoutEngine().layout(root, BasicProgressMonitor())
+
+        val maxTopY = nodes.values.filter { it.identifier.laneIndexOf() == 0 }.maxOf { it.y }
+        val minLowerY = nodes.values.filter { it.identifier.laneIndexOf() == 1 }.minOf { it.y }
+        assertTrue(
+            maxTopY >= minLowerY,
+            "expected group model order alone (stock NETWORK_SIMPLEX placement) to fail to " +
+                "separate the two lane groups on a strictly serial chain — got maxTopY=$maxTopY " +
+                "minLowerY=$minLowerY; if this now passes, AD-730-11's structural argument needs " +
+                "re-examining before reopening the mechanism search",
+        )
+    }
+
+    /**
+     * D2 fix (AD-730-09), isolated from the full corpus: `applyLaneBand`'s
+     * `PORT_ALIGNMENT_EAST`/`WEST = CENTER` makes two centred nodes of *different* height attach
+     * at the *same* absolute port Y, because `C` (the port-label content height `CENTER` lays
+     * ports within) depends only on port count, not node height — so `H` cancels for a centred
+     * node. Two same-count-port nodes of different heights sharing a centreline is exactly what a
+     * cross-lane gateway-to-task edge is; this reproduces it directly rather than only through a
+     * fixture golden.
+     */
+    @Test
+    fun `centred nodes of different height with matching port counts attach at identical absolute port Y`() {
+        val root = ElkGraphUtil.createGraph()
+        val parent = ElkGraphUtil.createNode(root)
+        parent.setProperty(CoreOptions.ALGORITHM, LayeredOptions.ALGORITHM_ID)
+        parent.setProperty(CoreOptions.DIRECTION, Direction.RIGHT)
+
+        val centreline = 100.0
+        val tall = ElkGraphUtil.createNode(parent).also {
+            it.identifier = "tall"
+            it.width = 60.0
+            it.height = 80.0
+            it.y = centreline - it.height / 2
+            it.setProperty(CoreOptions.PORT_ALIGNMENT_EAST, PortAlignment.CENTER)
+        }
+        val short = ElkGraphUtil.createNode(parent).also {
+            it.identifier = "short"
+            it.width = 60.0
+            it.height = 50.0
+            it.y = centreline - it.height / 2
+            it.setProperty(CoreOptions.PORT_ALIGNMENT_WEST, PortAlignment.CENTER)
+        }
+        val eastPort = ElkGraphUtil.createPort(tall).also {
+            it.setProperty(CoreOptions.PORT_SIDE, org.eclipse.elk.core.options.PortSide.EAST)
+        }
+        val westPort = ElkGraphUtil.createPort(short).also {
+            it.setProperty(CoreOptions.PORT_SIDE, org.eclipse.elk.core.options.PortSide.WEST)
+        }
+        tall.setProperty(CoreOptions.PORT_CONSTRAINTS, org.eclipse.elk.core.options.PortConstraints.FIXED_SIDE)
+        short.setProperty(CoreOptions.PORT_CONSTRAINTS, org.eclipse.elk.core.options.PortConstraints.FIXED_SIDE)
+        ElkGraphUtil.createSimpleEdge(eastPort, westPort)
+        RecursiveGraphLayoutEngine().layout(root, BasicProgressMonitor())
+
+        assertEquals(
+            tall.y + eastPort.y,
+            short.y + westPort.y,
+            "a centred tall node and a centred short node with one port each on facing sides " +
+                "must attach at the same absolute Y once ports are placed",
         )
     }
 

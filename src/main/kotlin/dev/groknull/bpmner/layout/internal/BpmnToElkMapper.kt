@@ -40,6 +40,7 @@ import org.eclipse.elk.core.options.EdgeLabelPlacement
 import org.eclipse.elk.core.options.EdgeRouting
 import org.eclipse.elk.core.options.HierarchyHandling
 import org.eclipse.elk.core.options.NodeLabelPlacement
+import org.eclipse.elk.core.options.PortAlignment
 import org.eclipse.elk.core.options.PortConstraints
 import org.eclipse.elk.core.options.PortSide
 import org.eclipse.elk.core.options.SizeConstraint
@@ -279,6 +280,17 @@ internal object BpmnToElkMapper {
      * [applyParticipantProfile]'s uniform [PARTICIPANT_CONTENT_PADDING]: ELK normalizes its content
      * to start at `padding.top`, so matching that to the first band's reserve puts the projected
      * band stack flush inside the pool instead of overhanging it.
+     *
+     * **Known limitation (D1, AD-730-09/AD-730-07, recorded rather than fixed).** A layer-spanning
+     * cross-lane sequence flow can route through an unpositioned long-edge dummy node instead of
+     * taking a direct inter-lane channel. The only writer of the dummy's placement hint
+     * (`ORIGINAL_DUMMY_NODE_POSITION`) is `InteractiveCrossingMinimizer`, which ELK documents as
+     * inapplicable to hierarchical layout — every lane-carrying participant is
+     * `HIERARCHY_HANDLING.INCLUDE_CHILDREN`, so that processor is out of reach here. Dropping
+     * `INCLUDE_CHILDREN` for participants was measured as a possible unlock (AD-730-12) and
+     * rejected: it perturbs unrelated non-lane collaboration layout (see
+     * `LaneConstraintSpikeTest`'s AD-730-12 spike record). D1 has no reachable fix under the
+     * selected mechanism (A2) and must be named for human bpmn-js review, not patched post-layout.
      */
     private fun applyLaneConstraint(compound: ElkNode, bands: LaneBands) {
         compound.setProperty(LayeredOptions.CROSSING_MINIMIZATION_SEMI_INTERACTIVE, true)
@@ -297,11 +309,20 @@ internal object BpmnToElkMapper {
     /**
      * Applies [elementId]'s [LaneBand], if any, as the node's declared position and input Y,
      * centring it on its lane's centreline. [node]'s height must already be set.
+     *
+     * Also centres the node's EAST/WEST ports (AD-730-09 D2 fix): under `INTERACTIVE` placement
+     * every lane member shares one exact midpoint (gate 9), so `PortAlignment.CENTER`'s
+     * `nodeTop + (H − C)/2 + i·spacing` collapses to `centreline − C/2 + i·spacing` — the node's
+     * own height cancels, so two members of different heights attach at identical absolute Y as
+     * long as both ends carry the same port count. `DISTRIBUTED` (the default) instead spaces
+     * ports proportionally to `H`, which is what turns a straight cross-lane edge into a jog.
      */
     private fun applyLaneBand(node: ElkNode, elementId: String, laneBands: Map<String, LaneBand>) {
         val band = laneBands[elementId] ?: return
         node.setProperty(LayeredOptions.POSITION, KVector(0.0, band.index.toDouble()))
         node.y = band.centreline - node.height / 2
+        node.setProperty(CoreOptions.PORT_ALIGNMENT_EAST, PortAlignment.CENTER)
+        node.setProperty(CoreOptions.PORT_ALIGNMENT_WEST, PortAlignment.CENTER)
     }
 
     /**

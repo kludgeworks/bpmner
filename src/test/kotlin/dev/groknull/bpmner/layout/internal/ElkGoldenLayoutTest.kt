@@ -237,21 +237,29 @@ class ElkGoldenLayoutTest {
 
     /**
      * REVIEW-730-2 #1: generic shape/label invariants are not the AD-730-02 routing contract.
-     * Asserts, on the new reduced regression fixture specifically: the start event is leftmost
-     * and declared in the first lane; no normal sequence flow decreases X end-to-end; a cross-lane
-     * flow advances rightward at *every* waypoint, not just overall; no flow intersects an
-     * unrelated flow node; no proper crossings; and no non-zero collinear overlap between
-     * distinct sequence flows (which [assertLabelsClearEdgeGeometry]'s corpus-wide checks do not
-     * cover — [collinearOverlaps] is a dedicated predicate for exactly this).
+     * Asserts, on every lane-carrying fixture: the start event is leftmost and declared in the
+     * first lane; no normal sequence flow decreases X end-to-end; a cross-lane flow advances
+     * rightward at *every* waypoint, not just overall; no flow intersects an unrelated flow node;
+     * no proper crossings; and no non-zero collinear overlap between distinct sequence flows
+     * (which [assertLabelsClearEdgeGeometry]'s corpus-wide checks do not cover —
+     * [collinearOverlaps] is a dedicated predicate for exactly this).
+     *
+     * The monotonic-X clause alone exempts a genuine AD-622-15 cycle back-edge (AD-730-02's
+     * explicit exception): `collab-lanes-loopback`'s `Flow_retry` is one. The exemption reuses
+     * production's own back-edge predicate — [BpmnToElkMapper.ElkSkeleton.reversedFlowIds] — so
+     * it stays a BPMN-semantic exception, never a fixture-name allowlist. Every other clause
+     * (unrelated-node clearance, proper-crossing absence, collinear-overlap absence) still binds
+     * a back-edge, since AD-730-02 only exempts the reading-direction requirement.
      */
     @ParameterizedTest(name = "AD-730-02 cross-lane routing contract: {0}")
-    @ValueSource(strings = ["collab-lanes-branch-rejoin"])
+    @ValueSource(strings = ["collab-lanes", "collab-lanes-loopback", "collab-lanes-branch-rejoin"])
     fun `cross-lane fixture satisfies the AD-730-02 routing contract`(fixture: String) {
         val input = load("layout-fixtures/$fixture.bpmn")
         val model = parseBpmn(input)
         val result = layouter.layout(input)
         val doc = LayoutDiInspector.parse(result)
         val shapes = extractShapeRects(doc).associateBy { it.id }
+        val backEdgeIds = BpmnToElkMapper.map(model).reversedFlowIds
 
         val flowNodes = model.getModelElementsByType(org.camunda.bpm.model.bpmn.instance.FlowNode::class.java)
         val start = model.getModelElementsByType(org.camunda.bpm.model.bpmn.instance.StartEvent::class.java).single()
@@ -269,7 +277,7 @@ class ElkGoldenLayoutTest {
         )
         assertEquals(0, laneOf.getValue(start.id), "[$fixture] start event must be declared in the first lane")
 
-        sequenceFlows.forEach { flow ->
+        sequenceFlows.filter { it.id !in backEdgeIds }.forEach { flow ->
             val edge = edgesById.getValue(flow.id)
             val first = edge.waypoints.first()
             val last = edge.waypoints.last()
@@ -361,6 +369,33 @@ class ElkGoldenLayoutTest {
                 declared.nodeMap.getValue(id).y,
                 settled.nodeMap.getValue(id).y,
                 "[$fixture] lane member '$id' was pushed off its declared band Y by node placement",
+            )
+        }
+    }
+
+    /**
+     * Architecture gate 8: consecutive lanes' projected rectangles never overlap and stay in
+     * declaration order. This is the check that caught Candidate C's zero-height band
+     * (`plans/730/BLOCKER-730-2.md`) — it is asserted regardless of which mechanism produced the
+     * bands, not only for the mechanism selected today (A2).
+     */
+    @ParameterizedTest(name = "lane bands are disjoint and ordered: {0}")
+    @ValueSource(strings = ["collab-lanes", "collab-lanes-loopback", "collab-lanes-branch-rejoin"])
+    fun `consecutive lane bands never overlap and stay in declaration order`(fixture: String) {
+        val input = load("layout-fixtures/$fixture.bpmn")
+        val shapes = extractShapeRects(LayoutDiInspector.parse(layouter.layout(input))).associateBy { it.id }
+        val lanes = parseBpmn(input).getModelElementsByType(org.camunda.bpm.model.bpmn.instance.Lane::class.java)
+        val bands = lanes.map { shapes.getValue(it.id) }
+
+        bands.zipWithNext().forEach { (upper, lower) ->
+            assertTrue(
+                upper.h > 0.0 && lower.h > 0.0,
+                "[$fixture] lane bands '${upper.id}'/'${lower.id}' must have positive height",
+            )
+            assertTrue(
+                upper.y + upper.h <= lower.y + AXIS_TOLERANCE_FOR_TEST,
+                "[$fixture] lane '${upper.id}' [${upper.y}, ${upper.y + upper.h}] must not overlap " +
+                    "declaration-order successor '${lower.id}' starting at ${lower.y}",
             )
         }
     }
