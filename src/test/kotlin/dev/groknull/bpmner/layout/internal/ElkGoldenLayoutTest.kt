@@ -25,7 +25,7 @@ import kotlin.test.assertTrue
 @Suppress("TooManyFunctions")
 class ElkGoldenLayoutTest {
 
-    private val layouter = ElkBpmnLayouter(clock = LAYOUT_GOLDEN_CLOCK).apply { registerElkLayoutAlgorithm() }
+    private val layouter = ElkBpmnLayouter().apply { registerElkLayoutAlgorithm() }
 
     companion object {
         private const val DI_NS = "http://www.omg.org/spec/BPMN/20100524/DI"

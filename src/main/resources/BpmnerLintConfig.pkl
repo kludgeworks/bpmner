@@ -66,10 +66,6 @@ class ThemeConfig {
   backgroundColor: String = "#ffffff"
   fontName: String?
   fontSize: Number?
-  draftStatusColor: String = "#2b6cb0"
-  proposedStatusColor: String = "#c77d12"
-  implementedStatusColor: String = "#2f7a43"
-  outOfProductionStatusColor: String = "#cf3a22"
   shapeOverrides: Mapping<String, ShapeStyle> = new {}
 }
 

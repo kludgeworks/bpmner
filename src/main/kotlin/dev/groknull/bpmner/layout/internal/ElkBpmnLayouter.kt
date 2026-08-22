@@ -5,7 +5,6 @@
 
 package dev.groknull.bpmner.layout.internal
 
-import dev.groknull.bpmner.bpmn.DiagramStatusColors
 import dev.groknull.bpmner.layout.BpmnAutoLayoutException
 import dev.groknull.bpmner.layout.BpmnLayoutPort
 import dev.groknull.bpmner.layout.internal.adapter.inbound.referentialIntegrityErrors
@@ -22,7 +21,6 @@ import org.jmolecules.architecture.onion.simplified.InfrastructureRing
 import org.springframework.stereotype.Service
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
-import java.time.Clock
 
 /**
  * Stateless ELK layout path for retained BPMN processes including subprocesses
@@ -30,10 +28,7 @@ import java.time.Clock
  */
 @InfrastructureRing
 @Service
-internal class ElkBpmnLayouter(
-    private val lintConfig: BpmnerLintConfig = BpmnerLintConfig(),
-    private val clock: Clock = Clock.systemUTC(),
-) : BpmnLayoutPort {
+internal class ElkBpmnLayouter(private val lintConfig: BpmnerLintConfig = BpmnerLintConfig()) : BpmnLayoutPort {
 
     /**
      * ELK requires algorithm registration outside OSGi. [LayoutMetaDataService] is a
@@ -51,18 +46,7 @@ internal class ElkBpmnLayouter(
         val existingShapes = ElkToBpmnDiWriter.captureExistingShapes(model)
         val existingEdges = ElkToBpmnDiWriter.captureExistingEdges(model)
         removeExistingDi(model)
-        MetadataSynthesis.addMissingAnnotations(
-            model,
-            clock.instant(),
-            DiagramStatusColors(
-                lintConfig.theme.draftStatusColor,
-                lintConfig.theme.proposedStatusColor,
-                lintConfig.theme.implementedStatusColor,
-                lintConfig.theme.outOfProductionStatusColor,
-            ),
-        )
         val skeleton = BpmnToElkMapper.map(model)
-        MetadataSynthesis.reserveTopPadding(model, skeleton.root)
         RecursiveGraphLayoutEngine().layout(skeleton.root, BasicProgressMonitor())
         val placed = BpmnPlacementPass.place(model, skeleton)
         ElkToBpmnDiWriter.write(model, placed, existingShapes, existingEdges)

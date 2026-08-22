@@ -190,9 +190,6 @@ internal class RuleSourceParityTest {
             "act-verb-object-name|Task_ConsiderSpecialty|missingVerb",
             "act-verb-object-name|Task_ReadDescriptors|missingVerb",
             "act-verb-object-name|Task_ScanCategories|missingVerb",
-            "def-header-present|Process_BeerSelection|def-header-present",
-            "def-legend-present|Process_BeerSelection|def-legend-present",
-            "def-notes-present|Process_BeerSelection|def-notes-present",
         )
         val actual = diags.map { "${it.ruleId}|${it.elementId}|${it.diagnosticCode}" }.toSet()
 

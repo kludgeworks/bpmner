@@ -149,33 +149,12 @@ internal class BpmnGenerationAgent(
         return if (validated.diagnostics.any { it.isBlocking }) {
             ValidationFailed(ready, validated)
         } else {
-            ValidationPassed(ready, validated)
+            ValidationPassed(validated)
         }
     }
 
     @Action(actionRetryPolicy = ActionRetryPolicy.FIRE_ONCE)
-    fun beginMetadataApproval(validation: ValidationPassed): MetadataApprovalStage = if (
-        validation.validated.diagnostics.any { it.rule in DiagramMetadataRuleIds }
-    ) {
-        MetadataApprovalRequired(validation.ready, validation.validated)
-    } else {
-        MetadataApprovalNotRequired(validation.ready, validation.validated)
-    }
-
-    @Action(actionRetryPolicy = ActionRetryPolicy.FIRE_ONCE)
-    fun layout(approval: MetadataApprovalNotRequired): LayoutStage = layout(approval.ready, approval.validated)
-
-    @Action(actionRetryPolicy = ActionRetryPolicy.FIRE_ONCE)
-    fun resolveMetadataApproval(
-        approval: MetadataApprovalRequired,
-        decision: MetadataApproval,
-    ): LayoutStage = if (decision.approved) {
-        layout(approval.ready, approval.validated)
-    } else {
-        LayoutReady(FinalValidatedBpmnXml(approval.validated.definition, approval.validated.xml))
-    }
-
-    private fun layout(ready: ReadyBpmnContext, validated: ValidatedBpmnXml): LayoutStage {
+    fun layout(ready: ReadyBpmnContext, validated: ValidatedBpmnXml): LayoutStage {
         val layoutedXml = layoutPort.layout(validated.xml)
         val layouted = LayoutedBpmnXml(definition = validated.definition, xml = layoutedXml)
         val xsdIssues = xsdValidationPort.validateDetailed(layouted.xml)
@@ -392,32 +371,9 @@ data class LayoutFailed(
 sealed interface ValidationStage
 
 @State
-data class ValidationPassed(
-    val ready: ReadyBpmnContext,
-    val validated: ValidatedBpmnXml,
-) : ValidationStage
-
-sealed interface MetadataApprovalStage
-
-@State
-data class MetadataApprovalNotRequired(
-    val ready: ReadyBpmnContext,
-    val validated: ValidatedBpmnXml,
-) : MetadataApprovalStage
-
-@State
-data class MetadataApprovalRequired(
-    val ready: ReadyBpmnContext,
-    val validated: ValidatedBpmnXml,
-) : MetadataApprovalStage {
-    @Action
-    fun ask(): MetadataApproval {
-        WaitFor.awaitable(metadataApprovalForm(validated))
-        error("Metadata approval form returned without parking the process")
-    }
+data class ValidationPassed(val validated: ValidatedBpmnXml) : ValidationStage {
+    @Action fun proceed(): ValidatedBpmnXml = validated
 }
-
-data class MetadataApproval(val approved: Boolean)
 
 @State
 data class ValidationFailed(
@@ -471,36 +427,6 @@ private fun clarificationFormFrom(assessment: ProcessInputAssessment): FormBindi
         BpmnClarificationAnswers::class.java,
     )
 }
-
-private fun metadataApprovalForm(validated: ValidatedBpmnXml): FormBindingRequest<MetadataApproval> {
-    val requested = validated.diagnostics
-        .filter { it.rule in DiagramMetadataRuleIds }
-        .joinToString { it.rule.orEmpty().removePrefix("def-").removeSuffix("-present") }
-    return FormBindingRequest(
-        Form(
-            title = "Approve diagram metadata",
-            controls = listOf(
-                RadioGroup(
-                    label = "Add or complete $requested using KLM defaults?",
-                    options = listOf(
-                        RadioOption(label = "Approve", value = "true"),
-                        RadioOption(label = "Reject", value = "false"),
-                    ),
-                    required = true,
-                    id = "approved",
-                ),
-            ),
-            id = "bpmn-metadata-approval",
-        ),
-        MetadataApproval::class.java,
-    )
-}
-
-private val DiagramMetadataRuleIds = setOf(
-    "def-header-present",
-    "def-notes-present",
-    "def-legend-present",
-)
 
 private fun BpmnRequest.withClarification(
     answers: BpmnClarificationAnswers,

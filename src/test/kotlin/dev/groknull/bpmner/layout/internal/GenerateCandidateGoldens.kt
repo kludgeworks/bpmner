@@ -20,7 +20,7 @@ import javax.xml.parsers.DocumentBuilderFactory
  * output it becomes the committed golden file for that fixture.
  */
 fun main() {
-    val layouter = ElkBpmnLayouter(clock = LAYOUT_GOLDEN_CLOCK).apply { registerElkLayoutAlgorithm() }
+    val layouter = ElkBpmnLayouter().apply { registerElkLayoutAlgorithm() }
     val docBuilder = DocumentBuilderFactory.newInstance().apply { isNamespaceAware = true }
     val fixtures = LAYOUT_CORPUS_FIXTURES
 

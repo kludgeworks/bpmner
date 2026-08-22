@@ -1,4 +1,4 @@
-annotation-and-group 0 0 5
+annotation-and-group 0 0 4
 boundary-error-task 0 3 1
 boundary-multi 0 2 2
 boundary-non-interrupting 0 1 1

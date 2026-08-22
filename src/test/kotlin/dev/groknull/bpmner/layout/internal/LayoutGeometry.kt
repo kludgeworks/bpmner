@@ -9,15 +9,10 @@ package dev.groknull.bpmner.layout.internal
 
 import org.w3c.dom.Document
 import org.w3c.dom.Element
-import java.time.Clock
-import java.time.Instant
-import java.time.ZoneOffset
 
 private const val DI_NS = "http://www.omg.org/spec/BPMN/20100524/DI"
 private const val DC_NS = "http://www.omg.org/spec/DD/20100524/DC"
 private const val DD_NS = "http://www.omg.org/spec/DD/20100524/DI"
-
-internal val LAYOUT_GOLDEN_CLOCK: Clock = Clock.fixed(Instant.parse("2026-08-20T12:00:00Z"), ZoneOffset.UTC)
 
 /**
  * The 26-fixture layout corpus, shared by [GenerateCandidateGoldens][main] (goldens + the Tier-2
