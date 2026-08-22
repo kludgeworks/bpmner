@@ -10,7 +10,6 @@ import dev.groknull.bpmner.layout.internal.BpmnPlacementPass.Point
 import dev.groknull.bpmner.layout.internal.BpmnPlacementPass.Rect
 import dev.groknull.bpmner.layout.internal.BpmnToElkMapper.PARTICIPANT_GAP
 import dev.groknull.bpmner.layout.internal.BpmnToElkMapper.PARTICIPANT_HEADER_WIDTH
-import org.camunda.bpm.model.bpmn.instance.BoundaryEvent
 import org.camunda.bpm.model.bpmn.instance.Collaboration
 import org.camunda.bpm.model.bpmn.instance.FlowNode
 import org.camunda.bpm.model.bpmn.instance.Lane
@@ -40,8 +39,8 @@ internal object CollaborationFramePlacement : PlacementProcessor {
         val whiteBox = collaboration.participants.filter { it.process != null }
         val blackBox = collaboration.participants.filter { it.process == null }
 
+        whiteBox.forEach { participant -> projectParticipant(participant, ctx) }
         val translations = mutableMapOf<String, Point>()
-        whiteBox.forEach { participant -> projectParticipant(participant, ctx, translations) }
         if (whiteBox.size >= 2) stackWhiteBoxPools(whiteBox, ctx, translations)
         blackBox.forEach { participant -> projectBlackBox(participant, ctx) }
         if (blackBox.isNotEmpty() && whiteBox.isNotEmpty()) stackBlackBoxBands(whiteBox, blackBox, ctx)
@@ -50,59 +49,54 @@ internal object CollaborationFramePlacement : PlacementProcessor {
         MessageFlowSynthesis.synthesize(collaboration, ctx)
     }
 
-    private fun projectParticipant(participant: Participant, ctx: PlacementContext, translations: MutableMap<String, Point>) {
-        val bounds = ctx.skeleton.nodeMap[participant.id]?.let(::elkBounds) ?: return
+    private fun projectParticipant(participant: Participant, ctx: PlacementContext) {
+        val elkBounds = ctx.skeleton.nodeMap[participant.id]?.let(::elkBounds) ?: return
+        val lanes = participant.process?.laneSets.orEmpty().flatMap { it.lanes.toList() }
+        val bounds = if (lanes.isEmpty()) elkBounds else projectLaneBands(lanes, elkBounds, ctx)
         ctx.shapes[participant.id] = bounds
         if (!participant.name.isNullOrBlank()) {
             ctx.labels[participant.id] = Rect(bounds.x, bounds.y, PARTICIPANT_HEADER_WIDTH, bounds.h)
         }
-        val lanes = participant.process?.laneSets.orEmpty().flatMap { it.lanes.toList() }
-        if (lanes.isNotEmpty()) projectLaneBands(participant, lanes, bounds, ctx, translations)
     }
 
+    /**
+     * Projects each lane's band rectangle over its members' already-settled shapes (AD-730-06):
+     * lane membership constrained ELK's own placement before routing ([BpmnToElkMapper]'s
+     * `applyLaneConstraint`/`computeLaneBands`), so the members are already correctly ordered,
+     * banded and centred — this reads that geometry, it never moves a member.
+     *
+     * A band is its declared [BpmnToElkMapper.ElkSkeleton.laneBandHeights] height centred on its
+     * members' settled shared centreline. Height and centreline therefore come from one authority,
+     * which makes each band's midpoint its members' midpoint and makes consecutive bands share a
+     * seam exactly — deriving a seam here from settled extents instead is what let the two
+     * disagree. Returns the participant rectangle spanning the resulting bands.
+     */
     private fun projectLaneBands(
-        participant: Participant,
         lanes: List<Lane>,
         participantBounds: Rect,
         ctx: PlacementContext,
-        translations: MutableMap<String, Point>,
-    ) {
-        val laneBounds = lanes.mapNotNull { lane -> ctx.skeleton.nodeMap[lane.id]?.let(::elkBounds)?.let { lane to it } }
-        if (laneBounds.isEmpty()) return
-
-        var nextY = participantBounds.y
-        val laneVectors = mutableMapOf<String, Point>()
-        laneBounds.forEach { (lane, elkLaneBounds) ->
-            val band = Rect(
+    ): Rect {
+        val bands = lanes.map { lane ->
+            // Only the lane's own declared members carry the band centreline; a subprocess
+            // descendant is positioned within its parent compound, not on the lane's centreline.
+            val centreline = lane.flowNodeRefs.firstNotNullOf { ctx.shapes[it.id] }.let { it.y + it.h / 2.0 }
+            val height = ctx.skeleton.laneBandHeights.getValue(lane.id)
+            lane to Rect(
                 participantBounds.x + PARTICIPANT_HEADER_WIDTH,
-                nextY,
+                centreline - height / 2.0,
                 participantBounds.w - PARTICIPANT_HEADER_WIDTH,
-                elkLaneBounds.h,
+                height,
             )
+        }
+        bands.forEach { (lane, band) ->
             ctx.shapes[lane.id] = band
-            PlacementTranslations.ledgerMove(lane.id, OWNER, ctx)
             if (!lane.name.isNullOrBlank()) {
                 ctx.labels[lane.id] = Rect(band.x, band.y, LANE_LABEL_WIDTH, band.h)
             }
-            val vector = Point(0.0, band.y - elkLaneBounds.y)
-            flowNodeMembers(lane.flowNodeRefs).forEach { memberId -> laneVectors[memberId] = vector }
-            nextY += band.h
         }
-
-        val projected = participantBounds.copy(h = nextY - participantBounds.y)
-        ctx.shapes[participant.id] = projected
-        if (!participant.name.isNullOrBlank()) {
-            ctx.labels[participant.id] = Rect(projected.x, projected.y, PARTICIPANT_HEADER_WIDTH, projected.h)
-        }
-
-        // A boundary event's own lane translation follows its host — lane flowNodeRefs rarely
-        // list it explicitly, so it is not covered by the loop above.
-        val boundaryVectors = ctx.model.getModelElementsByType(BoundaryEvent::class.java)
-            .mapNotNull { event -> laneVectors[event.attachedTo?.id]?.let { event.id to it } }
-            .toMap()
-
-        PlacementTranslations.translateAndLedger(laneVectors + boundaryVectors, OWNER, ctx)
-        translations.putAll(laneVectors + boundaryVectors)
+        val top = bands.minOf { (_, band) -> band.y }
+        val bottom = bands.maxOf { (_, band) -> band.y + band.h }
+        return Rect(participantBounds.x, top, participantBounds.w, bottom - top)
     }
 
     /** Every flow-node in [seeds], recursing into subprocess descendants. */

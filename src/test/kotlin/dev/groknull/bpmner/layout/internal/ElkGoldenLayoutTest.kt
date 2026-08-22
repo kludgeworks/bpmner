@@ -35,6 +35,9 @@ class ElkGoldenLayoutTest {
         /** Shapes at or above this area (200×200) are containers (subprocess/lane/participant). */
         private const val CONTAINER_AREA = 40_000.0
 
+        /** Tolerance for "does not decrease/must advance" X comparisons, absorbing ELK round-off. */
+        private const val AXIS_TOLERANCE_FOR_TEST = 0.5
+
         /**
          * Known label/edge-waypoint overlaps (fixture, label owner id, edge id). Each pair traces
          * to one of two causes: a hand-routed message flow (or, since group E, an ELK
@@ -62,9 +65,6 @@ class ElkGoldenLayoutTest {
             Triple("collab-subprocess", "Task_prepare", "MsgFlow_1"),
             Triple("collab-bioc", "Task_1", "MsgFlow_1"),
             Triple("annotation-and-group", "Task_1", "Assoc_1"),
-            Triple("collab-lanes", "Gw_split", "Flow_3"),
-            Triple("collab-lanes", "Task_pack", "Flow_5"),
-            Triple("collab-lanes-loopback", "Gw_check", "Flow_ok"),
             Triple("miwg-c2-four-pools", "End_warehouse", "MsgFlow_delivered"),
             Triple("miwg-c2-four-pools", "Task_confirm_order", "MsgFlow_confirm"),
             Triple("miwg-c2-four-pools", "Task_confirm_order", "MsgFlow_dispatch"),
@@ -131,6 +131,7 @@ class ElkGoldenLayoutTest {
             "collab-subprocess",
             "collab-bioc",
             "collab-lanes-loopback",
+            "collab-lanes-branch-rejoin",
         ],
     )
     fun `collaboration fixture plane bpmnElement references the Collaboration`(fixture: String) {
@@ -167,6 +168,7 @@ class ElkGoldenLayoutTest {
             "collab-subprocess",
             "collab-bioc",
             "collab-lanes-loopback",
+            "collab-lanes-branch-rejoin",
         ],
     )
     fun `collaboration fixture has BPMNShape for each participant`(fixture: String) {
@@ -232,6 +234,175 @@ class ElkGoldenLayoutTest {
         assertXml(result).nodesByXPath("//bpmndi:BPMNShape[@bioc:stroke]").exist()
         assertXml(result).nodesByXPath("//bpmndi:BPMNShape[@bioc:fill]").exist()
     }
+
+    /**
+     * REVIEW-730-2 #1: generic shape/label invariants are not the AD-730-02 routing contract.
+     * Asserts, on every lane-carrying fixture: the start event is leftmost and declared in the
+     * first lane; no normal sequence flow decreases X end-to-end; a cross-lane flow advances
+     * rightward at *every* waypoint, not just overall; no flow intersects an unrelated flow node;
+     * no proper crossings; and no non-zero collinear overlap between distinct sequence flows
+     * (which [assertLabelsClearEdgeGeometry]'s corpus-wide checks do not cover —
+     * [collinearOverlaps] is a dedicated predicate for exactly this).
+     *
+     * The monotonic-X clause alone exempts a genuine AD-622-15 cycle back-edge (AD-730-02's
+     * explicit exception): `collab-lanes-loopback`'s `Flow_retry` is one. The exemption reuses
+     * production's own back-edge predicate — [BpmnToElkMapper.ElkSkeleton.reversedFlowIds] — so
+     * it stays a BPMN-semantic exception, never a fixture-name allowlist. Every other clause
+     * (unrelated-node clearance, proper-crossing absence, collinear-overlap absence) still binds
+     * a back-edge, since AD-730-02 only exempts the reading-direction requirement.
+     */
+    @ParameterizedTest(name = "AD-730-02 cross-lane routing contract: {0}")
+    @ValueSource(strings = ["collab-lanes", "collab-lanes-loopback", "collab-lanes-branch-rejoin"])
+    fun `cross-lane fixture satisfies the AD-730-02 routing contract`(fixture: String) {
+        val input = load("layout-fixtures/$fixture.bpmn")
+        val model = parseBpmn(input)
+        val result = layouter.layout(input)
+        val doc = LayoutDiInspector.parse(result)
+        val shapes = extractShapeRects(doc).associateBy { it.id }
+        val backEdgeIds = BpmnToElkMapper.map(model).reversedFlowIds
+
+        val flowNodes = model.getModelElementsByType(org.camunda.bpm.model.bpmn.instance.FlowNode::class.java)
+        val start = model.getModelElementsByType(org.camunda.bpm.model.bpmn.instance.StartEvent::class.java).single()
+        val laneOf = model.getModelElementsByType(org.camunda.bpm.model.bpmn.instance.Lane::class.java)
+            .withIndex()
+            .flatMap { (index, lane) -> lane.flowNodeRefs.map { it.id to index } }
+            .toMap()
+        val sequenceFlows = model.getModelElementsByType(org.camunda.bpm.model.bpmn.instance.SequenceFlow::class.java)
+        val edgesById = extractEdges(doc).associateBy { it.id }
+
+        val startX = shapes.getValue(start.id).x
+        assertTrue(
+            flowNodes.all { (shapes[it.id]?.x ?: startX) >= startX },
+            "[$fixture] start event must be leftmost among the process's flow nodes",
+        )
+        assertEquals(0, laneOf.getValue(start.id), "[$fixture] start event must be declared in the first lane")
+
+        sequenceFlows.filter { it.id !in backEdgeIds }.forEach { flow ->
+            val edge = edgesById.getValue(flow.id)
+            val first = edge.waypoints.first()
+            val last = edge.waypoints.last()
+            assertTrue(
+                last.x >= first.x - AXIS_TOLERANCE_FOR_TEST,
+                "[$fixture] sequence flow '${flow.id}' must not decrease X (first=$first last=$last)",
+            )
+            if (laneOf[flow.source?.id] != laneOf[flow.target?.id]) {
+                edge.waypoints.zipWithNext().forEach { (a, b) ->
+                    assertTrue(
+                        b.x >= a.x - AXIS_TOLERANCE_FOR_TEST,
+                        "[$fixture] cross-lane flow '${flow.id}' must advance rightward at every " +
+                            "segment while changing lane, not just overall (segment $a -> $b)",
+                    )
+                }
+            }
+        }
+
+        val flowNodeRects = flowNodes.mapNotNull { shapes[it.id] }
+        sequenceFlows.forEach { flow ->
+            val edge = edgesById.getValue(flow.id)
+            val unrelated = flowNodeRects.filter { it.id != flow.source?.id && it.id != flow.target?.id }
+            edge.waypoints.zipWithNext().forEach { (a, b) ->
+                unrelated.forEach { rect ->
+                    assertTrue(
+                        !segmentIntersectsRect(a, b, rect),
+                        "[$fixture] flow '${flow.id}' must not intersect unrelated node '${rect.id}'",
+                    )
+                }
+            }
+        }
+
+        val sequenceEdges = sequenceFlows.map { edgesById.getValue(it.id) }
+        assertEquals(0, countCrossings(sequenceEdges), "[$fixture] sequence flows must not properly cross")
+        val overlaps = collinearOverlaps(sequenceEdges)
+        assertTrue(overlaps.isEmpty(), "[$fixture] sequence flows share a non-zero collinear segment: $overlaps")
+    }
+
+    /**
+     * A lane's members share one exact vertical midpoint, and it is their band's midpoint. Both
+     * held before lane membership became an ELK placement input and were lost when it did: an
+     * imported Y honoured verbatim by `NodePlacementStrategy.INTERACTIVE` top-aligns members
+     * unless they are mapped onto the band's centreline, and a band that reserves its label
+     * allowance only below its members sits lower than they do. Exact equality, not a tolerance —
+     * both are computed from one declared band height, so any drift is a real second authority.
+     */
+    @ParameterizedTest(name = "lane members are centred on their band: {0}")
+    @ValueSource(strings = ["collab-lanes", "collab-lanes-loopback", "collab-lanes-branch-rejoin"])
+    fun `every lane member shares its band's exact vertical midpoint`(fixture: String) {
+        val input = load("layout-fixtures/$fixture.bpmn")
+        val shapes = extractShapeRects(LayoutDiInspector.parse(layouter.layout(input))).associateBy { it.id }
+
+        parseBpmn(input).getModelElementsByType(org.camunda.bpm.model.bpmn.instance.Lane::class.java).forEach { lane ->
+            val band = shapes.getValue(lane.id)
+            val midpoints = lane.flowNodeRefs.map { shapes.getValue(it.id).let { rect -> rect.y + rect.h / 2.0 } }.distinct()
+            assertEquals(
+                1,
+                midpoints.size,
+                "[$fixture] lane '${lane.id}' members must share one vertical midpoint, got $midpoints",
+            )
+            assertEquals(
+                band.y + band.h / 2.0,
+                midpoints.single(),
+                "[$fixture] lane '${lane.id}' members' midpoint must be its own band's midpoint",
+            )
+        }
+    }
+
+    /**
+     * `InteractiveNodePlacer` keeps a node's imported Y but pushes it *down* when the node above it
+     * in the same layer does not clear it, silently overriding a declared centring for the second
+     * and later members of a shared layer. That push is the failure mode of under-reserved band
+     * separation, so declared and settled geometry are asserted equal rather than assumed to be.
+     */
+    @ParameterizedTest(name = "no interactive-placer push off the declared band: {0}")
+    @ValueSource(strings = ["collab-lanes", "collab-lanes-loopback", "collab-lanes-branch-rejoin"])
+    fun `every lane member settles on the band Y it was mapped onto`(fixture: String) {
+        val input = load("layout-fixtures/$fixture.bpmn")
+        val memberIds = parseBpmn(input)
+            .getModelElementsByType(org.camunda.bpm.model.bpmn.instance.Lane::class.java)
+            .flatMap { lane -> lane.flowNodeRefs.map { it.id } }
+        val declared = BpmnToElkMapper.map(parseBpmn(input))
+        val settled = BpmnToElkMapper.map(parseBpmn(input))
+        org.eclipse.elk.core.RecursiveGraphLayoutEngine()
+            .layout(settled.root, org.eclipse.elk.core.util.BasicProgressMonitor())
+
+        memberIds.forEach { id ->
+            assertEquals(
+                declared.nodeMap.getValue(id).y,
+                settled.nodeMap.getValue(id).y,
+                "[$fixture] lane member '$id' was pushed off its declared band Y by node placement",
+            )
+        }
+    }
+
+    /**
+     * Architecture gate 8: consecutive lanes' projected rectangles never overlap and stay in
+     * declaration order. This is the check that caught Candidate C's zero-height band
+     * (`plans/730/BLOCKER-730-2.md`) — it is asserted regardless of which mechanism produced the
+     * bands, not only for the mechanism selected today (A2).
+     */
+    @ParameterizedTest(name = "lane bands are disjoint and ordered: {0}")
+    @ValueSource(strings = ["collab-lanes", "collab-lanes-loopback", "collab-lanes-branch-rejoin"])
+    fun `consecutive lane bands never overlap and stay in declaration order`(fixture: String) {
+        val input = load("layout-fixtures/$fixture.bpmn")
+        val shapes = extractShapeRects(LayoutDiInspector.parse(layouter.layout(input))).associateBy { it.id }
+        val lanes = parseBpmn(input).getModelElementsByType(org.camunda.bpm.model.bpmn.instance.Lane::class.java)
+        val bands = lanes.map { shapes.getValue(it.id) }
+
+        bands.zipWithNext().forEach { (upper, lower) ->
+            assertTrue(
+                upper.h > 0.0 && lower.h > 0.0,
+                "[$fixture] lane bands '${upper.id}'/'${lower.id}' must have positive height",
+            )
+            assertTrue(
+                upper.y + upper.h <= lower.y + AXIS_TOLERANCE_FOR_TEST,
+                "[$fixture] lane '${upper.id}' [${upper.y}, ${upper.y + upper.h}] must not overlap " +
+                    "declaration-order successor '${lower.id}' starting at ${lower.y}",
+            )
+        }
+    }
+
+    private fun parseBpmn(xml: String) = org.camunda.bpm.model.bpmn.Bpmn.readModelFromStream(
+        java.io.ByteArrayInputStream(xml.toByteArray(Charsets.UTF_8)),
+    )
 
     private fun assertOneDiagram(doc: org.w3c.dom.Document, fixture: String) {
         val diagrams = doc.getElementsByTagNameNS(DI_NS, "BPMNDiagram")
