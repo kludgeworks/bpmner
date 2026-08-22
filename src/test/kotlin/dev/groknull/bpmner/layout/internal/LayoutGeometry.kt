@@ -121,18 +121,16 @@ internal fun overlappingPairs(rects: List<DiRect>): List<Pair<DiRect, DiRect>> {
     return result
 }
 
+private fun DiPoint.toPoint(): BpmnPlacementPass.Point = BpmnPlacementPass.Point(x, y)
+
+private fun DiRect.toRect(): BpmnPlacementPass.Rect = BpmnPlacementPass.Rect(x, y, w, h)
+
 /**
  * Whether segment `p1`-`p2` properly crosses segment `p3`-`p4` — an interior intersection, not a
  * shared endpoint or a collinear overlap (both of those are legitimate at edge junctions/termini).
  */
-internal fun segmentsCross(p1: DiPoint, p2: DiPoint, p3: DiPoint, p4: DiPoint): Boolean {
-    fun cross(o: DiPoint, a: DiPoint, b: DiPoint) = (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x)
-    val d1 = cross(p3, p4, p1)
-    val d2 = cross(p3, p4, p2)
-    val d3 = cross(p1, p2, p3)
-    val d4 = cross(p1, p2, p4)
-    return (d1 > 0 && d2 < 0 || d1 < 0 && d2 > 0) && (d3 > 0 && d4 < 0 || d3 < 0 && d4 > 0)
-}
+internal fun segmentsCross(p1: DiPoint, p2: DiPoint, p3: DiPoint, p4: DiPoint): Boolean =
+    segmentsCross(p1.toPoint(), p2.toPoint(), p3.toPoint(), p4.toPoint())
 
 private fun segmentPairCrossings(a: DiEdge, b: DiEdge): Int {
     var count = 0
@@ -177,19 +175,8 @@ internal fun axisSegmentLength(a: DiPoint, b: DiPoint): Double =
     if (a.x == b.x) kotlin.math.abs(b.y - a.y) else kotlin.math.abs(b.x - a.x)
 
 /** Whether segment `a`-`b` passes through the interior of, or terminates inside, rect [r]. */
-internal fun segmentIntersectsRect(a: DiPoint, b: DiPoint, r: DiRect): Boolean {
-    fun inside(p: DiPoint) = p.x > r.x && p.x < r.right && p.y > r.y && p.y < r.bottom
-    if (inside(a) || inside(b)) return true
-    val corners = listOf(
-        DiPoint(r.x, r.y),
-        DiPoint(r.right, r.y),
-        DiPoint(r.right, r.bottom),
-        DiPoint(r.x, r.bottom),
-    )
-    return corners.indices.any { i ->
-        segmentsCross(a, b, corners[i], corners[(i + 1) % corners.size])
-    }
-}
+internal fun segmentIntersectsRect(a: DiPoint, b: DiPoint, r: DiRect): Boolean =
+    segmentIntersectsRect(a.toPoint(), b.toPoint(), r.toRect())
 
 /** Tolerance for "non-zero collinear overlap" checks, absorbing floating-point rounding. */
 private const val COLLINEAR_OVERLAP_TOLERANCE = 1.0

@@ -156,10 +156,6 @@
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bioc:stroke="#16181d" bpmnElement="Flow_check" color:border-color="#16181d" id="BPMNEdge_Flow_check">
         <di:waypoint x="324.03515625" y="197.0"/>
-        <di:waypoint x="349.03515625" y="197.0"/>
-        <di:waypoint x="349.03515625" y="215.0"/>
-        <di:waypoint x="515.04296875" y="215.0"/>
-        <di:waypoint x="515.04296875" y="197.0"/>
         <di:waypoint x="558.728515625" y="197.0"/>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bioc:stroke="#16181d" bpmnElement="Flow_end" color:border-color="#16181d" id="BPMNEdge_Flow_end">
@@ -179,10 +175,6 @@
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bioc:stroke="#16181d" bpmnElement="Flow_retry" color:border-color="#16181d" id="BPMNEdge_Flow_retry">
         <di:waypoint x="558.728515625" y="167.0"/>
-        <di:waypoint x="485.04296875" y="167.0"/>
-        <di:waypoint x="485.04296875" y="189.0"/>
-        <di:waypoint x="379.03515625" y="189.0"/>
-        <di:waypoint x="379.03515625" y="167.0"/>
         <di:waypoint x="324.03515625" y="167.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_Flow_retry">
           <dc:Bounds height="20.0" width="46.0078125" x="414.03515625" y="162.0"/>

@@ -8,7 +8,7 @@ collab-bioc 0 0 6
 collab-blackbox 0 0 4
 collab-lanes 0 4 17
 collab-lanes-branch-rejoin 0 12 16
-collab-lanes-loopback 0 12 12
+collab-lanes-loopback 0 4 12
 collab-msg-endpoint 0 0 8
 collab-msg-label 0 4 8
 collab-subprocess 0 4 14
