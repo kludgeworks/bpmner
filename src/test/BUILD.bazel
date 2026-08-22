@@ -73,13 +73,6 @@ java_binary(
     runtime_deps = [":bpmner_tests_lib"],
 )
 
-java_binary(
-    name = "sweep_long_edge_dummy_placement",
-    main_class = "dev.groknull.bpmner.layout.internal.LongEdgeDummyPlacementSweepKt",
-    visibility = ["//visibility:public"],
-    runtime_deps = [":bpmner_tests_lib"],
-)
-
 filegroup(
     name = "analysis_srcs",
     srcs = glob(["kotlin/**/*.kt"]),
