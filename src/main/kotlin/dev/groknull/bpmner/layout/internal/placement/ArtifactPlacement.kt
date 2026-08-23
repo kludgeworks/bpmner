@@ -7,7 +7,6 @@ package dev.groknull.bpmner.layout.internal.placement
 
 import dev.groknull.bpmner.layout.internal.BpmnPlacementPass
 import dev.groknull.bpmner.layout.internal.BpmnPlacementPass.Rect
-import dev.groknull.bpmner.layout.internal.MetadataSynthesis
 import org.camunda.bpm.model.bpmn.instance.DataObjectReference
 import org.camunda.bpm.model.bpmn.instance.DataStoreReference
 import org.camunda.bpm.model.bpmn.instance.FlowNode
@@ -35,29 +34,7 @@ internal object ArtifactPlacement : PlacementProcessor {
 
     override fun process(ctx: PlacementContext) {
         placeGroups(ctx)
-        placeMetadataArtifacts(ctx)
         placeCommentBoxArtifacts(ctx)
-    }
-
-    private fun placeMetadataArtifacts(ctx: PlacementContext) {
-        val metadata = ctx.model.getModelElementsByType(TextAnnotation::class.java)
-            .filter { it.id in MetadataSynthesis.markerIds }
-            .sortedBy { MetadataSynthesis.markerIds.indexOf(it.id) }
-        if (metadata.isEmpty()) return
-
-        val skeletonMinX = ctx.shapes.values.minOfOrNull { it.x } ?: 0.0
-        val skeletonWidth = (ctx.shapes.values.maxOfOrNull { it.x + it.w } ?: 0.0) - skeletonMinX
-        var y = 0.0
-        metadata.forEach { annotation ->
-            val height = MetadataSynthesis.annotationHeight()
-            val width = if (annotation.id == MetadataSynthesis.HEADER_ID) {
-                skeletonWidth
-            } else {
-                MetadataSynthesis.annotationWidth(annotation)
-            }
-            ctx.shapes[annotation.id] = Rect(skeletonMinX, y, width, height)
-            y += height
-        }
     }
 
     private fun placeGroups(ctx: PlacementContext) {
@@ -93,7 +70,6 @@ internal object ArtifactPlacement : PlacementProcessor {
         val skeletonBottom = ctx.shapes.values.maxOfOrNull { it.y + it.h } ?: 0.0
         var fallbackY = skeletonBottom + ARTIFACT_MARGIN
         ids.sorted().forEach { id ->
-            if (id in MetadataSynthesis.markerIds) return@forEach
             val elkNode = ctx.skeleton.nodeMap[id] ?: return@forEach
             if (elkNode.parent != null) {
                 // Real comment box: ELK already decided its position (above/below its host,
