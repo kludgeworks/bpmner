@@ -4,9 +4,8 @@
   <!--
     Pool-stacking spike fixture (622-1, spike b): a MIWG C.2.0-derived four-participant
     collaboration — 4 participants, 5 message flows, an embedded (expanded) subprocess, and a
-    boundary error event. Parked: intentionally NOT enrolled in ElkGoldenLayoutTest's corpus and
-    has no golden yet, since white-box pool stacking is documented-broken beyond two participants
-    until Stage 622-4 lands AD-622-05. Enrollment is that stage's exit gate.
+    boundary error event. Enrolled in ElkGoldenLayoutTest's corpus (LAYOUT_CORPUS_FIXTURES) with a
+    committed golden, per Stage 622-4's AD-622-05 exit gate.
   -->
   <bpmn:collaboration id="Collab_c2_four_pools">
     <bpmn:participant id="Participant_customer" name="Customer" processRef="Process_customer"/>

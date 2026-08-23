@@ -26,13 +26,17 @@ internal object PlacementTestSkeletons {
 
     fun parse(xml: String): BpmnModelInstance = Bpmn.readModelFromStream(ByteArrayInputStream(xml.toByteArray(Charsets.UTF_8)))
 
+    // Mirrors ElkSkeleton's own constructor, adding a default for every field a placement test
+    // does not care about; it is one parameter per field by definition.
+    @Suppress("LongParameterList")
     fun skeleton(
         root: ElkNode,
         nodeMap: Map<String, ElkNode>,
         portMap: Map<String, ElkPort> = emptyMap(),
         edgeMap: Map<String, ElkEdge> = emptyMap(),
         reversedFlowIds: Set<String> = emptySet(),
-    ): ElkSkeleton = ElkSkeleton(root, nodeMap, portMap, edgeMap, reversedFlowIds)
+        laneBandHeights: Map<String, Double> = emptyMap(),
+    ): ElkSkeleton = ElkSkeleton(root, nodeMap, portMap, edgeMap, reversedFlowIds, laneBandHeights)
 
     @Suppress("LongParameterList")
     fun makeNode(parent: ElkNode, id: String, x: Double, y: Double, w: Double, h: Double): ElkNode {

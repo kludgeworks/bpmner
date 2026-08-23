@@ -40,6 +40,7 @@ import org.eclipse.elk.core.options.EdgeLabelPlacement
 import org.eclipse.elk.core.options.EdgeRouting
 import org.eclipse.elk.core.options.HierarchyHandling
 import org.eclipse.elk.core.options.NodeLabelPlacement
+import org.eclipse.elk.core.options.PortAlignment
 import org.eclipse.elk.core.options.PortConstraints
 import org.eclipse.elk.core.options.PortSide
 import org.eclipse.elk.core.options.SizeConstraint
@@ -73,6 +74,12 @@ internal object BpmnToElkMapper {
      * [reversedFlowIds] carries the set of sequence-flow IDs that are back-edges (in cyclic
      * subprocesses/participant processes) and were emitted into the ELK graph with source and
      * target swapped, per AD-622-15, so the graph handed to ELK is acyclic by construction.
+     *
+     * [laneBandHeights] carries each declared lane's band height from [computeLaneBands], the sole
+     * authority for band geometry:
+     * [dev.groknull.bpmner.layout.internal.placement.CollaborationFramePlacement] projects the
+     * BPMN-DI rectangle from it rather than re-deriving a seam from settled member extents, which
+     * is what let the two derivations disagree about where a band's midpoint lies.
      */
     internal data class ElkSkeleton(
         val root: ElkNode,
@@ -80,6 +87,7 @@ internal object BpmnToElkMapper {
         val portMap: Map<String, ElkPort>,
         val edgeMap: Map<String, ElkEdge>,
         val reversedFlowIds: Set<String> = emptySet(),
+        val laneBandHeights: Map<String, Double> = emptyMap(),
     )
 
     fun map(model: BpmnModelInstance): ElkSkeleton {
@@ -96,6 +104,7 @@ internal object BpmnToElkMapper {
             reversedFlowIds.addAll(findLoopBackEdges(sub.flowElements))
         }
 
+        val laneBandHeights = mutableMapOf<String, Double>()
         val collaboration = model.getModelElementsByType(Collaboration::class.java).firstOrNull()
         val topProcess = model.getModelElementsByType(org.camunda.bpm.model.bpmn.instance.Process::class.java).firstOrNull()
         if (collaboration != null) {
@@ -104,7 +113,7 @@ internal object BpmnToElkMapper {
                 reversedFlowIds.addAll(findLoopBackEdges(process.flowElements))
             }
             root.setProperty(CoreOptions.HIERARCHY_HANDLING, HierarchyHandling.INCLUDE_CHILDREN)
-            mapCollaboration(root, collaboration, model, nodeMap)
+            mapCollaboration(root, collaboration, model, nodeMap, laneBandHeights)
         } else if (topProcess != null) {
             // A cyclic sequence flow directly in the top-level process (no collaboration, no
             // enclosing SubProcess) is a back-edge too — the graph is acyclic by construction at
@@ -122,7 +131,7 @@ internal object BpmnToElkMapper {
         mapSequenceFlows(model, nodeMap, portMap, edgeMap, reversedFlowIds)
         collaboration?.let { mapMessageFlows(root, it, nodeMap, edgeMap) }
 
-        return ElkSkeleton(root, nodeMap, portMap, edgeMap, reversedFlowIds)
+        return ElkSkeleton(root, nodeMap, portMap, edgeMap, reversedFlowIds, laneBandHeights)
     }
 
     /**
@@ -142,6 +151,7 @@ internal object BpmnToElkMapper {
         collaboration: Collaboration,
         model: BpmnModelInstance,
         nodeMap: MutableMap<String, ElkNode>,
+        laneBandHeights: MutableMap<String, Double>,
     ) {
         for (participant in collaboration.participants) {
             val process = participant.process
@@ -153,17 +163,14 @@ internal object BpmnToElkMapper {
                 nodeMap[participant.id] = compound
 
                 val topLevelElements = process.flowElements.toList()
-                val laneMemberIds = mutableSetOf<String>()
-                process.laneSets.flatMap { it.lanes.toList() }.forEach { lane ->
-                    laneMemberIds.addAll(lane.flowNodeRefs.map { it.id })
-                    mapLane(compound, lane, nodeMap, model)
-                }
-                mapProcess(
-                    compound,
-                    topLevelElements.filter { it !is FlowNode || it.id !in laneMemberIds },
-                    nodeMap,
-                    model,
-                )
+                val lanes = process.laneSets.flatMap { it.lanes.toList() }
+                // Lanes are a routing constraint (AD-730-06), not ELK containment: members map
+                // directly under the participant, and each declared lane contributes an ordered
+                // band via applyLaneConstraint, not a compound child of its own.
+                val laneBands = computeLaneBands(lanes)
+                if (laneBands.members.isNotEmpty()) applyLaneConstraint(compound, laneBands)
+                laneBandHeights.putAll(laneBands.heights)
+                mapProcess(compound, topLevelElements, nodeMap, model, laneBands.members)
             } else {
                 // Black-box participants participate in collaboration-level message edges.
                 val bb = ElkGraphUtil.createNode(root)
@@ -175,36 +182,172 @@ internal object BpmnToElkMapper {
         }
     }
 
-    // Nested lanes (a lane with a childLaneSet) are not supported. A lane that delegates to a
-    // childLaneSet carries no flowNodeRefs of its own, so mapping it unguarded would silently
-    // produce a zero-height ghost lane while its descendants escape to the top level — a broken
-    // diagram with no error. Fail loudly instead.
-    private fun mapLane(
-        participant: ElkNode,
-        lane: Lane,
-        nodeMap: MutableMap<String, ElkNode>,
-        model: BpmnModelInstance,
-    ) {
+    /** A declared lane's routing constraint for one member: its 0-based declaration order and its band's centreline. */
+    private data class LaneBand(val index: Int, val centreline: Double)
+
+    /**
+     * The declared lane geometry: [members] carries each member's order index and band centreline,
+     * [heights] each lane's band height keyed by lane id, and [topReserve]/[bottomReserve] the
+     * space the first and last bands claim beyond their tallest member — the participant's own
+     * vertical padding, so the projected band stack lands flush inside the pool ELK sized.
+     */
+    private data class LaneBands(
+        val members: Map<String, LaneBand>,
+        val heights: Map<String, Double>,
+        val topReserve: Double,
+        val bottomReserve: Double,
+    )
+
+    /**
+     * Computes each lane's declaration-order index, band height, and band centreline
+     * (AD-730-06/AD-730-05 Candidate A2), and is the sole authority for both — the centreline a
+     * member is placed on and the height its BPMN-DI rectangle is projected with come from the
+     * same arithmetic here, so a band's midpoint is its members' midpoint by construction. Every
+     * input is a fixed constant ([nodeDimensions], [tallestLabelHeight]), so the whole band stack
+     * is computable before ELK runs.
+     *
+     * A band reserves its tallest member's height plus that lane's tallest label and [LANE_PADDING]
+     * *on both sides alike*. Reserving the label allowance only below (where the label is actually
+     * drawn) is what pushed a band's midpoint below its members'; reserving it symmetrically keeps
+     * the two equal while still clearing a bottom-placed label.
+     *
+     * Three lane shapes are rejected rather than silently mis-banded, matching the existing
+     * nested-lane failure style:
+     * - a nested lane (a lane with a childLaneSet) carries no flowNodeRefs of its own, so
+     *   continuing would leave its descendants unbanded with no error;
+     * - an empty lane (no flowNodeRefs) has no member geometry for
+     *   [dev.groknull.bpmner.layout.internal.placement.CollaborationFramePlacement] to derive its
+     *   band from after layout, which would otherwise suppress every populated sibling lane's
+     *   BPMN-DI shape too;
+     * - a [SubProcess] lane member's declared band height would be [TASK_HEIGHT], understating
+     *   its real expanded extent (which depends on its own children and padding, unknowable
+     *   before ELK lays it out) and risking an overlap with the next lane's band.
+     */
+    private fun computeLaneBands(lanes: List<Lane>): LaneBands {
+        val bands = mutableMapOf<String, LaneBand>()
+        val heights = mutableMapOf<String, Double>()
+        val reserves = mutableListOf<Double>()
+        var nextTop = 0.0
+        lanes.forEachIndexed { index, lane ->
+            val members = validatedLaneMembers(lane)
+            val maxHeight = members.maxOf { nodeDimensions(it).second }
+            val reserve = tallestLabelHeight(members.map { it.name }) + LANE_PADDING
+            val height = maxHeight + reserve * 2
+            val centreline = nextTop + height / 2
+            members.forEach { bands[it.id] = LaneBand(index, centreline) }
+            heights[lane.id] = height
+            reserves += reserve
+            nextTop += height
+        }
+        return LaneBands(bands, heights, reserves.firstOrNull() ?: 0.0, reserves.lastOrNull() ?: 0.0)
+    }
+
+    /** [lane]'s own flowNodeRefs, or throws one of the three rejections documented on [computeLaneBands]. */
+    private fun validatedLaneMembers(lane: Lane): List<FlowNode> {
+        val members = validatedLaneStructure(lane)
+        rejectSubProcessMember(lane, members)
+        return members
+    }
+
+    private fun validatedLaneStructure(lane: Lane): List<FlowNode> {
         if (lane.childLaneSet != null) {
             throw BpmnAutoLayoutException("ELK layout: nested lanes (lane '${lane.id}' has a childLaneSet) are not supported")
         }
-        val compound = ElkGraphUtil.createNode(participant)
-        compound.identifier = lane.id
-        applyLaneProfile(compound, lane)
-        nodeMap[lane.id] = compound
-        mapProcess(compound, lane.flowNodeRefs.toList(), nodeMap, model)
+        val members = lane.flowNodeRefs.toList()
+        if (members.isEmpty()) {
+            throw BpmnAutoLayoutException("ELK layout: an empty lane (lane '${lane.id}' has no flowNodeRef) is not supported")
+        }
+        return members
+    }
+
+    private fun rejectSubProcessMember(lane: Lane, members: List<FlowNode>) {
+        val subProcessMember = members.filterIsInstance<SubProcess>().firstOrNull() ?: return
+        throw BpmnAutoLayoutException(
+            "ELK layout: a SubProcess directly in a lane (lane '${lane.id}', subprocess " +
+                "'${subProcessMember.id}') is not supported — its expanded extent cannot be " +
+                "reserved in the lane's band before layout",
+        )
+    }
+
+    /**
+     * Declares the pseudo-interactive stock encoding (AD-730-05 Candidate A2): semi-interactive
+     * crossing minimisation orders each layer by [LaneBand.index] via the public `POSITION`
+     * property, and interactive node placement keeps a normal node's imported Y (the band
+     * centreline it was mapped onto) rather than recomputing it — so declared lane order becomes a
+     * placement input ELK itself honours before phase-5 routing, not a post-layout translation.
+     *
+     * Vertical padding is re-declared as the outer bands' own reserve, replacing
+     * [applyParticipantProfile]'s uniform [PARTICIPANT_CONTENT_PADDING]: ELK normalizes its content
+     * to start at `padding.top`, so matching that to the first band's reserve puts the projected
+     * band stack flush inside the pool instead of overhanging it.
+     *
+     * **Known limitation (D1, AD-730-09/AD-730-07, recorded rather than fixed).** A layer-spanning
+     * cross-lane sequence flow can route through an unpositioned long-edge dummy node instead of
+     * taking a direct inter-lane channel. The only writer of the dummy's placement hint
+     * (`ORIGINAL_DUMMY_NODE_POSITION`) is `InteractiveCrossingMinimizer`.
+     *
+     * Five configurations were measured against the full corpus; each left every golden
+     * byte-identical, so none moves D1 (see `LaneConstraintSpikeTest`'s AD-730-12 record for the
+     * control that proves options set here do take effect):
+     * `HIERARCHY_HANDLING = SEPARATE_CHILDREN`; `CROSSING_MINIMIZATION_STRATEGY = INTERACTIVE`,
+     * both with and without the `semiInteractive` its `requires` clause forbids;
+     * `CONSIDER_MODEL_ORDER_STRATEGY = NONE`; and
+     * `CONSIDER_MODEL_ORDER_LONG_EDGE_STRATEGY = DUMMY_NODE_UNDER`.
+     *
+     * D1 therefore has no fix among the mechanisms tried, which is weaker than "no fix exists":
+     * `Layered.melk` declares 78 options and roughly a quarter remain unexamined. It is named for
+     * human bpmn-js review (gate 6) rather than patched post-layout, which AD-730-01 forbids.
+     */
+    private fun applyLaneConstraint(compound: ElkNode, bands: LaneBands) {
+        compound.setProperty(LayeredOptions.CROSSING_MINIMIZATION_SEMI_INTERACTIVE, true)
+        compound.setProperty(LayeredOptions.NODE_PLACEMENT_STRATEGY, NodePlacementStrategy.INTERACTIVE)
+        compound.setProperty(
+            CoreOptions.PADDING,
+            ElkPadding(
+                bands.topReserve,
+                PARTICIPANT_CONTENT_PADDING,
+                bands.bottomReserve,
+                PARTICIPANT_HEADER_WIDTH + PARTICIPANT_CONTENT_PADDING,
+            ),
+        )
+    }
+
+    /**
+     * Applies [elementId]'s [LaneBand], if any, as the node's declared position and input Y,
+     * centring it on its lane's centreline. [node]'s height must already be set.
+     *
+     * Also centres the node's EAST/WEST ports (AD-730-09 D2 fix): under `INTERACTIVE` placement
+     * every lane member shares one exact midpoint (gate 9), so `PortAlignment.CENTER`'s
+     * `nodeTop + (H − C)/2 + i·spacing` collapses to `centreline − C/2 + i·spacing` — the node's
+     * own height cancels, so two members of different heights attach at identical absolute Y as
+     * long as both ends carry the same port count. `DISTRIBUTED` (the default) instead spaces
+     * ports proportionally to `H`, which is what turns a straight cross-lane edge into a jog.
+     */
+    private fun applyLaneBand(node: ElkNode, elementId: String, laneBands: Map<String, LaneBand>) {
+        val band = laneBands[elementId] ?: return
+        node.setProperty(LayeredOptions.POSITION, KVector(0.0, band.index.toDouble()))
+        node.y = band.centreline - node.height / 2
+        node.setProperty(CoreOptions.PORT_ALIGNMENT_EAST, PortAlignment.CENTER)
+        node.setProperty(CoreOptions.PORT_ALIGNMENT_WEST, PortAlignment.CENTER)
     }
 
     /**
      * Recursively maps flow elements into the given [container].
      * SubProcesses become compound ELK nodes and recurse; BoundaryEvents are skipped
      * (handled in pass 2); other FlowNodes become flat leaf nodes.
+     *
+     * [laneBands] applies only to leaf [elements] directly (a lane's own declared members); it is
+     * not threaded into a [SubProcess]'s recursive call — a lane bands its own process's direct
+     * children, not a nested subprocess's internal flow. A [SubProcess] is never itself banded:
+     * [computeLaneBands] rejects one as a lane member, since its settled height (and so the
+     * centreline offset that would centre it) is unknown until ELK has laid its children out.
      */
     private fun mapProcess(
         container: ElkNode,
         elements: List<FlowElement>,
         nodeMap: MutableMap<String, ElkNode>,
         model: BpmnModelInstance,
+        laneBands: Map<String, LaneBand> = emptyMap(),
     ) {
         // Iterate in document order (elements list preserves Camunda's XML parse order).
         for (element in elements) {
@@ -243,6 +386,7 @@ internal object BpmnToElkMapper {
                     val (w, h) = nodeDimensions(element)
                     elkNode.width = w
                     elkNode.height = h
+                    applyLaneBand(elkNode, element.id, laneBands)
                     // Pin start events to the first layer, end events to the last.
                     when (element) {
                         is StartEvent -> elkNode.setProperty(
@@ -708,25 +852,6 @@ internal object BpmnToElkMapper {
                 PARTICIPANT_CONTENT_PADDING,
                 PARTICIPANT_HEADER_WIDTH + PARTICIPANT_CONTENT_PADDING,
             ),
-        )
-        applyCompoundProfile(node)
-    }
-
-    /**
-     * `NODE_LABELS_PLACEMENT = outsideBottomCenter` makes a compound's content bbox the node row
-     * plus the label strip below it, so symmetric padding centres that combined box rather than
-     * the node row — the row ends up sitting half the label height above the band's visual
-     * centre. Declaring extra top padding equal to the lane's own direct children's tallest
-     * label, rather than translating content after the fact, makes the node row itself land on
-     * the band's centre.
-     */
-    private fun applyLaneProfile(node: ElkNode, lane: Lane) {
-        node.setProperty(CoreOptions.HIERARCHY_HANDLING, HierarchyHandling.INCLUDE_CHILDREN)
-        node.setProperty(CoreOptions.SEPARATE_CONNECTED_COMPONENTS, false)
-        val maxLabelHeight = tallestLabelHeight(lane.flowNodeRefs.map { it.name })
-        node.setProperty(
-            CoreOptions.PADDING,
-            ElkPadding(LANE_PADDING + maxLabelHeight, LANE_PADDING, LANE_PADDING, LANE_PADDING),
         )
         applyCompoundProfile(node)
     }

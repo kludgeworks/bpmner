@@ -395,6 +395,113 @@ class ElkToBpmnDiWriterTest {
         }
     }
 
+    // ── Same-lane waypoint snap (AD-730-17) ────────────────────────────────────
+
+    @Test
+    fun `same-lane sequence flow interior waypoints collapse to start and end`() {
+        val model = minimalModel(
+            """
+            <bpmn:laneSet id="LaneSet_1">
+              <bpmn:lane id="Lane_pickers">
+                <bpmn:flowNodeRef>Task_pick</bpmn:flowNodeRef>
+                <bpmn:flowNodeRef>Gw_check</bpmn:flowNodeRef>
+              </bpmn:lane>
+            </bpmn:laneSet>
+            <bpmn:task id="Task_pick"><bpmn:outgoing>Flow_check</bpmn:outgoing></bpmn:task>
+            <bpmn:exclusiveGateway id="Gw_check"><bpmn:incoming>Flow_check</bpmn:incoming></bpmn:exclusiveGateway>
+            <bpmn:sequenceFlow id="Flow_check" sourceRef="Task_pick" targetRef="Gw_check"/>
+            """.trimIndent(),
+        )
+        // Exact geometry from the collab-lanes-loopback fixture pre-fix: Flow_check zigzags
+        // around Gw_check's dummy-node Y (215) even though its start/end Y are both 197.
+        val layout = PlacedLayout(
+            shapes = mapOf(
+                "Task_pick" to Rect(224.03515625, 142.0, 100.0, 80.0),
+                "Gw_check" to Rect(558.728515625, 157.0, 50.0, 50.0),
+            ),
+            labels = emptyMap(),
+            edges = mapOf(
+                "Flow_check" to listOf(
+                    Point(324.03515625, 197.0),
+                    Point(349.03515625, 197.0),
+                    Point(349.03515625, 215.0),
+                    Point(515.04296875, 215.0),
+                    Point(515.04296875, 197.0),
+                    Point(558.728515625, 197.0),
+                ),
+            ),
+            expanded = emptySet(),
+        )
+        ElkToBpmnDiWriter.write(model, layout)
+        val xml = serialize(model)
+
+        val doc = parseDoc(xml)
+        val edges = doc.getElementsByTagNameNS(DI_NS, "BPMNEdge")
+        var wps: org.w3c.dom.NodeList? = null
+        for (i in 0 until edges.length) {
+            val edge = edges.item(i) as org.w3c.dom.Element
+            if (edge.getAttribute("bpmnElement") == "Flow_check") {
+                wps = edge.getElementsByTagNameNS("http://www.omg.org/spec/DD/20100524/DI", "waypoint")
+            }
+        }
+        assertNotNull(wps, "BPMNEdge for Flow_check must exist")
+        assertEquals(2, wps.length, "interior waypoints must collapse")
+        val wp0 = wps.item(0) as org.w3c.dom.Element
+        val wp1 = wps.item(1) as org.w3c.dom.Element
+        assertEquals(324.03515625, wp0.getAttribute("x").toDouble(), "wp0.x")
+        assertEquals(197.0, wp0.getAttribute("y").toDouble(), "wp0.y")
+        assertEquals(558.728515625, wp1.getAttribute("x").toDouble(), "wp1.x")
+        assertEquals(197.0, wp1.getAttribute("y").toDouble(), "wp1.y")
+    }
+
+    @Test
+    fun `same-lane interior waypoint blocked by an obstacle keeps its detour`() {
+        val model = minimalModel(
+            """
+            <bpmn:laneSet id="LaneSet_1">
+              <bpmn:lane id="Lane_1">
+                <bpmn:flowNodeRef>A</bpmn:flowNodeRef>
+                <bpmn:flowNodeRef>B</bpmn:flowNodeRef>
+              </bpmn:lane>
+            </bpmn:laneSet>
+            <bpmn:task id="A"><bpmn:outgoing>F2</bpmn:outgoing></bpmn:task>
+            <bpmn:task id="B"><bpmn:incoming>F2</bpmn:incoming></bpmn:task>
+            <bpmn:sequenceFlow id="F2" sourceRef="A" targetRef="B"/>
+            """.trimIndent(),
+        )
+        // Start/end both at y=20 (same-lane, snappable), but an unrelated node's rect sits
+        // directly on the shared line between the interior waypoint and the start point.
+        val layout = PlacedLayout(
+            shapes = mapOf(
+                "A" to Rect(0.0, 0.0, 40.0, 40.0),
+                "B" to Rect(280.0, 0.0, 40.0, 40.0),
+                "Obstacle" to Rect(150.0, 10.0, 40.0, 20.0),
+            ),
+            labels = emptyMap(),
+            edges = mapOf(
+                "F2" to listOf(Point(40.0, 20.0), Point(170.0, 100.0), Point(280.0, 20.0)),
+            ),
+            expanded = emptySet(),
+        )
+        ElkToBpmnDiWriter.write(model, layout)
+        val xml = serialize(model)
+
+        val doc = parseDoc(xml)
+        val edges = doc.getElementsByTagNameNS(DI_NS, "BPMNEdge")
+        var wps: org.w3c.dom.NodeList? = null
+        for (i in 0 until edges.length) {
+            val edge = edges.item(i) as org.w3c.dom.Element
+            if (edge.getAttribute("bpmnElement") == "F2") {
+                wps = edge.getElementsByTagNameNS("http://www.omg.org/spec/DD/20100524/DI", "waypoint")
+            }
+        }
+        assertNotNull(wps, "BPMNEdge for F2 must exist")
+        assertEquals(3, wps.length, "blocked detour must be kept, not collapsed")
+        val wp1 = wps.item(1) as org.w3c.dom.Element
+        assertEquals(170.0, wp1.getAttribute("x").toDouble(), "detour x unchanged")
+        assertEquals(100.0, wp1.getAttribute("y").toDouble(), "detour y unchanged — collision guard blocked the snap")
+    }
+
     // ── Plane bpmnElement references top-level Process ────────────────────────
 
     @Test

@@ -172,7 +172,7 @@ internal object ElkToBpmnDiWriter {
             if (waypoints.isNullOrEmpty()) continue
             existingEdges[mf.id]?.also { existing ->
                 existing.waypoints.clear()
-                model.fillWaypoints(existing, waypoints)
+                model.fillWaypoints(existing, waypoints, layout)
                 layout.labels[mf.id]?.let { labelRect ->
                     val bpmnLabel = existing.bpmnLabel ?: model.newInstance(BpmnLabel::class.java).also {
                         it.id = "BPMNLabel_${mf.id}"
@@ -184,7 +184,7 @@ internal object ElkToBpmnDiWriter {
             } ?: model.newInstance(BpmnEdge::class.java).also { bpmnEdge ->
                 bpmnEdge.id = "BPMNEdge_${mf.id}"
                 bpmnEdge.bpmnElement = mf
-                model.fillWaypoints(bpmnEdge, waypoints)
+                model.fillWaypoints(bpmnEdge, waypoints, layout)
                 layout.labels[mf.id]?.let { labelRect ->
                     val bpmnLabel = model.newInstance(BpmnLabel::class.java)
                     bpmnLabel.id = "BPMNLabel_${mf.id}"
@@ -322,7 +322,7 @@ internal object ElkToBpmnDiWriter {
             }
             existingEdges[sf.id]?.also { existing ->
                 existing.waypoints.clear()
-                model.fillWaypoints(existing, waypoints)
+                model.fillWaypoints(existing, waypoints, layout)
                 layout.labels[sf.id]?.let { labelRect ->
                     val bpmnLabel = existing.bpmnLabel ?: model.newInstance(BpmnLabel::class.java).also {
                         it.id = "BPMNLabel_${sf.id}"
@@ -334,7 +334,7 @@ internal object ElkToBpmnDiWriter {
             } ?: model.newInstance(BpmnEdge::class.java).also { bpmnEdge ->
                 bpmnEdge.id = "BPMNEdge_${sf.id}"
                 bpmnEdge.bpmnElement = sf
-                model.fillWaypoints(bpmnEdge, waypoints)
+                model.fillWaypoints(bpmnEdge, waypoints, layout)
                 layout.labels[sf.id]?.let { labelRect ->
                     val bpmnLabel = model.newInstance(BpmnLabel::class.java)
                     bpmnLabel.id = "BPMNLabel_${sf.id}"
@@ -359,28 +359,100 @@ internal object ElkToBpmnDiWriter {
             val waypoints = layout.edges[assoc.id] ?: continue
             existingEdges[assoc.id]?.also { existing ->
                 existing.waypoints.clear()
-                model.fillWaypoints(existing, waypoints)
+                model.fillWaypoints(existing, waypoints, layout)
                 plane.addChildElement(existing)
             } ?: model.newInstance(BpmnEdge::class.java).also { bpmnEdge ->
                 bpmnEdge.id = "BPMNEdge_${assoc.id}"
                 bpmnEdge.bpmnElement = assoc
-                model.fillWaypoints(bpmnEdge, waypoints)
+                model.fillWaypoints(bpmnEdge, waypoints, layout)
                 plane.addChildElement(bpmnEdge)
             }
         }
     }
 
     /**
-     * Writes [waypoints] to [edge], skipping consecutive duplicates.
+     * Writes [waypoints] to [edge], snapping same-lane [SequenceFlow] interior waypoints per
+     * AD-730-17 (see [snapSameLaneWaypoints]) and skipping consecutive duplicates.
      */
     private fun BpmnModelInstance.fillWaypoints(
         edge: BpmnEdge,
         waypoints: List<BpmnPlacementPass.Point>,
+        layout: PlacedLayout,
     ) {
-        for ((index, waypoint) in waypoints.withIndex()) {
-            if (index > 0 && waypoint == waypoints[index - 1]) continue
+        val snapped = snapSameLaneWaypoints(this, edge, waypoints, layout)
+        for ((index, waypoint) in snapped.withIndex()) {
+            if (index > 0 && waypoint == snapped[index - 1]) continue
             newWaypoint(waypoint.x, waypoint.y).also { edge.waypoints.add(it) }
         }
+    }
+
+    /** Floating-point slack confirming a same-lane edge's start/end Y are the same value (AD-730-17). */
+    private const val SAME_LANE_Y_EPSILON = 1e-6
+
+    /** Fewest waypoints a polyline can have and still contain an interior (non-endpoint) point. */
+    private const val MIN_WAYPOINTS_WITH_INTERIOR_POINT = 3
+
+    /** Whether [source] and [target] are both declared members of the same [Lane] (AD-730-17). */
+    private fun sameLaneMembers(model: BpmnModelInstance, source: FlowNode, target: FlowNode): Boolean =
+        model.getModelElementsByType(Lane::class.java).any { lane ->
+            val refs = lane.flowNodeRefs.map { it.id }.toSet()
+            source.id in refs && target.id in refs
+        }
+
+    /**
+     * For a same-lane [SequenceFlow] whose start and end Y are provably identical (AD-730-17's
+     * `PortPlacementCalculator` arithmetic), snaps each interior waypoint's Y to that shared value —
+     * unless doing so would draw the edge through an unrelated node's shape, in which case that
+     * waypoint is left at its original Y (a genuine detour around an obstacle, not the arbitrary-
+     * dummy-Y artefact). Lane and participant shapes are excluded as obstacles: a same-lane edge's
+     * whole route already sits inside its own lane and pool by construction. Any other edge (a
+     * cross-lane flow, or a non-[SequenceFlow]) is returned unchanged.
+     */
+    private fun snapSameLaneWaypoints(
+        model: BpmnModelInstance,
+        edge: BpmnEdge,
+        waypoints: List<BpmnPlacementPass.Point>,
+        layout: PlacedLayout,
+    ): List<BpmnPlacementPass.Point> {
+        if (waypoints.size < MIN_WAYPOINTS_WITH_INTERIOR_POINT) return waypoints
+        val flow = edge.bpmnElement as? SequenceFlow ?: return waypoints
+        val source = flow.source ?: return waypoints
+        val target = flow.target ?: return waypoints
+        if (!sameLaneMembers(model, source, target)) return waypoints
+        val sharedY = waypoints.first().y
+        if (kotlin.math.abs(waypoints.last().y - sharedY) > SAME_LANE_Y_EPSILON) return waypoints
+
+        val containerIds = model.getModelElementsByType(Lane::class.java).map { it.id }.toSet() +
+            model.getModelElementsByType(Participant::class.java).map { it.id }.toSet()
+        val obstacles = layout.shapes.filterKeys { it != source.id && it != target.id && it !in containerIds }.values
+
+        val snapped = waypoints.mapIndexed { index, point ->
+            if (index == 0 || index == waypoints.lastIndex) return@mapIndexed point
+            if (kotlin.math.abs(point.y - sharedY) <= SAME_LANE_Y_EPSILON) return@mapIndexed point
+            val candidate = point.copy(y = sharedY)
+            val prev = waypoints[index - 1]
+            val next = waypoints[index + 1]
+            val collides = obstacles.any { rect ->
+                segmentIntersectsRect(prev, candidate, rect) || segmentIntersectsRect(candidate, next, rect)
+            }
+            if (collides) point else candidate
+        }
+        return dropCollinearInteriorPoints(snapped)
+    }
+
+    /** Drops an interior waypoint whose surviving neighbours already share its axis — it draws nothing new. */
+    private fun dropCollinearInteriorPoints(points: List<BpmnPlacementPass.Point>): List<BpmnPlacementPass.Point> {
+        if (points.size < MIN_WAYPOINTS_WITH_INTERIOR_POINT) return points
+        val result = mutableListOf(points.first())
+        for (i in 1 until points.size - 1) {
+            val prev = result.last()
+            val cur = points[i]
+            val next = points[i + 1]
+            val collinear = (prev.y == cur.y && cur.y == next.y) || (prev.x == cur.x && cur.x == next.x)
+            if (!collinear) result += cur
+        }
+        result += points.last()
+        return result
     }
 
     private fun BpmnModelInstance.newBounds(x: Double, y: Double, w: Double, h: Double): Bounds {
