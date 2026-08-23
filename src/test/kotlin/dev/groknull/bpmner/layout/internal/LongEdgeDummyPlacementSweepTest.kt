@@ -118,9 +118,7 @@ class LongEdgeDummyPlacementSweepTest {
      */
     private fun layoutWith(xml: String, participantId: String, configure: (ElkNode) -> Unit): Document {
         val model = Bpmn.readModelFromStream(ByteArrayInputStream(xml.toByteArray(Charsets.UTF_8)))
-        MetadataSynthesis.addMissingAnnotations(model)
         val skeleton = BpmnToElkMapper.map(model)
-        MetadataSynthesis.reserveTopPadding(model, skeleton.root)
         configure(skeleton.nodeMap.getValue(participantId))
         RecursiveGraphLayoutEngine().layout(skeleton.root, BasicProgressMonitor())
         val placed = BpmnPlacementPass.place(model, skeleton)
