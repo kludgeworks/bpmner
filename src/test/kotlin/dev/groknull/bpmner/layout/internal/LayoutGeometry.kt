@@ -15,10 +15,11 @@ private const val DC_NS = "http://www.omg.org/spec/DD/20100524/DC"
 private const val DD_NS = "http://www.omg.org/spec/DD/20100524/DI"
 
 /**
- * The 26-fixture layout corpus, shared by [GenerateCandidateGoldens][main] (goldens + the Tier-2
- * metrics baseline) and the Tier-2 tripwire test. [ElkGoldenLayoutTest]'s own `@ValueSource`
- * lists must stay in sync with this — JUnit5 annotation arguments must be compile-time constants,
- * so they cannot reference this list directly.
+ * The 33-fixture layout corpus, shared by [GenerateCandidateGoldens][main] (goldens + the Tier-2
+ * metrics baseline) and the Tier-2 tripwire test. [ElkGoldenLayoutTest]'s own narrower
+ * collaboration-specific `@ValueSource` lists must stay in sync with this by hand; the corpus-wide
+ * `@MethodSource("fixtures")` tests read it directly. [fixtureEnrollmentViolations] mechanically
+ * checks this list against `layout-fixtures/`'s actual `.expected.bpmn` resource set (AD-730-03).
  */
 internal val LAYOUT_CORPUS_FIXTURES = listOf(
     "representative-process",
@@ -242,4 +243,135 @@ internal fun isOnRectBoundary(p: DiPoint, r: DiRect): Boolean {
     val onHorizontalEdge = kotlin.math.abs(p.y - r.y) <= BOUNDARY_TOLERANCE ||
         kotlin.math.abs(p.y - r.bottom) <= BOUNDARY_TOLERANCE
     return onVerticalEdge || onHorizontalEdge
+}
+
+/** Shapes at or above this area (200×200) are containers (subprocess/lane/participant). */
+internal const val CONTAINER_AREA = 40_000.0
+
+/**
+ * [shapes] filtered to exclude BPMN DI containers and boundary events — geometry that legitimately
+ * overlaps or is straddled by design and must not be treated as an "unrelated obstacle" a sequence
+ * flow may not cross (AD-730-02). Excludes: [headerOwnerIds] (participant/lane header shapes,
+ * `isHorizontal="true"`), [boundaryEventIds] (straddle their host by design), and any shape whose
+ * area reaches [CONTAINER_AREA] (subprocess containers, which contain their children by design).
+ */
+internal fun nonContainerObstacles(
+    shapes: List<DiRect>,
+    headerOwnerIds: Set<String>,
+    boundaryEventIds: Set<String>,
+): List<DiRect> = shapes.filter { it.id !in boundaryEventIds && it.id !in headerOwnerIds && it.w * it.h < CONTAINER_AREA }
+
+/**
+ * AD-730-02's "top-left" clause: the start event must be leftmost among [flowNodeIds] and declared
+ * in the first lane (index 0 of [laneIndexOf]). Empty/violation-free input returns no violations —
+ * this predicate has no way to vacuously pass on a fixture that actually has a start event and
+ * lanes, since both checks require [startId] to be present in [shapes]/[laneIndexOf].
+ */
+internal fun leftmostFirstLaneViolations(
+    flowNodeIds: List<String>,
+    startId: String,
+    shapes: Map<String, DiRect>,
+    laneIndexOf: Map<String, Int>,
+): List<String> {
+    val result = mutableListOf<String>()
+    val startX = shapes[startId]?.x
+    if (startX != null) {
+        flowNodeIds.forEach { id ->
+            val x = shapes[id]?.x ?: return@forEach
+            if (x < startX) result += "start event is not leftmost: '$id' (x=$x) is left of start '$startId' (x=$startX)"
+        }
+    }
+    if (laneIndexOf[startId] != 0) {
+        result += "start event '$startId' is not declared in the first lane (lane=${laneIndexOf[startId]})"
+    }
+    return result
+}
+
+/** Tolerance for "does not decrease/must advance" X comparisons, absorbing ELK round-off. */
+internal const val X_MONOTONIC_TOLERANCE = 0.5
+
+/**
+ * AD-730-02's "no normal forward sequence flow decreases X" clause, over [flowIds] whose edges are
+ * in [edgesById]. [backEdgeIds] (production's own [BpmnToElkMapper.ElkSkeleton.reversedFlowIds])
+ * exempts a genuine cycle back-edge — the one AD-730-02-named exception — never a fixture-name skip.
+ */
+internal fun monotonicXViolations(
+    flowIds: List<String>,
+    edgesById: Map<String, DiEdge>,
+    backEdgeIds: Set<String>,
+): List<String> {
+    val result = mutableListOf<String>()
+    flowIds.filter { it !in backEdgeIds }.forEach { flowId ->
+        val edge = edgesById[flowId] ?: return@forEach
+        val first = edge.waypoints.firstOrNull() ?: return@forEach
+        val last = edge.waypoints.lastOrNull() ?: return@forEach
+        if (last.x < first.x - X_MONOTONIC_TOLERANCE) {
+            result += "sequence flow '$flowId' decreases X (first=$first last=$last)"
+        }
+    }
+    return result
+}
+
+/**
+ * AD-730-02's "a lane transition advances rightward at every segment" clause, over
+ * [crossLaneFlowIds] whose edges are in [edgesById]. Checked per-segment, not just start-to-end.
+ */
+internal fun rightwardLaneTransitionViolations(
+    crossLaneFlowIds: List<String>,
+    edgesById: Map<String, DiEdge>,
+): List<String> {
+    val result = mutableListOf<String>()
+    crossLaneFlowIds.forEach { flowId ->
+        val edge = edgesById[flowId] ?: return@forEach
+        edge.waypoints.zipWithNext().forEach { (a, b) ->
+            if (b.x < a.x - X_MONOTONIC_TOLERANCE) {
+                result += "cross-lane flow '$flowId' regresses at segment $a -> $b"
+            }
+        }
+    }
+    return result
+}
+
+/**
+ * AD-730-02's unrelated-node-clearance clause: no [flows] (flowId, sourceId, targetId) waypoint
+ * segment may intersect an [obstacles] rect other than that flow's own endpoints (excluded here —
+ * the endpoint exclusion) — [obstacles] itself must already exclude containers via
+ * [nonContainerObstacles] (the container exclusion) before being passed in.
+ */
+internal fun unrelatedNodeIntersections(
+    flows: List<Triple<String, String, String>>,
+    edgesById: Map<String, DiEdge>,
+    obstacles: List<DiRect>,
+): List<String> = flows.flatMap { (flowId, sourceId, targetId) ->
+    val edge = edgesById[flowId] ?: return@flatMap emptyList()
+    val unrelated = obstacles.filter { it.id != sourceId && it.id != targetId }
+    flowObstacleIntersections(flowId, edge, unrelated)
+}
+
+private fun flowObstacleIntersections(flowId: String, edge: DiEdge, unrelated: List<DiRect>): List<String> =
+    edge.waypoints.zipWithNext().flatMap { (a, b) ->
+        unrelated.filter { segmentIntersectsRect(a, b, it) }.map { "flow '$flowId' intersects unrelated node '${it.id}'" }
+    }
+
+/**
+ * AD-730-03's fixture-enrollment gate: a corpus fixture is any name in `layout-fixtures/` with a
+ * committed `.expected.bpmn` golden — a `.bpmn` with no golden (e.g. a standalone probe's input,
+ * such as `annotation-multi-host.bpmn`) was never blessed as a corpus member and is excluded by
+ * construction, not by an allowlist that could rot. [expectedGoldenBaseNames] is the resource
+ * directory's actual `*.expected.bpmn` base names; [declared] is [LAYOUT_CORPUS_FIXTURES]. Returns
+ * one violation per name enrolled without a golden, or with a golden but not enrolled.
+ */
+internal fun fixtureEnrollmentViolations(
+    expectedGoldenBaseNames: Set<String>,
+    declared: List<String> = LAYOUT_CORPUS_FIXTURES,
+): List<String> {
+    val declaredSet = declared.toSet()
+    val result = mutableListOf<String>()
+    (expectedGoldenBaseNames - declaredSet).forEach {
+        result += "fixture '$it' has a committed .expected.bpmn golden but is not in LAYOUT_CORPUS_FIXTURES"
+    }
+    (declaredSet - expectedGoldenBaseNames).forEach {
+        result += "'$it' is in LAYOUT_CORPUS_FIXTURES but has no matching layout-fixtures/$it.expected.bpmn"
+    }
+    return result
 }

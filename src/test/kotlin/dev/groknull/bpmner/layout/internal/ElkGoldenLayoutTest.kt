@@ -5,6 +5,7 @@
 
 package dev.groknull.bpmner.layout.internal
 
+import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
 import org.junit.jupiter.params.provider.ValueSource
@@ -31,9 +32,6 @@ class ElkGoldenLayoutTest {
         private const val DI_NS = "http://www.omg.org/spec/BPMN/20100524/DI"
         private const val DC_NS = "http://www.omg.org/spec/DD/20100524/DC"
         private const val DD_NS = "http://www.omg.org/spec/DD/20100524/DI"
-
-        /** Shapes at or above this area (200×200) are containers (subprocess/lane/participant). */
-        private const val CONTAINER_AREA = 40_000.0
 
         /** Tolerance for "does not decrease/must advance" X comparisons, absorbing ELK round-off. */
         private const val AXIS_TOLERANCE_FOR_TEST = 0.5
@@ -236,13 +234,15 @@ class ElkGoldenLayoutTest {
     }
 
     /**
-     * REVIEW-730-2 #1: generic shape/label invariants are not the AD-730-02 routing contract.
-     * Asserts, on every lane-carrying fixture: the start event is leftmost and declared in the
-     * first lane; no normal sequence flow decreases X end-to-end; a cross-lane flow advances
-     * rightward at *every* waypoint, not just overall; no flow intersects an unrelated flow node;
-     * no proper crossings; and no non-zero collinear overlap between distinct sequence flows
-     * (which [assertLabelsClearEdgeGeometry]'s corpus-wide checks do not cover —
-     * [collinearOverlaps] is a dedicated predicate for exactly this).
+     * Stage 3 (AD-730-18): the AD-730-02 routing contract runs against the whole corpus, not just
+     * the three lane fixtures Stage 2 proved it on. Asserts, on every fixture: no flow intersects
+     * an unrelated flow node (containers and boundary events excluded, per [nonContainerObstacles]
+     * — the same exclusion [assertNoTopLevelShapeOverlap] already relies on); no proper crossings;
+     * and no non-zero collinear overlap between distinct sequence flows ([collinearOverlaps] is a
+     * dedicated predicate for exactly this, which generic shape/label invariants do not cover).
+     * The reading-direction clauses (leftmost/first-lane start, monotonic X, rightward lane
+     * transition) are lane-specific per AD-730-02's own definition and only apply — and are only
+     * asserted — when [laneOf] is non-empty, i.e. the fixture actually declares lanes.
      *
      * The monotonic-X clause alone exempts a genuine AD-622-15 cycle back-edge (AD-730-02's
      * explicit exception): `collab-lanes-loopback`'s `Flow_retry` is one. The exemption reuses
@@ -251,9 +251,9 @@ class ElkGoldenLayoutTest {
      * (unrelated-node clearance, proper-crossing absence, collinear-overlap absence) still binds
      * a back-edge, since AD-730-02 only exempts the reading-direction requirement.
      */
-    @ParameterizedTest(name = "AD-730-02 cross-lane routing contract: {0}")
-    @ValueSource(strings = ["collab-lanes", "collab-lanes-loopback", "collab-lanes-branch-rejoin"])
-    fun `cross-lane fixture satisfies the AD-730-02 routing contract`(fixture: String) {
+    @ParameterizedTest(name = "AD-730-02 routing contract: {0}")
+    @MethodSource("fixtures")
+    fun `fixture satisfies the AD-730-02 routing contract`(fixture: String) {
         val input = load("layout-fixtures/$fixture.bpmn")
         val model = parseBpmn(input)
         val result = layouter.layout(input)
@@ -261,59 +261,82 @@ class ElkGoldenLayoutTest {
         val shapes = extractShapeRects(doc).associateBy { it.id }
         val backEdgeIds = BpmnToElkMapper.map(model).reversedFlowIds
 
-        val flowNodes = model.getModelElementsByType(org.camunda.bpm.model.bpmn.instance.FlowNode::class.java)
-        val start = model.getModelElementsByType(org.camunda.bpm.model.bpmn.instance.StartEvent::class.java).single()
+        val start = model.getModelElementsByType(org.camunda.bpm.model.bpmn.instance.StartEvent::class.java).firstOrNull()
         val laneOf = model.getModelElementsByType(org.camunda.bpm.model.bpmn.instance.Lane::class.java)
             .withIndex()
             .flatMap { (index, lane) -> lane.flowNodeRefs.map { it.id to index } }
             .toMap()
         val sequenceFlows = model.getModelElementsByType(org.camunda.bpm.model.bpmn.instance.SequenceFlow::class.java)
         val edgesById = extractEdges(doc).associateBy { it.id }
+        val flowIds = sequenceFlows.map { it.id }
 
-        val startX = shapes.getValue(start.id).x
-        assertTrue(
-            flowNodes.all { (shapes[it.id]?.x ?: startX) >= startX },
-            "[$fixture] start event must be leftmost among the process's flow nodes",
-        )
-        assertEquals(0, laneOf.getValue(start.id), "[$fixture] start event must be declared in the first lane")
-
-        sequenceFlows.filter { it.id !in backEdgeIds }.forEach { flow ->
-            val edge = edgesById.getValue(flow.id)
-            val first = edge.waypoints.first()
-            val last = edge.waypoints.last()
-            assertTrue(
-                last.x >= first.x - AXIS_TOLERANCE_FOR_TEST,
-                "[$fixture] sequence flow '${flow.id}' must not decrease X (first=$first last=$last)",
-            )
-            if (laneOf[flow.source?.id] != laneOf[flow.target?.id]) {
-                edge.waypoints.zipWithNext().forEach { (a, b) ->
-                    assertTrue(
-                        b.x >= a.x - AXIS_TOLERANCE_FOR_TEST,
-                        "[$fixture] cross-lane flow '${flow.id}' must advance rightward at every " +
-                            "segment while changing lane, not just overall (segment $a -> $b)",
-                    )
-                }
-            }
+        if (laneOf.isNotEmpty() && start != null) {
+            val flowNodeIds = model.getModelElementsByType(org.camunda.bpm.model.bpmn.instance.FlowNode::class.java)
+                .map { it.id }
+            val leftmostViolations = leftmostFirstLaneViolations(flowNodeIds, start.id, shapes, laneOf)
+            assertTrue(leftmostViolations.isEmpty(), "[$fixture] " + leftmostViolations.joinToString("; "))
+            val monotonicViolations = monotonicXViolations(flowIds, edgesById, backEdgeIds)
+            assertTrue(monotonicViolations.isEmpty(), "[$fixture] " + monotonicViolations.joinToString("; "))
+            val crossLaneFlowIds = sequenceFlows
+                .filter { laneOf[it.source?.id] != laneOf[it.target?.id] }
+                .map { it.id }
+            val rightwardViolations = rightwardLaneTransitionViolations(crossLaneFlowIds, edgesById)
+            assertTrue(rightwardViolations.isEmpty(), "[$fixture] " + rightwardViolations.joinToString("; "))
         }
 
-        val flowNodeRects = flowNodes.mapNotNull { shapes[it.id] }
-        sequenceFlows.forEach { flow ->
-            val edge = edgesById.getValue(flow.id)
-            val unrelated = flowNodeRects.filter { it.id != flow.source?.id && it.id != flow.target?.id }
-            edge.waypoints.zipWithNext().forEach { (a, b) ->
-                unrelated.forEach { rect ->
-                    assertTrue(
-                        !segmentIntersectsRect(a, b, rect),
-                        "[$fixture] flow '${flow.id}' must not intersect unrelated node '${rect.id}'",
-                    )
-                }
-            }
+        val boundaryIds = boundaryEventIds(input)
+        val obstacles = nonContainerObstacles(shapes.values.toList(), headerOwnerIds(doc), boundaryIds)
+        val flowTriples = sequenceFlows.mapNotNull { flow ->
+            val sourceId = flow.source?.id ?: return@mapNotNull null
+            val targetId = flow.target?.id ?: return@mapNotNull null
+            Triple(flow.id, sourceId, targetId)
         }
+        val clearanceViolations = unrelatedNodeIntersections(flowTriples, edgesById, obstacles)
+        assertTrue(clearanceViolations.isEmpty(), "[$fixture] " + clearanceViolations.joinToString("; "))
 
-        val sequenceEdges = sequenceFlows.map { edgesById.getValue(it.id) }
+        val sequenceEdges = flowIds.mapNotNull { edgesById[it] }
         assertEquals(0, countCrossings(sequenceEdges), "[$fixture] sequence flows must not properly cross")
         val overlaps = collinearOverlaps(sequenceEdges)
         assertTrue(overlaps.isEmpty(), "[$fixture] sequence flows share a non-zero collinear segment: $overlaps")
+    }
+
+    /**
+     * AD-730-03's fixture-enrollment gate: every committed `.expected.bpmn` golden under
+     * `layout-fixtures/` must be in [LAYOUT_CORPUS_FIXTURES], and every declared fixture must have
+     * a golden. A `.bpmn` with no golden (e.g. `annotation-multi-host.bpmn`,
+     * [AnnotationMultiHostProbeTest]'s standalone probe input) was never blessed as a corpus member
+     * and is excluded by construction.
+     */
+    @Test
+    fun `every layout-fixtures golden is enrolled in LAYOUT_CORPUS_FIXTURES and vice versa`() {
+        val violations = fixtureEnrollmentViolations(expectedGoldenBaseNames())
+        assertTrue(violations.isEmpty(), violations.joinToString("; "))
+    }
+
+    /**
+     * The base names of every committed `.expected.bpmn` resource under `layout-fixtures/` that is
+     * actually on the test classpath — Bazel bundles `kt_jvm_library` resources into the compiled
+     * test jar, so this inspects the jar entries rather than a loose runfiles directory (which
+     * resources never materialize into).
+     */
+    private fun expectedGoldenBaseNames(): Set<String> {
+        val suffix = ".expected.bpmn"
+        val url = checkNotNull(javaClass.classLoader.getResource("layout-fixtures")) {
+            "layout-fixtures/ resource root not found on the test classpath"
+        }
+        return when (url.protocol) {
+            "file" -> java.io.File(url.toURI()).listFiles { f -> f.name.endsWith(suffix) }
+                ?.mapTo(mutableSetOf()) { it.name.removeSuffix(suffix) } ?: emptySet()
+            "jar" -> {
+                val jarPath = url.path.substringBefore("!").removePrefix("file:")
+                java.util.jar.JarFile(jarPath).use { jar ->
+                    jar.entries().asSequence()
+                        .filter { it.name.startsWith("layout-fixtures/") && it.name.endsWith(suffix) }
+                        .mapTo(mutableSetOf()) { it.name.substringAfterLast("/").removeSuffix(suffix) }
+                }
+            }
+            else -> error("Unsupported layout-fixtures resource protocol: ${url.protocol}")
+        }
     }
 
     /**
@@ -481,17 +504,7 @@ class ElkGoldenLayoutTest {
      * gateways) that are neither boundaries nor containers.
      */
     private fun assertNoTopLevelShapeOverlap(doc: org.w3c.dom.Document, fixture: String, boundaryEventIds: Set<String>) {
-        val shapes = doc.getElementsByTagNameNS(DI_NS, "BPMNShape")
-        val headerOwners = (0 until shapes.length)
-            .map { shapes.item(it) as Element }
-            .filter { it.getAttribute("isHorizontal") == "true" }
-            .mapTo(mutableSetOf()) { it.getAttribute("bpmnElement") }
-
-        // Non-container: area < 40000 (200×200). Subprocesses (e.g. 300×200 = 60000) contain
-        // their children by design. Boundary events (area = 36×36 ≈ 1296) straddle their host by
-        // design — both are excluded. Participants/lanes are horizontal pool containers — excluded too.
-        val nonContainer = extractShapeRects(doc)
-            .filter { it.id !in boundaryEventIds && it.id !in headerOwners && it.w * it.h < CONTAINER_AREA }
+        val nonContainer = nonContainerObstacles(extractShapeRects(doc), headerOwnerIds(doc), boundaryEventIds)
 
         val overlaps = overlappingPairs(nonContainer)
         assertTrue(
