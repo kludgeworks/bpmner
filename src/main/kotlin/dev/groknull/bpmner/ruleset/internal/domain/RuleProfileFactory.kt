@@ -64,6 +64,14 @@ internal class RuleProfileFactory(
         val baseline: RuleProfile = when (profileName) {
             PROFILE_RECOMMENDED -> RuleProfile.EMPTY
             PROFILE_STRICT -> computeStrictBaseline(beanRegistryProvider.getObject())
+            PROFILE_STYLE_GUIDE -> RuleProfile(
+                severityOverrides = mapOf(
+                    "def-header-present" to RuleSeverity.WARNING,
+                    "def-notes-present" to RuleSeverity.WARNING,
+                    "def-legend-present" to RuleSeverity.WARNING,
+                ),
+                disabledRuleIds = emptySet(),
+            )
             else -> error("Unhandled profile '$profileName' — this is a bug; update the when() branch")
         }
 
@@ -167,8 +175,9 @@ internal class RuleProfileFactory(
     companion object {
         private const val PROFILE_RECOMMENDED = "recommended"
         private const val PROFILE_STRICT = "strict"
+        private const val PROFILE_STYLE_GUIDE = "style-guide"
 
         /** Built-in profiles. Adding a new profile requires a Kotlin `when` branch above. */
-        val AVAILABLE_PROFILES: Set<String> = setOf(PROFILE_RECOMMENDED, PROFILE_STRICT)
+        val AVAILABLE_PROFILES: Set<String> = setOf(PROFILE_RECOMMENDED, PROFILE_STRICT, PROFILE_STYLE_GUIDE)
     }
 }

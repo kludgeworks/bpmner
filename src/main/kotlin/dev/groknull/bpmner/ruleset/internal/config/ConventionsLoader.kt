@@ -57,6 +57,7 @@ internal class ConventionsLoader(private val config: BpmnRulesUriConfig) {
             elementTypeWords = pkl.get("elementTypeWords").to(),
             allowedAcronyms = pkl.get("allowedAcronyms").to(),
             discouragedBpmnTypes = pkl.get("discouragedBpmnTypes").to(),
+            styleGuideDiscouragedBpmnTypes = pkl.get("styleGuideDiscouragedBpmnTypes").to(),
             abbreviationReplacements = pkl.get("abbreviationReplacements").to<Map<String, String>>(),
             theme = pkl.get("theme").to<ThemeConfig>(),
         )

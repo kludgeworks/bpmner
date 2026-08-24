@@ -45,7 +45,7 @@ internal class GeneralRuleConfig {
         intent = "Keep models within the supported BPMN subset.",
         forModellers = "Use only the BPMN elements described in the supported BPMN subset and avoid unsupported exotic BPMN constructs.",
         forAI = "Detect discouraged BPMN types that are outside the supported subset and propose supported replacements.",
-        targetElements = lintConfig.discouragedBpmnTypes,
+        targetElements = lintConfig.discouragedBpmnTypesForProfile(),
         errorMessages = mapOf(
             "default" to "Element type is outside the supported BPMN subset",
         ),

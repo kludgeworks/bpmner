@@ -6,12 +6,16 @@ typealias Severity = "error" | "warning" | "info" | "off"
 /// `bpmner.pkl` amends this module and is evaluated once at startup for convention lists.
 profile: String = "recommended"
 
-severityOverrides: Mapping<String, Severity> = new {
-  ["act-verb-object-name"] = "off"
-  ["act-activity-label-capitalization"] = "off"
-  ["name-no-element-type-words"] = "off"
-  ["name-uncommon-abbreviations"] = "off"
-}
+severityOverrides: Mapping<String, Severity> =
+  if (profile == "recommended")
+    new {
+      ["act-verb-object-name"] = "off"
+      ["act-activity-label-capitalization"] = "off"
+      ["name-no-element-type-words"] = "off"
+      ["name-uncommon-abbreviations"] = "off"
+    }
+  else
+    new {}
 
 discouragedLeadingVerbs: List<String> = List("handle", "manage", "process", "perform", "do")
 
@@ -35,6 +39,32 @@ discouragedBpmnTypes: List<String> =
     "bpmn:DataStoreReference",
     "bpmn:DataInputAssociation",
     "bpmn:DataOutputAssociation",
+  )
+
+styleGuideDiscouragedBpmnTypes: List<String> =
+  List(
+    "bpmn:Choreography",
+    "bpmn:ChoreographyTask",
+    "bpmn:SubChoreography",
+    "bpmn:CallChoreography",
+    "bpmn:Conversation",
+    "bpmn:ConversationLink",
+    "bpmn:ConversationAssociation",
+    "bpmn:Transaction",
+    "bpmn:DataObject",
+    "bpmn:DataObjectReference",
+    "bpmn:DataStore",
+    "bpmn:DataStoreReference",
+    "bpmn:DataInputAssociation",
+    "bpmn:DataOutputAssociation",
+    "bpmn:UserTask",
+    "bpmn:ServiceTask",
+    "bpmn:ManualTask",
+    "bpmn:ScriptTask",
+    "bpmn:BusinessRuleTask",
+    "bpmn:SendTask",
+    "bpmn:ReceiveTask",
+    "bpmn:ComplexGateway",
   )
 
 abbreviationReplacements: Mapping<String, String> = new {
