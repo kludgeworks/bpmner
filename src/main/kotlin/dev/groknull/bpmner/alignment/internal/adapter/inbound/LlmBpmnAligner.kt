@@ -48,7 +48,8 @@ internal class LlmBpmnAligner(
         context: OperationContext,
     ): BpmnAlignmentReport {
         val request = ready.request
-        val summary = summarizer.summarize(bpmn.definition)
+        val contractDecisionIds = contract.contract.decisions.map { it.id }.toSet()
+        val summary = summarizer.summarize(bpmn.definition, contractDecisionIds)
         val promptRunner =
             config.alignmentValidator
                 .promptRunner(context)

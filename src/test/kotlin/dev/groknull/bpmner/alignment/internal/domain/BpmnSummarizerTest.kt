@@ -10,6 +10,7 @@ import dev.groknull.bpmner.bpmn.BpmnDefinition
 import dev.groknull.bpmner.bpmn.BpmnEdge
 import dev.groknull.bpmner.bpmn.BpmnEndEvent
 import dev.groknull.bpmner.bpmn.BpmnExclusiveGateway
+import dev.groknull.bpmner.bpmn.BpmnParallelGateway
 import dev.groknull.bpmner.bpmn.BpmnStartEvent
 import dev.groknull.bpmner.bpmn.BpmnSubProcess
 import dev.groknull.bpmner.bpmn.BpmnTimerEventDefinition
@@ -151,6 +152,59 @@ class BpmnSummarizerTest {
             summary.flows.any { it.sourceRef == "Task_B" && it.targetRef == "End_1" },
             "Task_B should be rewired directly to End_1",
         )
+    }
+
+    @Test
+    fun `keeps a parallel fork named by a contract decision but still splices its unlabeled join`() {
+        // A PARALLEL ContractDecision (ContractGatewayKind.PARALLEL) has unconditional branches
+        // and BpmnNodeNamingPolicy never requires a parallel gateway to carry a name — so without
+        // the contractDecisionIds override, the fork would be spliced out exactly like its join,
+        // erasing the one element the alignment contract most needs to see (regression test for
+        // the bug where an explicit parallel-split decision was reported MISSING because the
+        // summary showed direct Start->branch edges with no trace of the fork gateway).
+        val definition =
+            BpmnDefinition(
+                processId = "Process_1",
+                processName = "Parallel Process",
+                nodes =
+                listOf(
+                    BpmnStartEvent("Start_1", "Start"),
+                    BpmnParallelGateway("dec-fork", null),
+                    BpmnUserTask("Task_A", "A"),
+                    BpmnUserTask("Task_B", "B"),
+                    BpmnParallelGateway("Gateway_join_1", null),
+                    BpmnEndEvent("End_1", "End"),
+                ),
+                sequences =
+                listOf(
+                    BpmnEdge("Flow_Start", "Start_1", "dec-fork"),
+                    BpmnEdge("Flow_A", "dec-fork", "Task_A"),
+                    BpmnEdge("Flow_B", "dec-fork", "Task_B"),
+                    BpmnEdge("Flow_JA", "Task_A", "Gateway_join_1"),
+                    BpmnEdge("Flow_JB", "Task_B", "Gateway_join_1"),
+                    BpmnEdge("Flow_End", "Gateway_join_1", "End_1"),
+                ),
+            )
+
+        val summary = summarizer.summarize(definition, contractDecisionIds = setOf("dec-fork"))
+
+        // The contract-named fork stays in the element list...
+        assertTrue(summary.elements.any { it.id == "dec-fork" }, "contract-named parallel fork must be kept")
+        assertEquals(
+            listOf("Start_1", "dec-fork", "Task_A", "Task_B", "End_1"),
+            summary.elements.map { it.id },
+        )
+        // ...and its outgoing flows are preserved untouched (not spliced).
+        assertTrue(summary.flows.any { it.sourceRef == "dec-fork" && it.targetRef == "Task_A" })
+        assertTrue(summary.flows.any { it.sourceRef == "dec-fork" && it.targetRef == "Task_B" })
+
+        // The unlabeled join has no contract id of its own, so it is still spliced out.
+        assertTrue(
+            summary.flows.none { it.sourceRef == "Gateway_join_1" || it.targetRef == "Gateway_join_1" },
+            "uncontracted join gateway must still be spliced out",
+        )
+        assertTrue(summary.flows.any { it.sourceRef == "Task_A" && it.targetRef == "End_1" })
+        assertTrue(summary.flows.any { it.sourceRef == "Task_B" && it.targetRef == "End_1" })
     }
 
     @Test
