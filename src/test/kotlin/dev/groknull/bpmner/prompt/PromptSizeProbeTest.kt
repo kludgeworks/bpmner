@@ -37,6 +37,8 @@ class PromptSizeProbeTest {
         return listOf(
             probe("contractPrompt") { PromptFixtures.contract.render().length },
             probe("contractFullPayload") { PromptFixtures.contract.fullPayload().length },
+            probe("contractRetryPrompt") { PromptFixtures.contractRetry.render().length },
+            probe("contractRetryFullPayload") { PromptFixtures.contractRetry.fullPayload().length },
             probe("generationPrompt") { PromptFixtures.generation.render().length },
             probe("generationFullPayload") { PromptFixtures.generation.fullPayload().length },
             probe("alignmentPrompt") { PromptFixtures.alignment.render().length },

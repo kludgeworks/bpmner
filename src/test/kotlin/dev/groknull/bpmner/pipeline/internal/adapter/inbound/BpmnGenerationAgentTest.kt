@@ -55,6 +55,7 @@ class BpmnGenerationAgentTest {
             repairer = BpmnRepairer { _, _, _, _, _ -> validated },
             layoutPort = layoutPort,
             xsdValidationPort = mock(BpmnXsdValidationPort::class.java),
+            xmlParser = { minimalDefinition() },
             aligner = mock(BpmnAligner::class.java),
             eventPublisher = mock(ApplicationEventPublisher::class.java),
         )

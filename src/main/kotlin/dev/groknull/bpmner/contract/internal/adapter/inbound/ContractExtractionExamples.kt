@@ -9,14 +9,21 @@ import dev.groknull.bpmner.contract.ContractGatewayKind
 
 /**
  * Typed few-shot examples attached to the contract-extraction call via
- * `Creating<FlatProcessContract>.withExample(...)`. They teach the five discrimination
- * boundaries that GPT-4.1 does not reliably reproduce from keyword descriptions alone:
+ * `Creating<FlatProcessContract>.withExample(...)`. They teach the discrimination boundaries
+ * and topology idioms that GPT-4.1 does not reliably reproduce from keyword descriptions alone:
  *
  * 1. MESSAGE end state (process ends by sending a message — NOT a NORMAL end)
- * 2. ESCALATION end state (process ends by escalating — NOT a NORMAL end)
- * 3. SEND activity (fire-and-forget outbound — NOT a SERVICE task)
- * 4. Intermediate throw (mid-flow send that does NOT end the process)
- * 5. SEND activity + NORMAL end (counter-example: in-flow send followed by ordinary completion)
+ * 2. SEND activity (fire-and-forget outbound — NOT a SERVICE task)
+ * 3. Intermediate throw (mid-flow send that does NOT end the process)
+ * 4. SEND activity + NORMAL end (counter-example: in-flow send followed by ordinary completion)
+ * 5. INCLUSIVE gateway (any combination of optional branches may fire)
+ * 6. BUSINESS_RULE activity (decision table / rules engine — NOT a SERVICE task)
+ * 7. Embedded subprocess, including how its `flows` cross the group boundary
+ * 8. PARALLEL fork, including that `start` keeps exactly one outgoing edge
+ *
+ * Examples 7 and 8 carry a complete `flows` list deliberately: the topology rules they
+ * demonstrate (V11 boundary crossing, and start-arity on a concurrent fork) are the ones
+ * extraction most often violates, and a flow-less example teaches none of them.
  *
  * As typed values the compiler keeps them structurally valid as the schema evolves.
  * The framework renders them into the prompt in the same JSON shape the LLM must emit.
@@ -48,6 +55,10 @@ internal object ContractExtractionExamples {
     const val SUB_PROCESS_LABEL: String =
         "Embedded subprocess: a named group of activities handled as one composite step —" +
             " list its member ids in a subProcesses entry; members stay in the activities array"
+
+    const val PARALLEL_GATEWAY_LABEL: String =
+        "PARALLEL fork: concurrent strands that all run and then reconverge — one PARALLEL decision" +
+            " with UNCONDITIONAL branches; `start` still has exactly ONE outgoing edge, into the decision"
 
     // ──────────────────────────────────────────────────────────────────────────
     // Shared node ids
@@ -435,6 +446,104 @@ internal object ContractExtractionExamples {
                     kind = FlatEndStateKind.NORMAL,
                     sourceIds = listOf("src-1"),
                 ),
+            ),
+            // The boundary rule this example exists to teach, shown rather than stated: the outer
+            // flow enters and leaves through the subprocess's OWN id, and the only edges naming a
+            // member are member-to-member. An edge with exactly one endpoint inside the group is
+            // what V11 (FLOW_CROSSES_SUBPROCESS_BOUNDARY) rejects.
+            flows = listOf(
+                FlatContractFlow(from = "start", to = SUB_ASSESS),
+                FlatContractFlow(from = ACT_VALIDATE_DOCS, to = ACT_ESTIMATE),
+                FlatContractFlow(from = ACT_ESTIMATE, to = ACT_DECIDE_PAYOUT),
+                FlatContractFlow(from = SUB_ASSESS, to = ACT_PAY_CLAIM),
+                FlatContractFlow(from = ACT_PAY_CLAIM, to = END_NORMAL),
+            ),
+        )
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // Example 8 — PARALLEL fork
+    //
+    // Prose: "When the order is released, the warehouse packs the goods while the office
+    //          books the courier. Once both are done, the shipment is dispatched."
+    // Two strands that run at the same time → ONE PARALLEL decision with UNCONDITIONAL
+    // branches. Note `start` keeps exactly one outgoing edge (into the decision) — wiring
+    // start directly to both strands is the single most common way this is got wrong.
+    // The strands reconverge implicitly by flowing into the same downstream activity; the
+    // synchronising join gateway is synthesised later, not stated in the contract.
+    // ──────────────────────────────────────────────────────────────────────────
+
+    private const val DEC_PREPARE = "dec-prepare-shipment"
+    private const val ACT_PACK_GOODS = "act-pack-goods"
+    private const val ACT_BOOK_COURIER = "act-book-courier"
+    private const val ACT_DISPATCH = "act-dispatch-shipment"
+
+    val parallelGatewayExample: FlatProcessContract =
+        FlatProcessContract(
+            id = "contract-shipment-preparation",
+            processName = "Shipment preparation process",
+            summary = "Process that packs goods and books a courier concurrently, then dispatches the shipment.",
+            start = FlatContractStart(
+                trigger = FlatContractTrigger(
+                    type = FlatTriggerKind.NONE,
+                    description = "Order released for shipping",
+                ),
+                sourceIds = listOf("src-1"),
+            ),
+            activities = listOf(
+                FlatContractActivity(
+                    id = ACT_PACK_GOODS,
+                    name = "Pack goods",
+                    kind = FlatActivityKind.USER,
+                    sourceIds = listOf("src-1"),
+                ),
+                FlatContractActivity(
+                    id = ACT_BOOK_COURIER,
+                    name = "Book courier",
+                    kind = FlatActivityKind.USER,
+                    sourceIds = listOf("src-1"),
+                ),
+                FlatContractActivity(
+                    id = ACT_DISPATCH,
+                    name = "Dispatch shipment",
+                    kind = FlatActivityKind.USER,
+                    sourceIds = listOf("src-1"),
+                ),
+            ),
+            decisions = listOf(
+                FlatContractDecision(
+                    id = DEC_PREPARE,
+                    question = "Run warehouse and office preparation in parallel",
+                    kind = ContractGatewayKind.PARALLEL,
+                    branches = listOf(
+                        FlatContractBranch(
+                            id = "br-warehouse",
+                            label = "Warehouse preparation",
+                            kind = FlatBranchKind.UNCONDITIONAL,
+                        ),
+                        FlatContractBranch(
+                            id = "br-office",
+                            label = "Office preparation",
+                            kind = FlatBranchKind.UNCONDITIONAL,
+                        ),
+                    ),
+                    sourceIds = listOf("src-1"),
+                ),
+            ),
+            endStates = listOf(
+                FlatContractEndState(
+                    id = END_NORMAL,
+                    name = "Shipment dispatched",
+                    kind = FlatEndStateKind.NORMAL,
+                    sourceIds = listOf("src-1"),
+                ),
+            ),
+            flows = listOf(
+                FlatContractFlow(from = "start", to = DEC_PREPARE),
+                FlatContractFlow(from = DEC_PREPARE, to = ACT_PACK_GOODS, branchId = "br-warehouse"),
+                FlatContractFlow(from = DEC_PREPARE, to = ACT_BOOK_COURIER, branchId = "br-office"),
+                FlatContractFlow(from = ACT_PACK_GOODS, to = ACT_DISPATCH),
+                FlatContractFlow(from = ACT_BOOK_COURIER, to = ACT_DISPATCH),
+                FlatContractFlow(from = ACT_DISPATCH, to = END_NORMAL),
             ),
         )
 }

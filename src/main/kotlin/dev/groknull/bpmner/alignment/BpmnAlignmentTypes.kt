@@ -8,7 +8,16 @@ package dev.groknull.bpmner.alignment
 import com.fasterxml.jackson.annotation.JsonClassDescription
 import com.fasterxml.jackson.annotation.JsonPropertyDescription
 import dev.groknull.bpmner.alignment.AlignmentClassification
+import dev.groknull.bpmner.bpmn.BpmnAssociation
+import dev.groknull.bpmner.bpmn.BpmnErrorRef
+import dev.groknull.bpmner.bpmn.BpmnEscalationRef
 import dev.groknull.bpmner.bpmn.BpmnEventDefinition
+import dev.groknull.bpmner.bpmn.BpmnLane
+import dev.groknull.bpmner.bpmn.BpmnMessageFlow
+import dev.groknull.bpmner.bpmn.BpmnMessageRef
+import dev.groknull.bpmner.bpmn.BpmnParticipant
+import dev.groknull.bpmner.bpmn.BpmnSignalRef
+import dev.groknull.bpmner.bpmn.BpmnTextAnnotation
 import dev.groknull.bpmner.bpmn.MultiInstanceLoopCharacteristics
 import dev.groknull.bpmner.bpmn.StandardLoopCharacteristics
 import jakarta.validation.Valid
@@ -39,7 +48,56 @@ data class BpmnDefinitionSummary(
     val flows: List<BpmnSummaryFlow> = emptyList(),
     @get:JsonPropertyDescription("IDs of elements that are unreachable from start events")
     val unreachableElementIds: List<String> = emptyList(),
-)
+    @get:JsonPropertyDescription("Pools: the white-box process pool and any black-box external participants")
+    val participants: List<BpmnParticipant> = emptyList(),
+    @get:JsonPropertyDescription("Lanes assigning flow nodes to the actor that performs them")
+    val lanes: List<BpmnLane> = emptyList(),
+    @get:JsonPropertyDescription("Message flows crossing a pool boundary — the process's external interactions")
+    val messageFlows: List<BpmnMessageFlow> = emptyList(),
+    @get:JsonPropertyDescription("Text annotations, e.g. the item set documented on a multi-instance task")
+    val annotations: List<BpmnTextAnnotation> = emptyList(),
+    @get:JsonPropertyDescription("Associations linking annotations to the elements they document")
+    val associations: List<BpmnAssociation> = emptyList(),
+    @get:JsonPropertyDescription("Message catalogue: names referenced by message events and message flows")
+    val messages: List<BpmnMessageRef> = emptyList(),
+    @get:JsonPropertyDescription("Error catalogue: codes referenced by error events")
+    val errors: List<BpmnErrorRef> = emptyList(),
+    @get:JsonPropertyDescription("Signal catalogue: names referenced by signal events")
+    val signals: List<BpmnSignalRef> = emptyList(),
+    @get:JsonPropertyDescription("Escalation catalogue: codes referenced by escalation events")
+    val escalations: List<BpmnEscalationRef> = emptyList(),
+) {
+    companion object {
+        /**
+         * `BpmnDefinition` fields deliberately NOT carried into the summary, each with its reason.
+         *
+         * The summary is the only view of the generated diagram the alignment model ever sees, so a
+         * field missing from it is a field the check cannot possibly flag. It previously carried 4 of
+         * `BpmnDefinition`'s 19 fields — lanes, pools and message flows among the omissions — which
+         * meant a diagram that dropped every actor assignment and every external interaction would
+         * still be reported ALIGNED — see issue #744.
+         *
+         * Omission is therefore a decision that must be recorded, not an accident of which fields
+         * someone happened to map. `BpmnSummarizerCoverageTest` asserts this map plus the carried
+         * fields exhaustively partition `BpmnDefinition`, so a newly added field cannot silently
+         * bypass the gate: it either shows up in the summary or it is declared here with a reason.
+         */
+        val OMITTED_DEFINITION_FIELDS: Map<String, String> = mapOf(
+            "groups" to
+                "purely visual grouping with no ProcessContract counterpart, so nothing to align against",
+            "dataObjectReferences" to
+                "ProcessContract models no data artifacts, so these cannot be compared to it",
+            "dataStoreReferences" to
+                "ProcessContract models no data artifacts, so these cannot be compared to it",
+            "dataInputAssociations" to
+                "ProcessContract models no data artifacts, so these cannot be compared to it",
+            "dataOutputAssociations" to
+                "ProcessContract models no data artifacts, so these cannot be compared to it",
+            "diagramCount" to
+                "diagram-interchange bookkeeping; carries no semantic content to align",
+        )
+    }
+}
 
 @JsonClassDescription("Summary of a single generated BPMN element")
 data class BpmnSummaryElement(

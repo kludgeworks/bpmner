@@ -81,6 +81,21 @@ class BpmnSummarizer {
             unreachableElementIds =
             unreachableSemanticNodes.map { it.id } +
                 splicedFlows.filter { it.id !in visited.flows }.map { it.id },
+            // Carried verbatim rather than re-summarised: these are already compact, and the
+            // alignment model needs them to check the contract's actors (lanes), its external
+            // parties (participants), its message exchanges (messageFlows) and its documented
+            // iteration/loop markers (annotations + associations). Omitting them made those parts
+            // of the contract structurally unverifiable — see issue #744. Every field not carried is
+            // declared, with a reason, in BpmnDefinitionSummary.OMITTED_DEFINITION_FIELDS.
+            participants = definition.participants,
+            lanes = definition.lanes,
+            messageFlows = definition.messageFlows,
+            annotations = definition.annotations,
+            associations = definition.associations,
+            messages = definition.messages,
+            errors = definition.errors,
+            signals = definition.signals,
+            escalations = definition.escalations,
         )
     }
 

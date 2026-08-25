@@ -548,8 +548,9 @@ public data class FlatContractDecision(
             "keywords: 'any of the following can fire', 'either, both, or neither', 'each evaluated " +
             "independently'; use for independent optional add-ons that may apply singly, together, " +
             "or not at all. PARALLEL = all branches activate concurrently regardless of conditions " +
-            "and reconverge at a join — keywords: 'in parallel', 'simultaneously', 'all of the " +
-            "following must complete'. EVENT_BASED = the flow waits for several events and the " +
+            "and reconverge at a join — keywords: 'in parallel', 'simultaneously', 'concurrently', " +
+            "'at the same time', 'splits into two strands/tracks', 'while X happens, Y happens', " +
+            "'all of the following must complete'. EVENT_BASED = the flow waits for several events and the " +
             "first to fire selects its branch — keywords: 'whichever arrives first', 'if a " +
             "confirmation arrives, or if nothing within N minutes'; its branches are EVENT_GATEWAY " +
             "branches naming the awaited event rather than a condition. " +

@@ -31,10 +31,12 @@ import dev.groknull.bpmner.authoring.BpmnRequestDraft
 import dev.groknull.bpmner.authoring.BpmnRequestDrafter
 import dev.groknull.bpmner.authoring.BpmnRequestResolutionPort
 import dev.groknull.bpmner.authoring.BpmnResult
+import dev.groknull.bpmner.authoring.BpmnXmlParser
 import dev.groknull.bpmner.authoring.ValidatedOutline
 import dev.groknull.bpmner.bpmn.BpmnRequest
 import dev.groknull.bpmner.bpmn.LaidOutProcessGraph
 import dev.groknull.bpmner.bpmn.RenderedBpmn
+import dev.groknull.bpmner.bpmn.semanticDivergenceFrom
 import dev.groknull.bpmner.conformance.BpmnXsdValidationPort
 import dev.groknull.bpmner.conformance.FinalValidatedBpmnXml
 import dev.groknull.bpmner.conformance.ValidatedBpmnXml
@@ -52,10 +54,17 @@ import dev.groknull.bpmner.readiness.ProcessInputAssessment
 import dev.groknull.bpmner.readiness.ReadinessVerdict
 import dev.groknull.bpmner.readiness.ReadyBpmnContext
 import dev.groknull.bpmner.repair.BpmnRepairer
+import org.slf4j.LoggerFactory
 import org.springframework.context.ApplicationEventPublisher
 import java.io.File
 
 @Agent(description = "Single idiomatic agent for happy-path BPMN generation")
+// This class is the pipeline's single orchestrator (ADR-001): every stage is one collaborator, so
+// the constructor's width tracks the number of stages rather than any tangling of responsibility.
+// Bundling them behind a facade would hide the stage list, which is the one thing a reader comes
+// here to see. `xmlParser` is the eleventh, added so `layout` can verify it returned the process it
+// was given (issue #746).
+@Suppress("LongParameterList")
 internal class BpmnGenerationAgent(
     private val requestDrafter: BpmnRequestDrafter,
     private val requestResolver: BpmnRequestResolutionPort,
@@ -65,9 +74,12 @@ internal class BpmnGenerationAgent(
     private val repairer: BpmnRepairer,
     private val layoutPort: BpmnLayoutPort,
     private val xsdValidationPort: BpmnXsdValidationPort,
+    private val xmlParser: BpmnXmlParser,
     private val aligner: BpmnAligner,
     private val eventPublisher: ApplicationEventPublisher,
 ) {
+    private val logger = LoggerFactory.getLogger(BpmnGenerationAgent::class.java)
+
     @Action
     fun draft(userInput: UserInput, ctx: OperationContext): BpmnRequestDraft {
         return requestDrafter.draftRequest(userInput, ctx)
@@ -163,11 +175,46 @@ internal class BpmnGenerationAgent(
             // Layout is deterministic, so retrying cannot help; report the reason and stop.
             return LayoutFailed(ready.request, "Auto-layout produced structurally invalid BPMN: $details", layouted.xml)
         }
+        // Layout replaces the XML wholesale but the definition beside it is carried through
+        // untouched, so the two can silently disagree — and it is the definition that alignment
+        // judges while it is the XML the user receives. XSD above proves the result is well formed,
+        // not that it is still the same process. Parse it back and hold the pair to that (#746).
+        layoutDivergences(layouted)?.let { divergences ->
+            return LayoutFailed(ready.request, "Auto-layout altered the process: $divergences", layouted.xml)
+        }
         // Publish the laid-out (DI-bearing) XML so telemetry can forward a LAYOUT_COMPLETE
         // snapshot over the SSE channel, enabling the web client to switch from its client-side
         // preview layout to the canonical server geometry (ARCH ADR-ss-007).
         eventPublisher.publishEvent(BpmnLayoutCompletedEvent(layouted.xml, processId = AgentProcess.get()?.id))
         return LayoutReady(FinalValidatedBpmnXml(definition = layouted.definition, xml = layouted.xml))
+    }
+
+    /**
+     * Divergences between the definition carried past layout and the laid-out XML, or null when the
+     * two agree — or when the comparison could not be made at all.
+     *
+     * Failing to *parse* the result is deliberately not treated as a layout failure. The check is a
+     * verification aid; "we could not verify this" is a weaker statement than "this is wrong", and
+     * XSD above has already established the XML is well formed. The parser is newly promoted from
+     * test-only use here, so letting its limitations terminate an otherwise-good run would trade a
+     * silent correctness gap for a loud availability one. It is logged instead, so the frequency is
+     * observable rather than invisible.
+     */
+    @Suppress("TooGenericExceptionCaught") // the parser's failure modes are not a typed contract
+    private fun layoutDivergences(layouted: LayoutedBpmnXml): String? {
+        val reparsed = try {
+            xmlParser.parse(layouted.xml)
+        } catch (e: RuntimeException) {
+            logger.warn(
+                "Could not parse laid-out BPMN to verify layout preserved the process; " +
+                    "continuing unverified: {}",
+                e.message ?: e.javaClass.simpleName,
+            )
+            return null
+        }
+        return layouted.definition.semanticDivergenceFrom(reparsed)
+            .takeIf { it.isNotEmpty() }
+            ?.joinToString("; ")
     }
 
     @Action(actionRetryPolicy = ActionRetryPolicy.FIRE_ONCE)

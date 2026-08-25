@@ -46,6 +46,8 @@ private const val DOC =
 private val MEASUREMENTS: Map<String, () -> Int> = linkedMapOf(
     "contractPrompt" to { PromptFixtures.contract.render().length },
     "contractFullPayload" to { PromptFixtures.contract.fullPayload().length },
+    "contractRetryPrompt" to { PromptFixtures.contractRetry.render().length },
+    "contractRetryFullPayload" to { PromptFixtures.contractRetry.fullPayload().length },
     "generationPrompt" to { PromptFixtures.generation.render().length },
     "generationFullPayload" to { PromptFixtures.generation.fullPayload().length },
     "alignmentPrompt" to { PromptFixtures.alignment.render().length },

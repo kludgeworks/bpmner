@@ -20,13 +20,13 @@ import dev.groknull.bpmner.contract.ContractIssueSeverity
 import dev.groknull.bpmner.contract.ContractValidationReport
 import dev.groknull.bpmner.contract.ProcessContract
 import dev.groknull.bpmner.contract.ProcessContractExtractor
-import dev.groknull.bpmner.contract.ProcessContractMarkdownRenderer
 import dev.groknull.bpmner.contract.ValidatedProcessContract
 import dev.groknull.bpmner.contract.format
 import dev.groknull.bpmner.contract.internal.BpmnContractConfig
 import dev.groknull.bpmner.contract.internal.BpmnContractThresholdsConfig
 import dev.groknull.bpmner.contract.internal.domain.BpmnContractValidator
 import dev.groknull.bpmner.contract.internal.domain.ContractConservation
+import dev.groknull.bpmner.llm.PromptJsonRenderer
 import dev.groknull.bpmner.llm.publishOnInvalidLlmReturn
 import dev.groknull.bpmner.readiness.ProcessInputAssessment
 import dev.groknull.bpmner.readiness.ReadyBpmnContext
@@ -41,7 +41,7 @@ internal class LlmProcessContractExtractor(
     private val config: BpmnContractConfig,
     private val thresholds: BpmnContractThresholdsConfig,
     private val validator: BpmnContractValidator,
-    private val markdownRenderer: ProcessContractMarkdownRenderer,
+    private val jsonRenderer: PromptJsonRenderer,
     private val eventPublisher: ApplicationEventPublisher,
 ) : ProcessContractExtractor {
     private val logger = LoggerFactory.getLogger(LlmProcessContractExtractor::class.java)
@@ -74,31 +74,26 @@ internal class LlmProcessContractExtractor(
                 )
             }
 
-            logger.info("Contract extracted:\n{}", markdownRenderer.render(contract))
+            logger.info("Contract extracted:\n{}", contract)
             val report = validator.validate(contract)
             val validated = ValidatedProcessContract.of(contract, report)
-            if (validated != null) {
-                val drops = detectConservationDrops(contract, previousContract, previousReport)
-                if (drops.isEmpty()) {
-                    eventPublisher.publishEvent(
-                        BpmnContractExtractedEvent(validated, processId = AgentProcess.get()?.id),
-                    )
-                    return validated
-                }
-                previousIssues = conservationDropFeedback(attempt, drops)
-                previousContract = contract
-                previousReport = report
-                continue
+            // Conservation is checked on BOTH outcomes. It used to sit inside the success branch,
+            // so a retry that regressed the contract while still failing validation went entirely
+            // unreported — which is precisely when regressions happen, because a failing attempt is
+            // the only kind that gets retried at all — see issue #745.
+            val drops = detectConservationDrops(contract, previousContract, previousReport)
+
+            if (validated != null && drops.isEmpty()) {
+                eventPublisher.publishEvent(
+                    BpmnContractExtractedEvent(validated, processId = AgentProcess.get()?.id),
+                )
+                return validated
             }
-            val errorCount = report.issues.count { it.severity == ContractIssueSeverity.ERROR }
-            logger.warn(
-                "Contract extraction attempt {}/{} found {} error(s): {}",
-                attempt,
-                thresholds.maxExtractionAttempts,
-                errorCount,
-                report.issues.joinToString { it.format() },
-            )
-            previousIssues = report.issues.joinToString(System.lineSeparator()) { "- ${it.format()}" }
+            previousIssues = if (validated != null) {
+                conservationDropFeedback(attempt, drops)
+            } else {
+                validationFeedback(attempt, report, drops)
+            }
             previousContract = contract
             previousReport = report
         }
@@ -125,6 +120,30 @@ internal class LlmProcessContractExtractor(
             next = contract,
         )
     }.orEmpty()
+
+    /**
+     * Feedback for a rejected attempt: the validation errors that drove the rejection, plus any
+     * content this attempt dropped relative to the previous one. Both matter — correcting the named
+     * errors while silently deleting unrelated elements is a regression, not a fix, and without the
+     * second half the model is never told it happened.
+     */
+    private fun validationFeedback(
+        attempt: Int,
+        report: ContractValidationReport,
+        drops: List<String>,
+    ): String {
+        val errorCount = report.issues.count { it.severity == ContractIssueSeverity.ERROR }
+        logger.warn(
+            "Contract extraction attempt {}/{} found {} error(s): {}",
+            attempt,
+            thresholds.maxExtractionAttempts,
+            errorCount,
+            report.issues.joinToString { it.format() },
+        )
+        val issues = report.issues.joinToString(System.lineSeparator()) { "- ${it.format()}" }
+        if (drops.isEmpty()) return issues
+        return issues + System.lineSeparator() + conservationDropFeedback(attempt, drops)
+    }
 
     private fun conservationDropFeedback(
         attempt: Int,
@@ -180,6 +199,10 @@ internal class LlmProcessContractExtractor(
                     ContractExtractionExamples.businessRuleTaskExample,
                 )
                 .withExample(ContractExtractionExamples.SUB_PROCESS_LABEL, ContractExtractionExamples.subProcessExample)
+                .withExample(
+                    ContractExtractionExamples.PARALLEL_GATEWAY_LABEL,
+                    ContractExtractionExamples.parallelGatewayExample,
+                )
                 .fromTemplate(
                     "bpmner/extract_contract",
                     templateModel(request, assessment, previousIssues, previousContract),
@@ -205,7 +228,11 @@ internal class LlmProcessContractExtractor(
     ): Map<String, Any> = mapOf(
         "maxAssumptions" to thresholds.maxAssumptions,
         "previousIssues" to (previousIssues ?: ""),
-        "previousContract" to (previousContract?.let(markdownRenderer::render) ?: ""),
+        // Derived, lossless projection. This previously used a hand-written markdown renderer that
+        // dropped the start trigger's type and payload, rendered INCLUSIVE identically to EXCLUSIVE,
+        // and omitted boundary-event labels — so the prompt's "preserve this contract exactly" was
+        // being asked of an artifact that had already lost fields — see issue #745.
+        "previousContract" to (previousContract?.let(jsonRenderer::render) ?: ""),
         "rationale" to assessment.rationale,
         "missingAreas" to assessment.missingAreas.map { it.name },
         "evidence" to assessment.evidence.map {
