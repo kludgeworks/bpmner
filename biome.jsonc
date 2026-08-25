@@ -11,8 +11,8 @@
 			"!layout/src/generated",
 			"!web/src/static/bpmn-js.css",
 			"!web/src/static/diagram-js.css",
-			"!web/src/static/bpmn-font/**",
-			"!web/src/static/fonts/**",
+			"!web/src/static/bpmn-font",
+			"!web/src/static/fonts",
 			"!src/main/resources/preview/preview-template.html"
 		]
 	},
