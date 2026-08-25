@@ -50,7 +50,7 @@ class ShapeStyle {
 }
 
 class ThemeConfig {
-  primaryColor: String = "#2b6cb0"
+  primaryColor: String = "#cf3a22"
   secondaryColor: String = "#16181d"
   backgroundColor: String = "#ffffff"
   // fontName: String?

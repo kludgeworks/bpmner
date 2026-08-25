@@ -87,5 +87,5 @@ fun defaultBpmnerLintConfig(): BpmnerLintConfig = BpmnerLintConfig(
         "bpmn:ComplexGateway",
     ),
     mutableMapOf(),
-    BpmnerLintConfig.ThemeConfig("#2b6cb0", "#16181d", "#ffffff", mutableMapOf()),
+    BpmnerLintConfig.ThemeConfig("#cf3a22", "#16181d", "#ffffff", mutableMapOf()),
 )
