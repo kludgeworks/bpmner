@@ -11,7 +11,7 @@ import dev.groknull.bpmner.bpmn.RepairMetadata
 import dev.groknull.bpmner.bpmn.RepairSafety
 import dev.groknull.bpmner.bpmn.RuleCategory
 import dev.groknull.bpmner.bpmn.RuleSeverity
-import dev.groknull.bpmner.ruleset.BpmnerLintConfig
+import dev.groknull.bpmner.pkl.BpmnerLintConfig
 import dev.groknull.bpmner.ruleset.internal.domain.nlp.BpmnNlp
 import dev.groknull.bpmner.ruleset.internal.domain.primitiveRule
 import dev.groknull.bpmner.ruleset.internal.domain.primitives.PropertyPatternCheckConfig

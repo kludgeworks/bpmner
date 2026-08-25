@@ -20,7 +20,6 @@ bazel_dep(name = "rules_nodejs", version = "6.7.4")
 bazel_dep(name = "platforms", version = "1.0.0")
 bazel_dep(name = "rules_shell", version = "0.8.0")
 bazel_dep(name = "contrib_rules_jvm", version = "0.33.0")
-bazel_dep(name = "rules_pkl", version = "0.15.0")
 bazel_dep(name = "rules_detekt", version = "0.8.1.13")
 bazel_dep(name = "rules_pmd", version = "0.4.0")
 bazel_dep(name = "toolchains_buildbuddy", version = "0.0.4")
@@ -100,7 +99,6 @@ JMOLECULES_INTEGRATIONS_VERSION = "0.33.0"
 # jmolecules-archunit must match the version bundled by spring-modulith-core (2.1.0 bundles 0.33.0).
 JMOLECULES_ARCHUNIT_VERSION = "0.33.0"
 
-# Must match the Pkl CLI version shipped by rules_pkl (see rules_pkl/pkl/private/constants.bzl).
 PKL_VERSION = "0.31.0"
 
 # --- Maven Dependencies ---
@@ -155,7 +153,8 @@ maven.install(
         "org.assertj:assertj-core:3.26.3",
         "org.xmlunit:xmlunit-assertj:2.10.0",
         "org.pkl-lang:pkl-config-java:" + PKL_VERSION,
-        "org.pkl-lang:pkl-config-kotlin:" + PKL_VERSION,
+        "org.pkl-lang:pkl-codegen-java:" + PKL_VERSION,
+        "org.pkl-lang:pkl-spring:0.18.0",
         # OpenNLP for Phase 3 (#218): SimpleTokenizer + DictionaryLemmatizer. POS-tagging is
         # currently morphological (no pretrained POSModel) — keeps the build hermetic. A
         # POSModel-backed tagger can swap in behind the BpmnNlp interface later.

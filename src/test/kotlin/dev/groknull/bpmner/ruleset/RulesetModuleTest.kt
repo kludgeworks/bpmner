@@ -7,6 +7,7 @@ package dev.groknull.bpmner.ruleset
 
 import dev.groknull.bpmner.EmbabelShellTestConfiguration
 import dev.groknull.bpmner.bpmn.RuleSeverity
+import dev.groknull.bpmner.pkl.BpmnerLintConfig
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Test
@@ -29,8 +30,8 @@ import org.springframework.test.context.TestPropertySource
  * on `bpmnerLintConfig` prevents double registration. No stub required. (ADR-007 Decision 1.1, S4)
  * API keys are stubbed so no live LLM call is made at startup.
  */
-@ApplicationModuleTest(mode = BootstrapMode.DIRECT_DEPENDENCIES, verifyAutomatically = false)
-@Import(EmbabelShellTestConfiguration::class, RulesetModuleTest.StyleGuideConfig::class)
+@ApplicationModuleTest(mode = BootstrapMode.ALL_DEPENDENCIES, verifyAutomatically = false)
+@Import(EmbabelShellTestConfiguration::class, RulesetModuleTest.Config::class)
 @TestPropertySource(
     properties = [
         "embabel.agent.platform.models.anthropic.api-key=test-key",
@@ -53,10 +54,10 @@ class RulesetModuleTest {
     }
 
     @Test
-    fun `booting with style-guide profile activates exact expected overrides and enables naming rules`() {
-        assertThat(ruleProfile.severityOverrides).containsEntry("def-header-present", RuleSeverity.WARNING)
-        assertThat(ruleProfile.severityOverrides).containsEntry("def-notes-present", RuleSeverity.WARNING)
-        assertThat(ruleProfile.severityOverrides).containsEntry("def-legend-present", RuleSeverity.WARNING)
+    fun `booting with default styleguide activates naming and metadata rules at error severity`() {
+        assertThat(ruleProfile.severityOverrides).containsEntry("def-header-present", RuleSeverity.ERROR)
+        assertThat(ruleProfile.severityOverrides).containsEntry("def-notes-present", RuleSeverity.ERROR)
+        assertThat(ruleProfile.severityOverrides).containsEntry("def-legend-present", RuleSeverity.ERROR)
 
         assertThat(ruleProfile.disabledRuleIds).doesNotContain(
             "act-verb-object-name",
@@ -67,11 +68,9 @@ class RulesetModuleTest {
     }
 
     @TestConfiguration
-    internal class StyleGuideConfig {
+    internal class Config {
         @Bean
         @Primary
-        fun testBpmnerLintConfig(): BpmnerLintConfig {
-            return BpmnerLintConfig(profile = "style-guide")
-        }
+        fun testBpmnerLintConfig(): BpmnerLintConfig = defaultBpmnerLintConfig()
     }
 }

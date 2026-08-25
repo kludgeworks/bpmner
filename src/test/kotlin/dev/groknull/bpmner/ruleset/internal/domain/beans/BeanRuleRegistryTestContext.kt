@@ -5,7 +5,8 @@
 
 package dev.groknull.bpmner.ruleset.internal.domain.beans
 
-import dev.groknull.bpmner.ruleset.BpmnerLintConfig
+import dev.groknull.bpmner.pkl.BpmnerLintConfig
+import dev.groknull.bpmner.ruleset.defaultBpmnerLintConfig
 import dev.groknull.bpmner.ruleset.internal.config.BpmnNlpConfig
 import dev.groknull.bpmner.ruleset.internal.domain.compiled.DanglingEdgeRule
 import dev.groknull.bpmner.ruleset.internal.domain.compiled.DefaultFlowRule
@@ -31,7 +32,7 @@ import org.springframework.context.annotation.AnnotationConfigApplicationContext
  * `use {}` or an `@AfterAll` teardown).
  */
 internal fun bpmnerKotlinRuleContext(
-    lintConfig: BpmnerLintConfig = BpmnerLintConfig(),
+    lintConfig: BpmnerLintConfig = defaultBpmnerLintConfig(),
 ): AnnotationConfigApplicationContext = AnnotationConfigApplicationContext().apply {
     beanFactory.registerSingleton("bpmnerLintConfig", lintConfig)
     register(

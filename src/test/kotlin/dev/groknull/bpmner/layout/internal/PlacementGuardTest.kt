@@ -32,7 +32,7 @@ class PlacementGuardTest {
         @JvmStatic
         @BeforeAll
         fun registerMetadata() {
-            ElkBpmnLayouter().registerElkLayoutAlgorithm()
+            ElkBpmnLayouter(dev.groknull.bpmner.ruleset.defaultBpmnerLintConfig()).registerElkLayoutAlgorithm()
         }
 
         private val DECLARED_OWNERS = setOf(

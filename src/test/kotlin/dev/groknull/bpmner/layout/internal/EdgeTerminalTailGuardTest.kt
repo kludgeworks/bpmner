@@ -23,7 +23,9 @@ import kotlin.test.assertTrue
  */
 class EdgeTerminalTailGuardTest {
 
-    private val layouter = ElkBpmnLayouter().apply { registerElkLayoutAlgorithm() }
+    private val layouter =
+        ElkBpmnLayouter(dev.groknull.bpmner.ruleset.defaultBpmnerLintConfig())
+            .apply { registerElkLayoutAlgorithm() }
 
     companion object {
         @JvmStatic

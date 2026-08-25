@@ -32,7 +32,7 @@ class LaneInLayerConstraintProbeTest {
     fun `raw ELK lane compounds overlap instead of stacking in BPMN's declared order`() {
         val xml = load("layout-fixtures/collab-lanes.bpmn")
         val model = Bpmn.readModelFromStream(ByteArrayInputStream(xml.toByteArray(Charsets.UTF_8)))
-        ElkBpmnLayouter().registerElkLayoutAlgorithm()
+        ElkBpmnLayouter(dev.groknull.bpmner.ruleset.defaultBpmnerLintConfig()).registerElkLayoutAlgorithm()
         val skeleton = BpmnToElkMapper.map(model)
         RecursiveGraphLayoutEngine().layout(skeleton.root, BasicProgressMonitor())
 

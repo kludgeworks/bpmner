@@ -5,9 +5,9 @@
 
 package dev.groknull.bpmner.layout.internal
 
-import dev.groknull.bpmner.ruleset.BpmnerLintConfig
-import dev.groknull.bpmner.ruleset.ShapeStyle
-import dev.groknull.bpmner.ruleset.ThemeConfig
+import dev.groknull.bpmner.pkl.BpmnerLintConfig.ShapeStyle
+import dev.groknull.bpmner.pkl.BpmnerLintConfig.ThemeConfig
+import dev.groknull.bpmner.ruleset.defaultBpmnerLintConfig
 import org.junit.jupiter.api.Test
 import org.xmlunit.assertj.XmlAssert
 
@@ -50,8 +50,8 @@ class ThemeDecoratorTest {
 
     @Test
     fun `global theme colors are applied to shapes and edges in both namespaces`() {
-        val theme = ThemeConfig(secondaryColor = "#112233", backgroundColor = "#445566")
-        val layouter = ElkBpmnLayouter(BpmnerLintConfig(theme = theme)).apply { registerElkLayoutAlgorithm() }
+        val theme = ThemeConfig("#2b6cb0", "#112233", "#445566", emptyMap())
+        val layouter = ElkBpmnLayouter(defaultBpmnerLintConfig().withTheme(theme)).apply { registerElkLayoutAlgorithm() }
 
         val result = layouter.layout(xmlWithoutDi)
 
@@ -78,11 +78,12 @@ class ThemeDecoratorTest {
     @Test
     fun `shapeOverrides beat the global fallback`() {
         val theme = ThemeConfig(
-            secondaryColor = "#112233",
-            backgroundColor = "#445566",
-            shapeOverrides = mapOf("bpmn:Task" to ShapeStyle(fill = "#00ff00", stroke = "#ff0000")),
+            "#2b6cb0",
+            "#112233",
+            "#445566",
+            mapOf("bpmn:Task" to ShapeStyle("#00ff00", "#ff0000", null, null)),
         )
-        val layouter = ElkBpmnLayouter(BpmnerLintConfig(theme = theme)).apply { registerElkLayoutAlgorithm() }
+        val layouter = ElkBpmnLayouter(defaultBpmnerLintConfig().withTheme(theme)).apply { registerElkLayoutAlgorithm() }
 
         val result = layouter.layout(xmlWithoutDi)
 
@@ -115,8 +116,8 @@ class ThemeDecoratorTest {
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>
 </bpmn:definitions>"""
-        val theme = ThemeConfig(secondaryColor = "#112233", backgroundColor = "#445566")
-        val layouter = ElkBpmnLayouter(BpmnerLintConfig(theme = theme)).apply { registerElkLayoutAlgorithm() }
+        val theme = ThemeConfig("#2b6cb0", "#112233", "#445566", emptyMap())
+        val layouter = ElkBpmnLayouter(defaultBpmnerLintConfig().withTheme(theme)).apply { registerElkLayoutAlgorithm() }
 
         val result = layouter.layout(xmlWithColor)
 
@@ -160,8 +161,8 @@ class ThemeDecoratorTest {
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>
 </bpmn:definitions>"""
-        val theme = ThemeConfig(secondaryColor = "#112233", backgroundColor = "#445566")
-        val layouter = ElkBpmnLayouter(BpmnerLintConfig(theme = theme)).apply { registerElkLayoutAlgorithm() }
+        val theme = ThemeConfig("#2b6cb0", "#112233", "#445566", emptyMap())
+        val layouter = ElkBpmnLayouter(defaultBpmnerLintConfig().withTheme(theme)).apply { registerElkLayoutAlgorithm() }
 
         val result = layouter.layout(xmlWithOmgColor)
 

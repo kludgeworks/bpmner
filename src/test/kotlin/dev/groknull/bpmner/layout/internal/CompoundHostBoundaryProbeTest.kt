@@ -40,7 +40,7 @@ class CompoundHostBoundaryProbeTest {
     fun `boundary port on a compound host survives hierarchical layout`() {
         val xml = load("layout-fixtures/miwg-c2-four-pools.bpmn")
         val model = Bpmn.readModelFromStream(ByteArrayInputStream(xml.toByteArray(Charsets.UTF_8)))
-        ElkBpmnLayouter().registerElkLayoutAlgorithm()
+        ElkBpmnLayouter(dev.groknull.bpmner.ruleset.defaultBpmnerLintConfig()).registerElkLayoutAlgorithm()
         val skeleton = BpmnToElkMapper.map(model)
         RecursiveGraphLayoutEngine().layout(skeleton.root, BasicProgressMonitor())
 
@@ -58,7 +58,9 @@ class CompoundHostBoundaryProbeTest {
         // Finding 2: post unit-D, the compound host's final DI position is contained within its
         // participant's band once the full production pipeline runs — recorded for 622-4
         // (AD-622-13), not a claim that AD-622-05's pool-stacking gate itself has landed.
-        val output = ElkBpmnLayouter().apply { registerElkLayoutAlgorithm() }.layout(xml)
+        val output = ElkBpmnLayouter(dev.groknull.bpmner.ruleset.defaultBpmnerLintConfig())
+            .apply { registerElkLayoutAlgorithm() }
+            .layout(xml)
         val doc = LayoutDiInspector.parse(output)
         val hostBounds = LayoutDiInspector.shapeBounds(doc, "SubProcess_fulfil")
         val participantBounds = LayoutDiInspector.shapeBounds(doc, "Participant_retailer")

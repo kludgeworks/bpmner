@@ -26,7 +26,9 @@ class AnnotationMultiHostProbeTest {
     @Test
     fun `an annotation with two associations lays out as a regular node with both edges routed`() {
         val xml = load("layout-fixtures/annotation-multi-host.bpmn")
-        val result = ElkBpmnLayouter().apply { registerElkLayoutAlgorithm() }.layout(xml)
+        val result = ElkBpmnLayouter(dev.groknull.bpmner.ruleset.defaultBpmnerLintConfig())
+            .apply { registerElkLayoutAlgorithm() }
+            .layout(xml)
         val doc = LayoutDiInspector.parse(result)
 
         val shapes = extractShapeRects(doc).associateBy { it.id }

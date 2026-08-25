@@ -49,7 +49,9 @@ class FloatingElementAnchorProbeTest {
   </bpmn:process>
 </bpmn:definitions>"""
 
-        val output = ElkBpmnLayouter().apply { registerElkLayoutAlgorithm() }.layout(xml)
+        val output = ElkBpmnLayouter(dev.groknull.bpmner.ruleset.defaultBpmnerLintConfig())
+            .apply { registerElkLayoutAlgorithm() }
+            .layout(xml)
         val doc = LayoutDiInspector.parse(output)
 
         val mainFlowBounds = listOf("StartEvent_1", "Task_1", "EndEvent_1").map { LayoutDiInspector.shapeBounds(doc, it) }
@@ -75,7 +77,9 @@ class FloatingElementAnchorProbeTest {
   </bpmn:process>
 </bpmn:definitions>"""
 
-        val output = ElkBpmnLayouter().apply { registerElkLayoutAlgorithm() }.layout(xml)
+        val output = ElkBpmnLayouter(dev.groknull.bpmner.ruleset.defaultBpmnerLintConfig())
+            .apply { registerElkLayoutAlgorithm() }
+            .layout(xml)
         val doc = LayoutDiInspector.parse(output)
 
         val mainFlowBounds = listOf("StartEvent_1", "Task_1", "EndEvent_1").map { LayoutDiInspector.shapeBounds(doc, it) }

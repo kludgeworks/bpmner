@@ -26,7 +26,9 @@ class DataObjectAndStoreProbeTest {
     @Test
     fun `data object and data store references lay out with real associations routed`() {
         val xml = load("layout-fixtures/data-object-and-store.bpmn")
-        val result = ElkBpmnLayouter().apply { registerElkLayoutAlgorithm() }.layout(xml)
+        val result = ElkBpmnLayouter(dev.groknull.bpmner.ruleset.defaultBpmnerLintConfig())
+            .apply { registerElkLayoutAlgorithm() }
+            .layout(xml)
         val doc = LayoutDiInspector.parse(result)
 
         val shapes = extractShapeRects(doc).associateBy { it.id }

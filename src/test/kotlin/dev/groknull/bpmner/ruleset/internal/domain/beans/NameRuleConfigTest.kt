@@ -5,7 +5,7 @@
 
 package dev.groknull.bpmner.ruleset.internal.domain.beans
 
-import dev.groknull.bpmner.ruleset.BpmnerLintConfig
+import dev.groknull.bpmner.ruleset.defaultBpmnerLintConfig
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.springframework.context.annotation.AnnotationConfigApplicationContext
@@ -22,7 +22,7 @@ internal class NameRuleConfigTest {
     fun `name-uncommon-abbreviations replacement map comes from configured lint config`() {
         val configured = mapOf("ZXY" to "zenith crossing yard")
         val context: AnnotationConfigApplicationContext =
-            bpmnerKotlinRuleContext(lintConfig = BpmnerLintConfig(abbreviationReplacements = configured))
+            bpmnerKotlinRuleContext(lintConfig = defaultBpmnerLintConfig().withAbbreviationReplacements(configured))
 
         val rule = context.use {
             it.getBean(BeanRuleRegistry::class.java).ruleByIdOrAlias("name-uncommon-abbreviations")

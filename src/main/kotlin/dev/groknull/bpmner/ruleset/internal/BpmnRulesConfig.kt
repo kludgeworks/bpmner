@@ -41,19 +41,3 @@ internal data class BpmnRulesConfig(
             )
     }
 }
-
-/**
- * Ruleset-module lint convention URI configuration.
- *
- * Bound at `bpmner.rules` to preserve the existing `bpmner.rules.config-uri` property key
- * while placing config ownership in the ruleset module (ADR-009 S4).
- */
-@Validated
-@ConfigurationProperties("bpmner.rules")
-internal data class BpmnRulesUriConfig(
-    // Modeller-owned lint convention source. Defaults to the packaged
-    // `modulepath:/bpmner.pkl`; set `bpmner.rules.config-uri` to a `file:` URI to load
-    // team-specific word lists. Rule profile and per-rule severity overrides are read from
-    // `bpmner.pkl` as part of [BpmnerLintConfig] (fields `profile` and `severityOverrides`).
-    val configUri: String? = null,
-)

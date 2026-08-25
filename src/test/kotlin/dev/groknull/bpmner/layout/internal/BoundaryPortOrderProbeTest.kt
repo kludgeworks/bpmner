@@ -41,7 +41,9 @@ class BoundaryPortOrderProbeTest {
 
     @Test
     fun `crossing minimization, not declaration order, decides multi-boundary port order`() {
-        val layouter = ElkBpmnLayouter().apply { registerElkLayoutAlgorithm() }
+        val layouter =
+            ElkBpmnLayouter(dev.groknull.bpmner.ruleset.defaultBpmnerLintConfig())
+                .apply { registerElkLayoutAlgorithm() }
         val xml = load("layout-fixtures/boundary-multi.bpmn")
         val model = Bpmn.readModelFromStream(ByteArrayInputStream(xml.toByteArray(Charsets.UTF_8)))
         val skeleton = BpmnToElkMapper.map(model)

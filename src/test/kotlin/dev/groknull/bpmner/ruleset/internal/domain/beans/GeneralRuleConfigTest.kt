@@ -5,14 +5,14 @@
 
 package dev.groknull.bpmner.ruleset.internal.domain.beans
 
-import dev.groknull.bpmner.ruleset.BpmnerLintConfig
+import dev.groknull.bpmner.ruleset.defaultBpmnerLintConfig
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 
 internal class GeneralRuleConfigTest {
     @Test
-    fun `gen-bpmn-subset targets style-guide discouraged types under style-guide profile`() {
-        val context = bpmnerKotlinRuleContext(lintConfig = BpmnerLintConfig(profile = "style-guide"))
+    fun `gen-bpmn-subset targets default banned types`() {
+        val context = bpmnerKotlinRuleContext(lintConfig = defaultBpmnerLintConfig())
         val rule = context.use {
             it.getBean(BeanRuleRegistry::class.java).ruleByIdOrAlias("gen-bpmn-subset")
         }
@@ -22,14 +22,13 @@ internal class GeneralRuleConfigTest {
     }
 
     @Test
-    fun `gen-bpmn-subset targets only baseline discouraged types under recommended profile`() {
-        val context = bpmnerKotlinRuleContext(lintConfig = BpmnerLintConfig(profile = "recommended"))
+    fun `gen-bpmn-subset targets overridden banned types`() {
+        val context = bpmnerKotlinRuleContext(lintConfig = defaultBpmnerLintConfig().withBannedBpmnTypes(listOf("bpmn:UserTask")))
         val rule = context.use {
             it.getBean(BeanRuleRegistry::class.java).ruleByIdOrAlias("gen-bpmn-subset")
         }
 
         assertThat(rule).describedAs("gen-bpmn-subset rule").isNotNull
-        assertThat(rule?.metadata?.targetElements).contains("bpmn:DataObject")
-        assertThat(rule?.metadata?.targetElements).doesNotContain("bpmn:UserTask", "bpmn:ComplexGateway")
+        assertThat(rule?.metadata?.targetElements).containsExactly("bpmn:UserTask")
     }
 }

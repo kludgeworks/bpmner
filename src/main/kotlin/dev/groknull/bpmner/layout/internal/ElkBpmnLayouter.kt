@@ -8,7 +8,7 @@ package dev.groknull.bpmner.layout.internal
 import dev.groknull.bpmner.layout.BpmnAutoLayoutException
 import dev.groknull.bpmner.layout.BpmnLayoutPort
 import dev.groknull.bpmner.layout.internal.adapter.inbound.referentialIntegrityErrors
-import dev.groknull.bpmner.ruleset.BpmnerLintConfig
+import dev.groknull.bpmner.pkl.BpmnerLintConfig
 import jakarta.annotation.PostConstruct
 import org.camunda.bpm.model.bpmn.Bpmn
 import org.camunda.bpm.model.bpmn.BpmnModelInstance
@@ -28,7 +28,7 @@ import java.io.ByteArrayOutputStream
  */
 @InfrastructureRing
 @Service
-internal class ElkBpmnLayouter(private val lintConfig: BpmnerLintConfig = BpmnerLintConfig()) : BpmnLayoutPort {
+internal class ElkBpmnLayouter(private val lintConfig: BpmnerLintConfig) : BpmnLayoutPort {
 
     /**
      * ELK requires algorithm registration outside OSGi. [LayoutMetaDataService] is a

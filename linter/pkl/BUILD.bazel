@@ -1,2 +1,35 @@
 # Copyright 2026 The Project Contributors
 # SPDX-License-Identifier: MIT
+
+load("@rules_java//java:java_binary.bzl", "java_binary")
+load("@rules_java//java:java_library.bzl", "java_library")
+
+java_binary(
+    name = "pkl_codegen_java",
+    srcs = ["PklCodegen.java"],
+    main_class = "dev.groknull.bpmner.tools.pkl.PklCodegen",
+    deps = [
+        "@maven//:org_pkl_lang_pkl_codegen_java",
+        "@maven//:org_pkl_lang_pkl_core",
+    ],
+)
+
+genrule(
+    name = "generate_bpmner_lint_config",
+    srcs = ["//src:main/resources/bpmner.pkl"],
+    outs = ["dev/groknull/bpmner/pkl/BpmnerLintConfig.java"],
+    cmd = "$(location :pkl_codegen_java) $(location //src:main/resources/bpmner.pkl) $@",
+    tools = [":pkl_codegen_java"],
+)
+
+java_library(
+    name = "bpmner_lint_config",
+    srcs = [":generate_bpmner_lint_config"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "@maven//:org_pkl_lang_pkl_config_java",
+        "@maven//:org_pkl_lang_pkl_spring",
+        "@maven//:org_springframework_boot_spring_boot",
+        "@maven//:org_springframework_boot_spring_boot_autoconfigure",
+    ],
+)

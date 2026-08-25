@@ -8,6 +8,9 @@ spring:
     web-application-type: none
   jackson:
     use-jackson2-defaults: true
+  config:
+    # Replace this import to load a team module that amends `modulepath:/bpmner.pkl`.
+    import: classpath:bpmner.pkl
 
 embabel:
   models:
@@ -53,6 +56,3 @@ bpmner:
     # without a mounted log volume have no other way to see DEBUG: `kubectl logs` only ever shows
     # stdout. Override with `BPMNER_LOGGING_CONSOLE_LEVEL=DEBUG` to make it visible there too.
     console-level: ${BPMNER_LOGGING_CONSOLE_LEVEL:INFO}
-  # Rule profile and per-rule severity overrides are now sourced from bpmner.pkl (via
-  # BpmnerLintConfig). To override the conventions source, set bpmner.rules.config-uri to a
-  # file: URI pointing at a local bpmner.pkl that amends the packaged BpmnerLintConfig.pkl.

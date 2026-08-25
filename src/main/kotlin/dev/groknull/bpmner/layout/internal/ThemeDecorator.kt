@@ -5,7 +5,7 @@
 
 package dev.groknull.bpmner.layout.internal
 
-import dev.groknull.bpmner.ruleset.ThemeConfig
+import dev.groknull.bpmner.pkl.BpmnerLintConfig.ThemeConfig
 import org.camunda.bpm.model.bpmn.BpmnModelInstance
 import org.camunda.bpm.model.bpmn.instance.bpmndi.BpmnEdge
 import org.camunda.bpm.model.bpmn.instance.bpmndi.BpmnShape

@@ -35,7 +35,9 @@ class MetricsTripwireTest {
         val input = javaClass.classLoader.getResourceAsStream("layout-fixtures/$fixture.bpmn")
             ?.use { it.readBytes().toString(Charsets.UTF_8) }
             ?: error("Fixture not found: $fixture")
-        val actual = ElkBpmnLayouter().apply { registerElkLayoutAlgorithm() }.layout(input)
+        val actual = ElkBpmnLayouter(
+            dev.groknull.bpmner.ruleset.defaultBpmnerLintConfig(),
+        ).apply { registerElkLayoutAlgorithm() }.layout(input)
         val doc = parse(actual)
 
         val baseline = loadBaseline()[fixture] ?: error("No baseline entry for '$fixture' in $BASELINE_RESOURCE")

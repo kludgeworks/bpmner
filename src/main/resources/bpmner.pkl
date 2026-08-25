@@ -1,1 +1,61 @@
-amends "BpmnerLintConfig.pkl"
+module dev.groknull.bpmner.pkl.BpmnerLintConfig
+
+typealias Severity = "error" | "off"
+
+/// Severity overrides to customize or disable specific rules.
+/// By default, all rules are enabled ("error") except those explicitly marked "off".
+severityOverrides: Mapping<String, Severity> = new {}
+
+discouragedLeadingVerbs: List<String> = List("handle", "manage", "process", "perform", "do")
+
+elementTypeWords: List<String> = List("activity", "process", "event")
+
+allowedAcronyms: List<String> = List()
+
+bannedBpmnTypes: List<String> =
+  List(
+    "bpmn:Choreography",
+    "bpmn:ChoreographyTask",
+    "bpmn:SubChoreography",
+    "bpmn:CallChoreography",
+    "bpmn:Conversation",
+    "bpmn:ConversationLink",
+    "bpmn:ConversationAssociation",
+    "bpmn:Transaction",
+    "bpmn:DataObject",
+    "bpmn:DataObjectReference",
+    "bpmn:DataStore",
+    "bpmn:DataStoreReference",
+    "bpmn:DataInputAssociation",
+    "bpmn:DataOutputAssociation",
+    "bpmn:UserTask",
+    "bpmn:ServiceTask",
+    "bpmn:ManualTask",
+    "bpmn:ScriptTask",
+    "bpmn:BusinessRuleTask",
+    "bpmn:SendTask",
+    "bpmn:ReceiveTask",
+    "bpmn:ComplexGateway",
+  )
+
+abbreviationReplacements: Mapping<String, String> = new {}
+
+class ShapeStyle {
+  fill: String?
+  stroke: String?
+  fontColor: String?
+  // fontName: String?
+  // fontSize: Number?
+  fontWeight: String?
+}
+
+class ThemeConfig {
+  primaryColor: String = "#2b6cb0"
+  secondaryColor: String = "#16181d"
+  backgroundColor: String = "#ffffff"
+  // fontName: String?
+  // fontSize: Number?
+  shapeOverrides: Mapping<String, ShapeStyle> = new {}
+}
+
+theme: ThemeConfig = new {}

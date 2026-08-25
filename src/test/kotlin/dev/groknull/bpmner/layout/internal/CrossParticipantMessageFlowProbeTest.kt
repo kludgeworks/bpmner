@@ -26,7 +26,9 @@ class CrossParticipantMessageFlowProbeTest {
     fun `retailer participant's internal layout is stable with the cross-participant guard in place`() {
         val xml = javaClass.classLoader.getResourceAsStream("layout-fixtures/miwg-c2-four-pools.bpmn")
             ?.bufferedReader()?.readText() ?: error("fixture not found")
-        val output = ElkBpmnLayouter().apply { registerElkLayoutAlgorithm() }.layout(xml)
+        val output = ElkBpmnLayouter(dev.groknull.bpmner.ruleset.defaultBpmnerLintConfig())
+            .apply { registerElkLayoutAlgorithm() }
+            .layout(xml)
         val doc = LayoutDiInspector.parse(output)
 
         val participant = LayoutDiInspector.shapeBounds(doc, "Participant_retailer")

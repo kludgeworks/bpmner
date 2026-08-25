@@ -36,7 +36,9 @@ class BendCountLayeringProbeTest {
     @Test
     fun `Flow_default is an ordinary cross-layer edge, not an in-layer special case`() {
         val xml = LayoutDiInspector.loadCorpus(javaClass.classLoader, "representative-process.bpmn")
-        val output = ElkBpmnLayouter().apply { registerElkLayoutAlgorithm() }.layout(xml)
+        val output = ElkBpmnLayouter(dev.groknull.bpmner.ruleset.defaultBpmnerLintConfig())
+            .apply { registerElkLayoutAlgorithm() }
+            .layout(xml)
         val doc = LayoutDiInspector.parse(output)
 
         val split = LayoutDiInspector.shapeBounds(doc, "Gw_split")

@@ -5,6 +5,7 @@
 
 package dev.groknull.bpmner.ruleset
 
+import dev.groknull.bpmner.pkl.BpmnerLintConfig
 import dev.groknull.bpmner.ruleset.internal.domain.DefaultRuleEngine
 import dev.groknull.bpmner.ruleset.internal.domain.InMemoryRuleRegistry
 import dev.groknull.bpmner.ruleset.internal.domain.beans.bpmnerKotlinRuleContext
@@ -68,6 +69,23 @@ object RulesTestFixtures {
      */
     @JvmStatic
     fun fullBeanRuleContext(
-        lintConfig: BpmnerLintConfig = BpmnerLintConfig(),
+        lintConfig: BpmnerLintConfig = defaultBpmnerLintConfig(),
     ): AnnotationConfigApplicationContext = bpmnerKotlinRuleContext(lintConfig)
 }
+
+fun defaultBpmnerLintConfig(): BpmnerLintConfig = BpmnerLintConfig(
+    mutableMapOf(),
+    listOf("handle", "manage", "process", "perform", "do"),
+    listOf("activity", "process", "event"),
+    emptyList(),
+    listOf(
+        "bpmn:Choreography", "bpmn:ChoreographyTask", "bpmn:SubChoreography", "bpmn:CallChoreography",
+        "bpmn:Conversation", "bpmn:ConversationLink", "bpmn:ConversationAssociation", "bpmn:Transaction",
+        "bpmn:DataObject", "bpmn:DataObjectReference", "bpmn:DataStore", "bpmn:DataStoreReference",
+        "bpmn:DataInputAssociation", "bpmn:DataOutputAssociation", "bpmn:UserTask", "bpmn:ServiceTask",
+        "bpmn:ManualTask", "bpmn:ScriptTask", "bpmn:BusinessRuleTask", "bpmn:SendTask", "bpmn:ReceiveTask",
+        "bpmn:ComplexGateway",
+    ),
+    mutableMapOf(),
+    BpmnerLintConfig.ThemeConfig("#2b6cb0", "#16181d", "#ffffff", mutableMapOf()),
+)

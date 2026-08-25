@@ -8,7 +8,7 @@ package dev.groknull.bpmner.ruleset.internal.domain.beans
 import dev.groknull.bpmner.bpmn.BpmnRule
 import dev.groknull.bpmner.bpmn.RuleCategory
 import dev.groknull.bpmner.bpmn.RuleSeverity
-import dev.groknull.bpmner.ruleset.BpmnerLintConfig
+import dev.groknull.bpmner.pkl.BpmnerLintConfig
 import dev.groknull.bpmner.ruleset.LlmRuleSpec
 import dev.groknull.bpmner.ruleset.internal.domain.llmRule
 import dev.groknull.bpmner.ruleset.internal.domain.nlp.BpmnNlp
@@ -45,7 +45,7 @@ internal class GeneralRuleConfig {
         intent = "Keep models within the supported BPMN subset.",
         forModellers = "Use only the BPMN elements described in the supported BPMN subset and avoid unsupported exotic BPMN constructs.",
         forAI = "Detect discouraged BPMN types that are outside the supported subset and propose supported replacements.",
-        targetElements = lintConfig.discouragedBpmnTypesForProfile(),
+        targetElements = lintConfig.bannedBpmnTypes,
         errorMessages = mapOf(
             "default" to "Element type is outside the supported BPMN subset",
         ),

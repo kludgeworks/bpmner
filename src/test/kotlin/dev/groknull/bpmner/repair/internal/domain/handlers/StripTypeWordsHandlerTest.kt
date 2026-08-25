@@ -12,13 +12,13 @@ import dev.groknull.bpmner.bpmn.BpmnStartEvent
 import dev.groknull.bpmner.bpmn.BpmnUserTask
 import dev.groknull.bpmner.repair.internal.domain.BpmnPatchOperationType
 import dev.groknull.bpmner.repair.internal.domain.HandlerConfig
-import dev.groknull.bpmner.ruleset.BpmnerLintConfig
+import dev.groknull.bpmner.ruleset.defaultBpmnerLintConfig
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class StripTypeWordsHandlerTest {
-    private val handler = StripTypeWordsHandler(BpmnerLintConfig())
+    private val handler = StripTypeWordsHandler(defaultBpmnerLintConfig())
     private val defaultConfig = HandlerConfig.EMPTY
 
     @Test
@@ -61,14 +61,14 @@ class StripTypeWordsHandlerTest {
 
     @Test
     fun `no ops when injected elementTypeWords list is empty`() {
-        val emptyHandler = StripTypeWordsHandler(BpmnerLintConfig(elementTypeWords = emptyList()))
+        val emptyHandler = StripTypeWordsHandler(defaultBpmnerLintConfig().withElementTypeWords(emptyList()))
         val ops = emptyHandler.buildPatch(definitionWithTask("Approve Order Activity"), "Task_1", defaultConfig)
         assertTrue(ops.isEmpty())
     }
 
     @Test
     fun `custom injected elementTypeWords are used`() {
-        val customHandler = StripTypeWordsHandler(BpmnerLintConfig(elementTypeWords = listOf("step")))
+        val customHandler = StripTypeWordsHandler(defaultBpmnerLintConfig().withElementTypeWords(listOf("step")))
         val ops = customHandler.buildPatch(definitionWithTask("Approve Order Step"), "Task_1", defaultConfig)
         assertEquals("Approve Order", ops.single().name)
     }

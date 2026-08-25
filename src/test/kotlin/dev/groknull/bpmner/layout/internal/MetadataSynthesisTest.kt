@@ -13,7 +13,9 @@ import org.junit.jupiter.api.Test
 import java.io.ByteArrayInputStream
 
 class MetadataSynthesisTest {
-    private val layouter = ElkBpmnLayouter().apply { registerElkLayoutAlgorithm() }
+    private val layouter = ElkBpmnLayouter(
+        dev.groknull.bpmner.ruleset.defaultBpmnerLintConfig(),
+    ).apply { registerElkLayoutAlgorithm() }
 
     @Test
     fun `layout synthesizes metadata annotations and preserves them on a subsequent layout`() {

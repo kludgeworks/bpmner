@@ -6,11 +6,11 @@
 package dev.groknull.bpmner.repair.internal.domain.handlers
 
 import dev.groknull.bpmner.bpmn.BpmnDefinition
+import dev.groknull.bpmner.pkl.BpmnerLintConfig
 import dev.groknull.bpmner.repair.internal.domain.BpmnLocalModelFixHandler
 import dev.groknull.bpmner.repair.internal.domain.BpmnPatchOperation
 import dev.groknull.bpmner.repair.internal.domain.BpmnPatchOperationType
 import dev.groknull.bpmner.repair.internal.domain.HandlerConfig
-import dev.groknull.bpmner.ruleset.BpmnerLintConfig
 import org.springframework.stereotype.Component
 
 /**

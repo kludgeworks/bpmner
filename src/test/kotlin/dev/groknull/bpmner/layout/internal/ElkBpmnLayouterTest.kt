@@ -22,7 +22,9 @@ import kotlin.test.assertTrue
 @Suppress("TooManyFunctions", "LargeClass")
 class ElkBpmnLayouterTest {
 
-    private val layouter = ElkBpmnLayouter().apply { registerElkLayoutAlgorithm() }
+    private val layouter =
+        ElkBpmnLayouter(dev.groknull.bpmner.ruleset.defaultBpmnerLintConfig())
+            .apply { registerElkLayoutAlgorithm() }
 
     // ── Flat corpus — invariants (existing 4 fixtures) ────────────────────────
 

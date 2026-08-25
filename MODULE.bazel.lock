@@ -29,7 +29,6 @@
     "https://bcr.bazel.build/modules/aspect_bazel_lib/2.14.0/MODULE.bazel": "2b31ffcc9bdc8295b2167e07a757dbbc9ac8906e7028e5170a3708cecaac119f",
     "https://bcr.bazel.build/modules/aspect_bazel_lib/2.19.2/MODULE.bazel": "30dfabbfae0139b1f0036e01c201dd4c0167da3017f0b7ef3820d78e07622989",
     "https://bcr.bazel.build/modules/aspect_bazel_lib/2.19.3/MODULE.bazel": "253d739ba126f62a5767d832765b12b59e9f8d2bc88cc1572f4a73e46eb298ca",
-    "https://bcr.bazel.build/modules/aspect_bazel_lib/2.21.2/MODULE.bazel": "276347663a25b0d5bd6cad869252bea3e160c4d980e764b15f3bae7f80b30624",
     "https://bcr.bazel.build/modules/aspect_bazel_lib/2.22.5/MODULE.bazel": "004ba890363d05372a97248c37205ae64b6fa31047629cd2c0895a9d0c7779e8",
     "https://bcr.bazel.build/modules/aspect_bazel_lib/2.22.5/source.json": "ac2c3213df8f985785f1d0aeb7f0f73d5324e6e67d593d9b9470fb74a25d4a9b",
     "https://bcr.bazel.build/modules/aspect_bazel_lib/2.7.2/MODULE.bazel": "780d1a6522b28f5edb7ea09630748720721dfe27690d65a2d33aa7509de77e07",
@@ -278,8 +277,6 @@
     "https://bcr.bazel.build/modules/rules_pkg/0.7.0/MODULE.bazel": "df99f03fc7934a4737122518bb87e667e62d780b610910f0447665a7e2be62dc",
     "https://bcr.bazel.build/modules/rules_pkg/1.0.1/MODULE.bazel": "5b1df97dbc29623bccdf2b0dcd0f5cb08e2f2c9050aab1092fd39a41e82686ff",
     "https://bcr.bazel.build/modules/rules_pkg/1.0.1/source.json": "bd82e5d7b9ce2d31e380dd9f50c111d678c3bdaca190cb76b0e1c71b05e1ba8a",
-    "https://bcr.bazel.build/modules/rules_pkl/0.15.0/MODULE.bazel": "05952211a66c9ac1bccb42cd0800e0e982d9cbd4826cd8dfcd9eb966c7bc83c2",
-    "https://bcr.bazel.build/modules/rules_pkl/0.15.0/source.json": "80e7129483822e0ece0283375f675acaebc19ede8c921b40899e2657f4ca2f15",
     "https://bcr.bazel.build/modules/rules_pmd/0.4.0/MODULE.bazel": "2ce687fc15a244e4404f497be89a230a0de1742c41012530977aaeb693003d10",
     "https://bcr.bazel.build/modules/rules_pmd/0.4.0/source.json": "ca481c0e8862f6e5e6217ab58ec427a620ab47035bab6b1a4cc7fd0ab6cdef62",
     "https://bcr.bazel.build/modules/rules_proto/4.0.0/MODULE.bazel": "a7a7b6ce9bee418c1a760b3d84f83a299ad6952f9903c67f19e4edd964894e06",
@@ -597,7 +594,7 @@
     "@@aspect_rules_ts+//ts:extensions.bzl%ext": {
       "general": {
         "bzlTransitiveDigest": "cqZ07zAB92ofKybw48WmPNKyNQHaGZ7YVkj1SNs+f7c=",
-        "usagesDigest": "g2PUkGPIlwJ3ViPKP2jMSmGo7DmdBmaZj4tH4eKabdA=",
+        "usagesDigest": "KdcIq+JM+RxZTSbyflGPEml4MGO2QxVmmVW66rNgZq0=",
         "recordedFileInputs": {},
         "recordedDirentsInputs": {},
         "envVariables": {},
@@ -921,7 +918,7 @@
     "@@rules_nodejs+//nodejs:extensions.bzl%node": {
       "general": {
         "bzlTransitiveDigest": "oZFClfRhTTwsYzpxVPkOpOt/r0+OzEfEV37au0jFZ0s=",
-        "usagesDigest": "iV7RYQLA/ZB5OyLizciNv/Ep5Ic5+cKYJmYasyfqjVY=",
+        "usagesDigest": "3tiwtndQp3y9+xR0n94LA3OQPGeveMokzTeR+tA0BMY=",
         "recordedFileInputs": {},
         "recordedDirentsInputs": {},
         "envVariables": {},
@@ -1055,7 +1052,7 @@
     "@@rules_oci+//oci:extensions.bzl%oci": {
       "general": {
         "bzlTransitiveDigest": "vGXVILdzmjpSu9TUsSyZYGHBH6GeNYZ/FHJVj5urdDE=",
-        "usagesDigest": "BCJAGIi+3tvSYkJAte6VLT654/jx1TXSEzFf/gT+wtg=",
+        "usagesDigest": "Wc6517P2j/bJmfvuxyVCEJRRf50TRJb9As32+TQBikg=",
         "recordedFileInputs": {},
         "recordedDirentsInputs": {},
         "envVariables": {},
@@ -1584,7 +1581,7 @@
     "@@rules_pmd+//pmd:extensions.bzl%pmd": {
       "general": {
         "bzlTransitiveDigest": "UU1v0CSeh22O4JdYP5u9M6gyD6coR7gAQVjx6+ah86M=",
-        "usagesDigest": "MN5naZ55vGEsXksFm2VApfqcNVpSkS+HPe47ntgyiwg=",
+        "usagesDigest": "Mxg4PCcKN2RNBRgxLeItY4EXJ6lL0lZ4bCIpZHqUbHs=",
         "recordedFileInputs": {},
         "recordedDirentsInputs": {},
         "envVariables": {},
@@ -1813,7 +1810,7 @@
     "@@toolchains_buildbuddy+//:extensions.bzl%buildbuddy": {
       "general": {
         "bzlTransitiveDigest": "YThiSErJv+jiCHJzZIEyk0yegQRS/x+T/ce309eGTvA=",
-        "usagesDigest": "UBTHX+BcSCcaZ/08pVCxNgMOMhE91H3mrkjEbu7cxMc=",
+        "usagesDigest": "TPWQTc3dkYN18MZNknqqlcFeFjuEJYsWiO/xLENatYg=",
         "recordedFileInputs": {},
         "recordedDirentsInputs": {},
         "envVariables": {},

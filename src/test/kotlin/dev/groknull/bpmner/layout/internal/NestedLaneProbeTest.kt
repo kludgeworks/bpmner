@@ -53,7 +53,9 @@ class NestedLaneProbeTest {
 </bpmn:definitions>"""
 
         val ex = assertFailsWith<BpmnAutoLayoutException> {
-            ElkBpmnLayouter().apply { registerElkLayoutAlgorithm() }.layout(xml)
+            ElkBpmnLayouter(
+                dev.groknull.bpmner.ruleset.defaultBpmnerLintConfig(),
+            ).apply { registerElkLayoutAlgorithm() }.layout(xml)
         }
         assertContains(ex.message.orEmpty(), "Lane_region")
         assertContains(ex.message.orEmpty(), "nested lanes")
