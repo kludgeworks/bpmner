@@ -8,9 +8,19 @@
 			"reason": "epic #696 stated the flow degree rules, the DEFAULT bypass rule, and the MESSAGE boundary kind in the extraction prompt; #703 corrected the branch-kind/decision-kind rule to match the validator"
 		},
 		"contractFullPayload": {
-			"chars": 38999,
-			"updatedBy": "#703",
-			"reason": "same as contractPrompt, plus the widened ContractBoundaryEvent/FlatContractFlow schema descriptions (ADR-696-11)"
+			"chars": 39099,
+			"updatedBy": "#743",
+			"reason": "widened the PARALLEL keyword list on FlatContractDecision.kind so a source that says 'concurrently' / 'strands' / 'tracks' is recognised as a parallel fork"
+		},
+		"contractRetryPrompt": {
+			"chars": 15370,
+			"updatedBy": "#745",
+			"reason": "new probe: the extraction prompt on a corrective retry, which additionally carries the rejected contract and its issues. The first-attempt probe leaves those unset, so the largest variant of this prompt was previously unmeasured"
+		},
+		"contractRetryFullPayload": {
+			"chars": 40951,
+			"updatedBy": "#745",
+			"reason": "new probe: same as contractRetryPrompt, plus the FlatProcessContract schema payload"
 		},
 		"generationPrompt": {
 			"chars": 16267,

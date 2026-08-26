@@ -205,6 +205,21 @@ internal object PromptFixtures {
         contribution = requestContribution,
     ) { contractExtractionModel() }
 
+    /**
+     * The extraction prompt on a *corrective retry*, which is materially larger than the first
+     * attempt: it additionally carries the rejected contract and the issues that rejected it.
+     *
+     * The first-attempt site above leaves `previousContract`/`previousIssues` unset, so the
+     * template's retry blocks never render there and the biggest variant of this prompt went
+     * unmeasured — including when the projection it carries changed from a compact markdown
+     * rendering to full JSON. See issue #745.
+     */
+    val contractRetry: PromptSite<Any> = site(
+        template = "bpmner/extract_contract",
+        outputType = FlatContractTestFixtures.FLAT_PROCESS_CONTRACT_CLASS,
+        contribution = requestContribution,
+    ) { contractExtractionModel() + contractRetryModel() }
+
     val generation: PromptSite<FlatBpmnDefinition> = site(
         template = "bpmner/generate_bpmn",
         outputType = FlatBpmnDefinition::class.java,
@@ -239,6 +254,18 @@ internal object PromptFixtures {
         },
         "styleGuide" to (canonicalRequest.styleGuide ?: ""),
         "processDescription" to canonicalRequest.processDescription,
+    )
+
+    // The two fields a retry adds. `previousContract` uses the same lossless projection the
+    // production retry path uses, so the probe measures what the LLM actually receives.
+    private fun contractRetryModel(): Map<String, Any> = mapOf(
+        "previousIssues" to listOf(
+            "- code=start_outgoing_count_wrong, severity=error, targetId=start:" +
+                " start 'start' must have exactly one outgoing flow (found 2)",
+            "- code=element_missing_incoming_flow, severity=error, targetId=dec-insurance:" +
+                " element 'dec-insurance' is declared but nothing flows into it",
+        ).joinToString(System.lineSeparator()),
+        "previousContract" to jsonRenderer.render(canonicalContract),
     )
 
     private fun bpmnGenerationModel(): Map<String, Any> = mapOf(

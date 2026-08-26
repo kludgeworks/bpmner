@@ -79,17 +79,37 @@ class BpmnerArchitectureTest {
     }
 
     @Test
-    fun `ProcessContractMarkdownRenderer is used only for the operator-facing log line`() {
-        // Prose past extraction is a hand-maintained projection LLM prompts must not carry
-        // The renderer's only sanctioned caller is its own package, where
-        // LlmProcessContractExtractor logs it for operator visibility.
-        noClasses()
-            .that()
-            .resideOutsideOfPackages("..bpmner.contract..")
-            .should()
-            .dependOnClassesThat()
-            .haveFullyQualifiedName("dev.groknull.bpmner.contract.ProcessContractMarkdownRenderer")
-            .check(classes)
+    fun `hand-written projections of a domain model declare what they omit`() {
+        // WHY THIS RULE EXISTS
+        //
+        // A projection built by hand-picking fields from a larger model has no mechanism that
+        // notices when the model gains a field — so it silently stops carrying it, and any check
+        // downstream of the projection silently stops being able to see it. Auditing the pipeline
+        // turned up three live instances of exactly that, all shipped, none detected:
+        //
+        //   * BpmnDefinitionSummary carried 4 of BpmnDefinition's 19 fields, so the alignment
+        //     model could not see lanes, pools or message flows and would pass a diagram that
+        //     dropped every one of them (issue #744).
+        //   * The contract's markdown projection dropped the start trigger's type and payload and
+        //     rendered INCLUSIVE identically to EXCLUSIVE, while the retry prompt it fed asked the
+        //     model to "preserve this contract exactly" (issue #745).
+        //   * The layout stage carried a pre-layout definition beside post-layout XML, so the
+        //     artifact that was checked was not the artifact that shipped (issue #746).
+        //
+        // The common cause is not any one mapper being wrong: it is that omission was implied
+        // rather than declared, so nobody could tell an oversight from a decision. Where a
+        // projection type survives, it must publish that decision — hence the omission registry
+        // this rule enforces the existence of. The companion behavioural guard is
+        // BpmnSummarizerCoverageTest, which proves the registry is honest by checking that every
+        // field NOT declared as omitted actually changes the projection when perturbed.
+        val registry = dev.groknull.bpmner.alignment.BpmnDefinitionSummary.OMITTED_DEFINITION_FIELDS
+        check(registry.isNotEmpty()) {
+            "BpmnDefinitionSummary.OMITTED_DEFINITION_FIELDS is empty. If the summary now carries " +
+                "every BpmnDefinition field, delete this rule; if it does not, declare the omissions."
+        }
+        check(registry.values.none { it.isBlank() }) {
+            "every declared omission must carry a reason: ${registry.filterValues { it.isBlank() }.keys}"
+        }
     }
 
     @Test

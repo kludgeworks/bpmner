@@ -27,7 +27,10 @@ import java.util.Queue
  */
 @Component
 class BpmnSummarizer {
-    fun summarize(definition: BpmnDefinition): BpmnDefinitionSummary {
+    fun summarize(
+        definition: BpmnDefinition,
+        contractDecisionIds: Set<String> = emptySet(),
+    ): BpmnDefinitionSummary {
         val nodeMap = definition.nodes.associateBy { it.id }
         val outgoingFlows = definition.sequences.groupBy { it.sourceRef }
         val visited = TraversalState()
@@ -47,8 +50,19 @@ class BpmnSummarizer {
         // element list is not enough: a strict model still infers "unlisted joining gateways" from
         // the flow lines, so we also SPLICE them out of the flows (rewiring `A -> join -> B` into
         // `A -> B`, preserving the branch's condition/label), leaving no trace for the aligner.
+        //
+        // Exception: a gateway whose id matches a [contractDecisionIds] entry is a PARALLEL or
+        // INCLUSIVE decision's fork that the contract names explicitly (ContractGatewayKind allows
+        // an unconditional-branch decision with no per-branch condition — see BpmnContractTypes).
+        // Splicing it out anyway would hide the one element the alignment contract most needs to
+        // see, so the aligner would then flag that contract decision MISSING and the gateway's
+        // now-direct successor edges UNSUPPORTED (both false positives on a correct diagram). The
+        // gateway's unlabeled join partner has no contract id of its own and keeps being spliced,
+        // matching how the contract models reconvergence implicitly via multiple flows into a
+        // shared downstream target rather than a distinct join element.
         val routingGatewayIds =
             definition.nodes
+                .filter { it.id !in contractDecisionIds }
                 .filter { it.isUnlabeledRoutingGateway(outgoingFlows[it.id]?.size ?: 0) }
                 .map { it.id }
                 .toSet()
@@ -67,6 +81,21 @@ class BpmnSummarizer {
             unreachableElementIds =
             unreachableSemanticNodes.map { it.id } +
                 splicedFlows.filter { it.id !in visited.flows }.map { it.id },
+            // Carried verbatim rather than re-summarised: these are already compact, and the
+            // alignment model needs them to check the contract's actors (lanes), its external
+            // parties (participants), its message exchanges (messageFlows) and its documented
+            // iteration/loop markers (annotations + associations). Omitting them made those parts
+            // of the contract structurally unverifiable — see issue #744. Every field not carried is
+            // declared, with a reason, in BpmnDefinitionSummary.OMITTED_DEFINITION_FIELDS.
+            participants = definition.participants,
+            lanes = definition.lanes,
+            messageFlows = definition.messageFlows,
+            annotations = definition.annotations,
+            associations = definition.associations,
+            messages = definition.messages,
+            errors = definition.errors,
+            signals = definition.signals,
+            escalations = definition.escalations,
         )
     }
 

@@ -322,23 +322,46 @@ internal class BpmnContractValidator {
         }
     }
 
-    // V11: a subprocess joins the outer flow through its own id — a flow with exactly one
-    // endpoint among a subprocess's containedActivityIds reaches into or out of it directly.
+    // V11: a subprocess joins the outer flow through its own id, so every flow keeps both endpoints
+    // on one side of every boundary. An endpoint's side is its owning subprocess — null for the
+    // outermost level — and two endpoints whose owners differ are separated by a boundary the flow
+    // has no business crossing, whether that is one subprocess's wall or two.
     private fun validateSubprocessBoundary(contract: ProcessContract): List<ContractValidationIssue> = buildList {
-        val memberIds = contract.subprocessMemberIds()
-        if (memberIds.isEmpty()) return@buildList
+        val ownerOf = contract.subprocessOwnerByMemberId()
+        if (ownerOf.isEmpty()) return@buildList
         val boundaryEventIds = contract.activities.flatMap { it.boundaryEvents }.map { it.id }.toSet()
         contract.flows.forEach { flow ->
-            if ((flow.from in memberIds) != (flow.to in memberIds)) {
+            val fromOwner = ownerOf[flow.from]
+            val toOwner = ownerOf[flow.to]
+            if (fromOwner == toOwner) return@forEach
+            if (fromOwner != null && toOwner != null) {
                 add(
                     errorIssue(
                         code = ContractValidationCode.FLOW_CROSSES_SUBPROCESS_BOUNDARY,
-                        message = "flow from '${flow.from}' to '${flow.to}' crosses a subprocess boundary" +
-                            " through a member id directly — ${crossingRepair(flow.from in boundaryEventIds)}",
+                        message = "flow from '${flow.from}' to '${flow.to}' joins the interior of subprocess" +
+                            " '$fromOwner' to the interior of subprocess '$toOwner' — $INTERIOR_TO_INTERIOR_REPAIR",
                         targetId = flow.from,
                     ),
                 )
+                return@forEach
             }
+            val fromIsMember = fromOwner != null
+            val member = if (fromIsMember) flow.from else flow.to
+            val other = if (fromIsMember) flow.to else flow.from
+            add(
+                errorIssue(
+                    code = ContractValidationCode.FLOW_CROSSES_SUBPROCESS_BOUNDARY,
+                    message = "flow from '${flow.from}' to '${flow.to}' crosses a subprocess boundary" +
+                        " through a member id directly — " +
+                        crossingRepair(
+                            fromIsBoundaryEvent = flow.from in boundaryEventIds,
+                            joinsMemberToItsOwnSubprocess = ownerOf[member] == other,
+                            memberIsSource = fromIsMember,
+                            isBranchFlow = flow is ContractFlow.Branch,
+                        ),
+                    targetId = flow.from,
+                ),
+            )
         }
     }
 
@@ -346,12 +369,51 @@ internal class BpmnContractValidator {
     // boundary event, which is reached by attachment to its host rather than by a flow and so has
     // no edge to reroute. Its two repairs are to keep the handler inside the subprocess, or to
     // attach the event to the subprocess itself.
-    private fun crossingRepair(fromIsBoundaryEvent: Boolean): String = if (fromIsBoundaryEvent) {
-        "a boundary event's handler runs inside whatever contains its host, so route it to a member " +
-            "of the same subprocess, or attach the boundary event to the subprocess itself instead " +
-            "of to one of its members"
-    } else {
-        "route through the subprocess's own id instead"
+    //
+    // The `joinsMemberToItsOwnSubprocess` case is the one that must not fall through to the
+    // default. There the edge ALREADY names the subprocess's own id, so telling an author to
+    // "route through the subprocess's own id" describes what they just did: following the advice
+    // reproduces the contract unchanged, and a corrective retry loop cannot converge. Deleting the
+    // edge is the only repair, because a subprocess's interior is delimited by membership rather
+    // than by edges — it begins at whichever members have no interior predecessor and ends at
+    // whichever have no interior successor, and the outer flow is carried by the subprocess's own
+    // id alone.
+    // A branch flow is the one case where deleting is NOT available: V9 requires every branch to be
+    // realised by some flow carrying its branchId, so removing the edge trades this error for
+    // DECISION_BRANCH_NOT_REALIZED and the two rules bounce an author between them indefinitely. A
+    // branch that finishes the interior needs somewhere inside to land, and an end state listed
+    // among the subprocess's own members is that somewhere — legal since end states became
+    // nestable, but useless while nothing names it as the way out of this bind.
+    private fun crossingRepair(
+        fromIsBoundaryEvent: Boolean,
+        joinsMemberToItsOwnSubprocess: Boolean,
+        memberIsSource: Boolean,
+        isBranchFlow: Boolean,
+    ): String = when {
+        fromIsBoundaryEvent ->
+            "a boundary event's handler runs inside whatever contains its host, so route it to a member " +
+                "of the same subprocess, or attach the boundary event to the subprocess itself instead " +
+                "of to one of its members"
+
+        memberIsSource && isBranchFlow ->
+            "a branch of a decision inside a subprocess has to land inside the same subprocess, and it " +
+                "cannot simply be dropped because every branch must be realised by a flow. Where the " +
+                "branch means the group is finished, add an end state, list its id among that " +
+                "subprocess's memberIds, and point the branch at it — do not point it at the " +
+                "subprocess's own id"
+
+        joinsMemberToItsOwnSubprocess && memberIsSource ->
+            "this edge already names the subprocess's own id, so remove it rather than rerouting it — " +
+                "a subprocess's interior ends implicitly at the member with no interior successor, and " +
+                "the outer flow resumes from the subprocess's own id. Where several interior branches " +
+                "finish, each simply ends; they are not joined back to the subprocess"
+
+        joinsMemberToItsOwnSubprocess ->
+            "this edge already names the subprocess's own id, so remove it rather than rerouting it — " +
+                "a subprocess's interior begins implicitly at the member with no interior predecessor, " +
+                "which the outer flow reaches by entering the subprocess's own id"
+
+        else -> "route through the subprocess's own id instead"
     }
 
     // V12: subprocess interior is connected — every member is reachable, via flows between
@@ -359,7 +421,7 @@ internal class BpmnContractValidator {
     private fun validateSubprocessConnectivity(contract: ProcessContract): List<ContractValidationIssue> = buildList {
         val subProcesses = contract.activities.filterIsInstance<ContractActivity.SubProcess>()
         subProcesses.forEach { subProcess ->
-            val memberActivityIds = subProcess.containedActivityIds.toSet()
+            val memberActivityIds = subProcess.memberIds.toSet()
             val members = memberActivityIds + contract.boundaryEventIdsOf(memberActivityIds)
             val interior =
                 (contract.flows.map { it.from to it.to } + contract.attachmentEdges())
@@ -452,23 +514,26 @@ internal class BpmnContractValidator {
         val subProcesses = contract.activities.filterIsInstance<ContractActivity.SubProcess>()
         if (subProcesses.isEmpty()) return@buildList
 
-        val activityIds = contract.activities.map { it.id }.toSet()
+        val allowedMemberIds = contract.activities.map { it.id }.toSet() +
+            contract.decisions.map { it.id } +
+            contract.intermediateThrows.map { it.id } +
+            contract.endStates.map { it.id }
         val subProcessIds = subProcesses.map { it.id }.toSet()
         // memberId -> the distinct subprocess ids that claim it. Tracking distinct owners (rather than
         // raw occurrences) means a member listed twice within one subprocess isn't misreported as shared.
         val claimants = mutableMapOf<String, MutableSet<String>>()
 
         subProcesses.forEach { subProcess ->
-            if (subProcess.containedActivityIds.isEmpty()) {
+            if (subProcess.memberIds.isEmpty()) {
                 add(
                     errorIssue(
                         code = ContractValidationCode.SUBPROCESS_EMPTY,
-                        message = "subprocess '${subProcess.id}' must contain at least one member activity",
+                        message = "subprocess '${subProcess.id}' must contain at least one member element",
                         targetId = subProcess.id,
                     ),
                 )
             }
-            subProcess.containedActivityIds.forEach { memberId ->
+            subProcess.memberIds.forEach { memberId ->
                 claimants.getOrPut(memberId) { mutableSetOf() }.add(subProcess.id)
                 when {
                     memberId == subProcess.id -> add(
@@ -491,11 +556,11 @@ internal class BpmnContractValidator {
                         ),
                     )
 
-                    memberId !in activityIds -> add(
+                    memberId !in allowedMemberIds -> add(
                         errorIssue(
                             code = ContractValidationCode.SUBPROCESS_MEMBER_NOT_FOUND,
-                            message = "subprocess '${subProcess.id}' references member activity '$memberId'" +
-                                " that is not declared in the contract's activities",
+                            message = "subprocess '${subProcess.id}' references member element '$memberId'" +
+                                " that is not declared in the contract's elements",
                             targetId = subProcess.id,
                         ),
                     )
@@ -507,8 +572,8 @@ internal class BpmnContractValidator {
             add(
                 errorIssue(
                     code = ContractValidationCode.SUBPROCESS_MEMBER_SHARED,
-                    message = "activity '$memberId' is claimed by ${owners.size} subprocesses —" +
-                        " an activity belongs to at most one",
+                    message = "element '$memberId' is claimed by ${owners.size} subprocesses —" +
+                        " an element belongs to at most one",
                     targetId = memberId,
                 ),
             )
@@ -836,6 +901,14 @@ internal class BpmnContractValidator {
     companion object {
         private const val MIN_ACTIVITIES = 2
         private const val MIN_DECISION_BRANCHES = 2
+
+        // Neither rerouting nor deletion, the repairs the single-boundary cases get. Each interior
+        // is sealed behind its own subprocess's id, so there is no edge either end could legally
+        // name: the connection belongs between the two subprocesses themselves.
+        private const val INTERIOR_TO_INTERIOR_REPAIR =
+            "each subprocess is reached only through its own id, so one interior cannot name an" +
+                " element of another. Let each interior end where it ends, and carry the" +
+                " connection on a flow between the two subprocesses' own ids instead"
     }
 }
 
@@ -864,11 +937,22 @@ private fun ProcessContract.boundaryEventIdsOf(activityIds: Set<String>): Set<St
 // A boundary event is contained wherever its host is, so one attached to a subprocess member is
 // itself a member.
 private fun ProcessContract.subprocessMemberIds(): Set<String> {
-    val memberActivityIds =
+    val memberIds =
         activities.filterIsInstance<ContractActivity.SubProcess>()
-            .flatMap { it.containedActivityIds }
+            .flatMap { it.memberIds }
             .toSet()
-    return memberActivityIds + boundaryEventIdsOf(memberActivityIds)
+    return memberIds + boundaryEventIdsOf(memberIds)
+}
+
+// Which subprocess each member belongs to, for telling an edge that reaches into some OTHER
+// subprocess apart from one that names the member's own — the two need opposite repairs. A
+// boundary event is contained wherever its host is, so it inherits its host's owner.
+private fun ProcessContract.subprocessOwnerByMemberId(): Map<String, String> = buildMap {
+    activities.filterIsInstance<ContractActivity.SubProcess>().forEach { subProcess ->
+        val memberIds = subProcess.memberIds.toSet()
+        memberIds.forEach { put(it, subProcess.id) }
+        boundaryEventIdsOf(memberIds).forEach { put(it, subProcess.id) }
+    }
 }
 
 private fun ContractIntermediateThrow.invalidPayloadField(): String? = when (this) {

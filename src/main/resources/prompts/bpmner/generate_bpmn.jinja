@@ -46,9 +46,9 @@ Inclusive-gateway topology:
 - After the join, emit a single outbound sequence flow to whatever comes next.
 
 Embedded-subprocess topology:
-- A `SubProcess` contract activity becomes a `SUB_PROCESS` node, id copied verbatim. Its members are the activities listed in its `containedActivityIds`.
-- Every member node listed in `containedActivityIds` MUST carry `parentRef` = the subprocess id, and every sequence flow between two members MUST also carry `parentRef` = the subprocess id. Members stay in the flat node list — nesting is expressed only by `parentRef`, not by physically moving them.
-- Give the subprocess its own self-contained inner flow: emit one inner `START_EVENT` and one inner `END_EVENT` (both with `parentRef` = the subprocess id) and wire the members start-to-end between them.
+- A `SubProcess` contract activity becomes a `SUB_PROCESS` node, id copied verbatim. Its members are the elements listed in its `memberIds`, which name any mix of activities, decisions, intermediate throws and end states — each realised as the node type it would be anywhere else.
+- Every member node listed in `memberIds` MUST carry `parentRef` = the subprocess id, and every sequence flow between two members MUST also carry `parentRef` = the subprocess id. Members stay in the flat node list — nesting is expressed only by `parentRef`, not by physically moving them.
+- Give the subprocess its own self-contained inner flow: emit one inner `START_EVENT` (with `parentRef` = the subprocess id) and wire the members start-to-end from it. Every interior path ends at an inner `END_EVENT` also carrying that `parentRef`: a contract end state named in `memberIds` IS one of those inner end events, id copied verbatim, so do not emit a second node beside it; synthesise an inner `END_EVENT` only for an interior path that finishes without one.
 - The subprocess node itself sits on the enclosing flow like any task: the main flow connects into the `SUB_PROCESS` node and out of it. Sequence flows connect to the subprocess node, not to its interior members — each flow keeps both endpoints on the same side of the boundary (both inside the subprocess or both outside).
 
 Call-activity topology:

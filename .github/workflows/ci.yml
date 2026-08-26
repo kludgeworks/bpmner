@@ -31,8 +31,12 @@ jobs:
         with:
           setup-bazel: "false"
 
+      # `--all` is a flag, not a positional: hk's positional argument is a FILE list, so a bare
+      # `hk check all` lints a single non-existent path named "all", skips every file-scoped step
+      # (ktlint, detekt, biome, rumdl, actionlint, shellcheck), and still exits 0. This gate is
+      # green either way, so the flag is the only thing making it mean anything.
       - name: Run hk lint checks
-        run: hk check all
+        run: hk check --all
 
   test-unit:
     runs-on: ubuntu-latest

@@ -93,8 +93,8 @@ class ExtractContractTemplateTest {
         val prompt = render(request(), assessment(), clarificationHistory = emptyList())
 
         assertTrue(prompt.contains("Embedded subprocesses (optional `subProcesses` list)"))
-        assertTrue(prompt.contains("An activity belongs to at most one subprocess."))
-        assertTrue(prompt.contains("activityIds"))
+        assertTrue(prompt.contains("An element belongs to at most one subprocess."))
+        assertTrue(prompt.contains("memberIds"))
     }
 
     @Test

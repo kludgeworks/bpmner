@@ -13,6 +13,7 @@ and Embabel chains them automatically by matching types on the blackboard.
 ## Stage-by-stage
 
 ### 1. Readiness assessment
+
 `BpmnReadinessAgent.assessReadiness`
 (`readiness/internal/adapter/inbound/BpmnReadinessAgent.kt:46`)
 
@@ -21,6 +22,7 @@ proceed, producing a `ProcessInputAssessment`. A
 `BpmnReadinessAssessedEvent` is published.
 
 ### 2. Contract extraction
+
 `BpmnContractAgent.extractProcessContract`
 (`contract/internal/adapter/inbound/BpmnContractAgent.kt:53`)
 
@@ -30,6 +32,7 @@ triggers, steps, branches, end conditions). It is validated into a
 formatted issues.
 
 ### 3. Generation
+
 `BpmnGeneratorAgent` (`generation/internal/adapter/inbound/BpmnGeneratorAgent.kt`)
 
 A multi-step graph build:
@@ -48,6 +51,7 @@ A multi-step graph build:
   `BpmnGeneratedEvent`.
 
 ### 4. Repair loop
+
 `BpmnRepairAgent.repair` → `BpmnRefinementEngine`
 (`repair/internal/domain/BpmnRefinementEngine.kt`)
 
@@ -65,6 +69,7 @@ The engine detects no-progress (unchanged diagnostics/patches) and bails out.
 Publishes `BpmnValidationPassedEvent` on success. Output: `ValidatedBpmnXml`.
 
 ### 5. Auto-layout
+
 `BpmnLayoutAgent` (`layout/internal/adapter/inbound/BpmnLayoutAgent.kt`)
 
 - `autoFixBpmnXml` — bounded, XML-local cleanup limited to lint issues whose
@@ -75,6 +80,7 @@ Publishes `BpmnValidationPassedEvent` on success. Output: `ValidatedBpmnXml`.
   `BpmnFinalValidationException` if anything remains.
 
 ### 6. Alignment check
+
 `BpmnAlignmentAgent.checkAlignment`
 (`alignment/internal/adapter/inbound/BpmnAlignmentAgent.kt:52`)
 
@@ -84,6 +90,7 @@ LLM call comparing a summary of the BPMN against the original
 Output: `AlignedBpmnXml` (XML + alignment report).
 
 ### 7. Finalize
+
 `BpmnGeneratorAgent.finalizeBpmn`
 (`generation/internal/adapter/inbound/BpmnGeneratorAgent.kt:231`)
 

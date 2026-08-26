@@ -290,13 +290,13 @@ sealed interface ContractActivity {
     ) : ContractActivity
 
     @JsonClassDescription(
-        "Embedded subprocess — a composite activity grouping member activities into one step on the " +
+        "Embedded subprocess — a composite activity grouping member elements into one step on the " +
             "main flow. Maps to BpmnSubProcess containing the member nodes.",
     )
     data class SubProcess(
         override val id: String,
         override val name: String,
-        val containedActivityIds: List<String>,
+        val memberIds: List<String>,
         override val actorId: String? = null,
         override val sourceIds: List<String> = emptyList(),
         override val modifiers: ActivityModifiers = ActivityModifiers(),

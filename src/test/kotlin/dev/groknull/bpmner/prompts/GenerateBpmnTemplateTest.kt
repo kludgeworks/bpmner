@@ -132,7 +132,7 @@ class GenerateBpmnTemplateTest {
         assertTrue(prompt.contains("parentRef"))
         // The serialised contract surfaces the membership so the LLM knows what the subprocess groups.
         assertTrue(
-            prompt.contains("\"containedActivityIds\":[\"a-validate\",\"a-estimate\"]"),
+            prompt.contains("\"memberIds\":[\"a-validate\",\"a-estimate\"]"),
             "rendered subprocess should list its member ids; got:\n$prompt",
         )
     }
@@ -190,7 +190,7 @@ class GenerateBpmnTemplateTest {
                 ContractActivity.SubProcess(
                     id = "sub-assess",
                     name = "Assess claim",
-                    containedActivityIds = listOf("a-validate", "a-estimate"),
+                    memberIds = listOf("a-validate", "a-estimate"),
                     sourceIds = sources,
                 ),
             ),

@@ -438,10 +438,13 @@ public data class FlatContractSubProcess(
     @field:NotEmpty
     @field:Size(max = 100)
     @get:JsonPropertyDescription(
-        "Ids of the member activities contained in this subprocess. Each must match an entry in the " +
-            "top-level `activities` array. Order follows the member flow inside the subprocess.",
+        "Ids of the member elements contained in this subprocess. Each must match an entry in the " +
+            "top-level `activities`, `decisions`, `intermediateThrows`, or `endStates` arrays. Order " +
+            "follows the member flow inside the subprocess. Membership alone marks the group's " +
+            "extent: never add a `flows` edge between a member and this subprocess's own id — the " +
+            "interior starts and ends implicitly, so branches that finish inside simply stop.",
     )
-    val activityIds: List<String>,
+    val memberIds: List<String>,
     @field:Size(max = 10)
     @get:JsonPropertyDescription("Source ids grounding this subprocess in evidence.")
     val sourceIds: List<String> = emptyList(),
@@ -548,8 +551,9 @@ public data class FlatContractDecision(
             "keywords: 'any of the following can fire', 'either, both, or neither', 'each evaluated " +
             "independently'; use for independent optional add-ons that may apply singly, together, " +
             "or not at all. PARALLEL = all branches activate concurrently regardless of conditions " +
-            "and reconverge at a join — keywords: 'in parallel', 'simultaneously', 'all of the " +
-            "following must complete'. EVENT_BASED = the flow waits for several events and the " +
+            "and reconverge at a join — keywords: 'in parallel', 'simultaneously', 'concurrently', " +
+            "'at the same time', 'splits into two strands/tracks', 'while X happens, Y happens', " +
+            "'all of the following must complete'. EVENT_BASED = the flow waits for several events and the " +
             "first to fire selects its branch — keywords: 'whichever arrives first', 'if a " +
             "confirmation arrives, or if nothing within N minutes'; its branches are EVENT_GATEWAY " +
             "branches naming the awaited event rather than a condition. " +
