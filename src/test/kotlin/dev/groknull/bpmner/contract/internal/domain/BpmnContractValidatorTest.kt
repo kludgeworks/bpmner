@@ -689,6 +689,50 @@ class BpmnContractValidatorTest {
         )
     }
 
+    // Membership used to be tested against one flattened set covering every subprocess at once, so
+    // an edge joining one subprocess's interior straight to another's had a member at both ends,
+    // agreed with itself, and passed in silence. V12 does not catch it either: a subprocess's
+    // interior is built from flows with both endpoints inside it, so the cross edge is filtered out
+    // of both interiors and its target merely looks like an entry point.
+    @Test
+    fun `V11 - a flow between members of different subprocesses fails FLOW_CROSSES_SUBPROCESS_BOUNDARY`() {
+        val base = linearContract()
+        val contract = base.copy(
+            activities = base.activities + listOf(
+                ContractActivity.SubProcess(
+                    id = "sub-intake",
+                    name = "Intake",
+                    memberIds = listOf("activity-receive"),
+                    sourceIds = sources,
+                ),
+                ContractActivity.SubProcess(
+                    id = "sub-assess",
+                    name = "Assess",
+                    memberIds = listOf("activity-review"),
+                    sourceIds = sources,
+                ),
+            ),
+            flows = listOf(
+                ContractFlow.Sequence(from = "start", to = "sub-intake"),
+                // One interior reaching into the other, rather than the two subprocesses meeting.
+                ContractFlow.Sequence(from = "activity-receive", to = "activity-review"),
+                ContractFlow.Sequence(from = "sub-assess", to = "end-approved"),
+            ),
+        )
+
+        val issue = validator.validate(contract).issues
+            .single { it.code == ContractValidationCode.FLOW_CROSSES_SUBPROCESS_BOUNDARY }
+
+        assertTrue(
+            issue.message.contains("'sub-intake'") && issue.message.contains("'sub-assess'"),
+            "the repair has to name both owners for an author to know which two to join: ${issue.message}",
+        )
+        assertTrue(
+            issue.message.contains("between the two subprocesses' own ids"),
+            "expected the connection moved out to the subprocesses themselves, got: ${issue.message}",
+        )
+    }
+
     // The advice on a V11 issue is the only thing a corrective retry has to act on, so an edge
     // whose repair is "do what you already did" cannot converge. A real run spent all three
     // attempts re-emitting byte-identical flows against advice that read "route through the

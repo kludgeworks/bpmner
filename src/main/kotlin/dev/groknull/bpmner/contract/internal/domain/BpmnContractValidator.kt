@@ -322,16 +322,30 @@ internal class BpmnContractValidator {
         }
     }
 
-    // V11: a subprocess joins the outer flow through its own id — a flow with exactly one
-    // endpoint among a subprocess's containedActivityIds reaches into or out of it directly.
+    // V11: a subprocess joins the outer flow through its own id, so every flow keeps both endpoints
+    // on one side of every boundary. An endpoint's side is its owning subprocess — null for the
+    // outermost level — and two endpoints whose owners differ are separated by a boundary the flow
+    // has no business crossing, whether that is one subprocess's wall or two.
     private fun validateSubprocessBoundary(contract: ProcessContract): List<ContractValidationIssue> = buildList {
-        val memberIds = contract.subprocessMemberIds()
-        if (memberIds.isEmpty()) return@buildList
-        val boundaryEventIds = contract.activities.flatMap { it.boundaryEvents }.map { it.id }.toSet()
         val ownerOf = contract.subprocessOwnerByMemberId()
+        if (ownerOf.isEmpty()) return@buildList
+        val boundaryEventIds = contract.activities.flatMap { it.boundaryEvents }.map { it.id }.toSet()
         contract.flows.forEach { flow ->
-            val fromIsMember = flow.from in memberIds
-            if (fromIsMember == (flow.to in memberIds)) return@forEach
+            val fromOwner = ownerOf[flow.from]
+            val toOwner = ownerOf[flow.to]
+            if (fromOwner == toOwner) return@forEach
+            if (fromOwner != null && toOwner != null) {
+                add(
+                    errorIssue(
+                        code = ContractValidationCode.FLOW_CROSSES_SUBPROCESS_BOUNDARY,
+                        message = "flow from '${flow.from}' to '${flow.to}' joins the interior of subprocess" +
+                            " '$fromOwner' to the interior of subprocess '$toOwner' — $INTERIOR_TO_INTERIOR_REPAIR",
+                        targetId = flow.from,
+                    ),
+                )
+                return@forEach
+            }
+            val fromIsMember = fromOwner != null
             val member = if (fromIsMember) flow.from else flow.to
             val other = if (fromIsMember) flow.to else flow.from
             add(
@@ -887,6 +901,14 @@ internal class BpmnContractValidator {
     companion object {
         private const val MIN_ACTIVITIES = 2
         private const val MIN_DECISION_BRANCHES = 2
+
+        // Neither rerouting nor deletion, the repairs the single-boundary cases get. Each interior
+        // is sealed behind its own subprocess's id, so there is no edge either end could legally
+        // name: the connection belongs between the two subprocesses themselves.
+        private const val INTERIOR_TO_INTERIOR_REPAIR =
+            "each subprocess is reached only through its own id, so one interior cannot name an" +
+                " element of another. Let each interior end where it ends, and carry the" +
+                " connection on a flow between the two subprocesses' own ids instead"
     }
 }
 
