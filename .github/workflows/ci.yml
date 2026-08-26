@@ -31,10 +31,10 @@ jobs:
         with:
           setup-bazel: "false"
 
-      # `--all`, not a bare `all`: hk's positional argument is a FILE list, so `hk check all`
-      # silently linted a non-existent path named "all" and exited 0. Every file-scoped step
-      # (ktlint, detekt, biome, rumdl, actionlint, shellcheck) was skipped for the lifetime of
-      # that typo, which is how the debt this commit clears accumulated unnoticed.
+      # `--all` is a flag, not a positional: hk's positional argument is a FILE list, so a bare
+      # `hk check all` lints a single non-existent path named "all", skips every file-scoped step
+      # (ktlint, detekt, biome, rumdl, actionlint, shellcheck), and still exits 0. This gate is
+      # green either way, so the flag is the only thing making it mean anything.
       - name: Run hk lint checks
         run: hk check --all
 

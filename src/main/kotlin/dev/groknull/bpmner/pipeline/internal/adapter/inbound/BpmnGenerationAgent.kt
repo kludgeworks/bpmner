@@ -62,8 +62,8 @@ import java.io.File
 // This class is the pipeline's single orchestrator (ADR-001): every stage is one collaborator, so
 // the constructor's width tracks the number of stages rather than any tangling of responsibility.
 // Bundling them behind a facade would hide the stage list, which is the one thing a reader comes
-// here to see. `xmlParser` is the eleventh, added so `layout` can verify it returned the process it
-// was given (issue #746).
+// here to see. `xmlParser` is the eleventh, and is here so `layout` can check its own output still
+// describes the process it was handed (issue #746).
 @Suppress("LongParameterList")
 internal class BpmnGenerationAgent(
     private val requestDrafter: BpmnRequestDrafter,

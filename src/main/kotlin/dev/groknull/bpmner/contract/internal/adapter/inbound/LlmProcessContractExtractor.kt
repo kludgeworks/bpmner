@@ -77,10 +77,10 @@ internal class LlmProcessContractExtractor(
             logger.info("Contract extracted:\n{}", contract)
             val report = validator.validate(contract)
             val validated = ValidatedProcessContract.of(contract, report)
-            // Conservation is checked on BOTH outcomes. It used to sit inside the success branch,
-            // so a retry that regressed the contract while still failing validation went entirely
-            // unreported — which is precisely when regressions happen, because a failing attempt is
-            // the only kind that gets retried at all — see issue #745.
+            // Conservation is checked on BOTH outcomes, not just the valid one. A failing attempt
+            // is the only kind that gets retried, so it is the only kind whose successor can
+            // regress the contract — confining the check to the success branch would leave it
+            // watching the one path where a regression can no longer happen (issue #745).
             val drops = detectConservationDrops(contract, previousContract, previousReport)
 
             if (validated != null && drops.isEmpty()) {
@@ -228,10 +228,10 @@ internal class LlmProcessContractExtractor(
     ): Map<String, Any> = mapOf(
         "maxAssumptions" to thresholds.maxAssumptions,
         "previousIssues" to (previousIssues ?: ""),
-        // Derived, lossless projection. This previously used a hand-written markdown renderer that
-        // dropped the start trigger's type and payload, rendered INCLUSIVE identically to EXCLUSIVE,
-        // and omitted boundary-event labels — so the prompt's "preserve this contract exactly" was
-        // being asked of an artifact that had already lost fields — see issue #745.
+        // Derived, lossless projection, and it has to stay one: the template asks the model to
+        // preserve this contract exactly, which is only answerable if every field it must preserve
+        // is present here. A hand-written renderer cannot hold that line — it silently stops
+        // carrying whatever the contract gains next (issue #745).
         "previousContract" to (previousContract?.let(jsonRenderer::render) ?: ""),
         "rationale" to assessment.rationale,
         "missingAreas" to assessment.missingAreas.map { it.name },

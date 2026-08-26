@@ -3,8 +3,6 @@
  * SPDX-License-Identifier: MIT
  */
 
-@file:Suppress("unused")
-
 package dev.groknull.bpmner.authoring.internal.domain
 
 /**

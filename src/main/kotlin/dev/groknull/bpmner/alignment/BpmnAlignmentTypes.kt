@@ -72,27 +72,25 @@ data class BpmnDefinitionSummary(
          * `BpmnDefinition` fields deliberately NOT carried into the summary, each with its reason.
          *
          * The summary is the only view of the generated diagram the alignment model ever sees, so a
-         * field missing from it is a field the check cannot possibly flag. It previously carried 4 of
-         * `BpmnDefinition`'s 19 fields — lanes, pools and message flows among the omissions — which
-         * meant a diagram that dropped every actor assignment and every external interaction would
-         * still be reported ALIGNED — see issue #744.
+         * field missing from it is a field the check cannot possibly flag. Omit lanes and pools and
+         * a diagram that drops every actor assignment still reports ALIGNED; omit message flows and
+         * so does one that drops every external interaction (issue #744).
          *
          * Omission is therefore a decision that must be recorded, not an accident of which fields
          * someone happened to map. `BpmnSummarizerCoverageTest` asserts this map plus the carried
          * fields exhaustively partition `BpmnDefinition`, so a newly added field cannot silently
          * bypass the gate: it either shows up in the summary or it is declared here with a reason.
          */
+        private const val NO_CONTRACT_COUNTERPART =
+            "ProcessContract models no data artifacts, so these cannot be compared to it"
+
         val OMITTED_DEFINITION_FIELDS: Map<String, String> = mapOf(
             "groups" to
                 "purely visual grouping with no ProcessContract counterpart, so nothing to align against",
-            "dataObjectReferences" to
-                "ProcessContract models no data artifacts, so these cannot be compared to it",
-            "dataStoreReferences" to
-                "ProcessContract models no data artifacts, so these cannot be compared to it",
-            "dataInputAssociations" to
-                "ProcessContract models no data artifacts, so these cannot be compared to it",
-            "dataOutputAssociations" to
-                "ProcessContract models no data artifacts, so these cannot be compared to it",
+            "dataObjectReferences" to NO_CONTRACT_COUNTERPART,
+            "dataStoreReferences" to NO_CONTRACT_COUNTERPART,
+            "dataInputAssociations" to NO_CONTRACT_COUNTERPART,
+            "dataOutputAssociations" to NO_CONTRACT_COUNTERPART,
             "diagramCount" to
                 "diagram-interchange bookkeeping; carries no semantic content to align",
         )
