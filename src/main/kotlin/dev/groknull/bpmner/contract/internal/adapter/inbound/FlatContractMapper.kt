@@ -66,7 +66,7 @@ public fun FlatContractFlow.toSealed(): ContractFlow = if (branchId == null) {
 public fun FlatContractSubProcess.toSealed(): ContractActivity.SubProcess = ContractActivity.SubProcess(
     id = id,
     name = name,
-    containedActivityIds = activityIds,
+    memberIds = memberIds,
     sourceIds = sourceIds,
 )
 

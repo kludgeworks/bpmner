@@ -267,7 +267,7 @@ class BpmnContractFidelityCheckerTest {
             ContractActivity.SubProcess(
                 id = "sub-assess",
                 name = "Assess claim",
-                containedActivityIds = listOf("act-validate", "act-estimate"),
+                memberIds = listOf("act-validate", "act-estimate"),
             ),
         ),
         endStates = listOf(ContractEndState.Normal("end-paid", "Claim paid")),

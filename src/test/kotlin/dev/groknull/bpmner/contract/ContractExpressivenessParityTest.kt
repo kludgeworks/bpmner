@@ -68,15 +68,15 @@ class ContractExpressivenessParityTest {
     )
 
     private enum class ContractSource(val nestableInSubprocess: Boolean) {
-        /** `ContractActivity.SubProcess.containedActivityIds` names these, so they can be nested. */
+        /** `ContractActivity.SubProcess.memberIds` names these, so they can be nested. */
         ACTIVITY(true),
 
         /** Contained implicitly: a boundary event is nested wherever its host activity is. */
         BOUNDARY_EVENT(true),
 
-        DECISION(false),
-        INTERMEDIATE_THROW(false),
-        END_STATE(false),
+        DECISION(true),
+        INTERMEDIATE_THROW(true),
+        END_STATE(true),
 
         /** A process has exactly one start; nesting it is not a capability the contract needs. */
         START(false),
@@ -89,15 +89,7 @@ class ContractExpressivenessParityTest {
      * Categories BPMN can nest inside a subprocess but the contract cannot, each with the issue
      * tracking the gap. Delete an entry when its issue lands; the test then proves parity.
      */
-    private val knownGaps: Map<ContractSource, String> = mapOf(
-        ContractSource.DECISION to
-            "issue #742 — SubProcess.containedActivityIds holds activity ids only, so a decision " +
-            "inside a subprocess has no valid contract representation",
-        ContractSource.INTERMEDIATE_THROW to
-            "issue #742 — same containment limitation; intermediate throws cannot be nested either",
-        ContractSource.END_STATE to
-            "issue #742 — a subprocess with its own end state cannot be expressed",
-    )
+    private val knownGaps: Map<ContractSource, String> = emptyMap()
 
     @Test
     fun `every BPMN node type declares which contract element produces it`() {

@@ -381,16 +381,26 @@ internal object ContractExtractionExamples {
     // ──────────────────────────────────────────────────────────────────────────
     // Example 7 — embedded subprocess
     //
-    // Prose: "To assess a claim, the adjuster validates the documents, estimates the
-    //          damage, then decides the payout. Once the claim has been assessed, it is paid."
-    // The three assessment steps are a named composite step → a subProcesses entry grouping
-    // them. The members stay in `activities`; the subprocess only names which ids it contains.
+    // Prose: "To assess a claim, the adjuster validates the documents and then judges whether
+    //          the damage is major. Minor damage is settled from a desk estimate; major damage
+    //          is sent for a full survey. Once the claim has been assessed, it is paid."
+    // The assessment steps are a named composite step → a subProcesses entry grouping them.
+    // The members stay in their top-level arrays; the subprocess only names which ids it groups.
+    //
+    // The interior deliberately BRANCHES and its two branches deliberately END inside the group,
+    // because that is the shape the boundary rule is most often got wrong on. A linear interior
+    // cannot teach it: when the chain merely stops, there is no way to see whether the exit edge
+    // was omitted by rule or by accident, and a model reading such an example generalises that
+    // several finishing branches should be joined back to the subprocess's own id to "converge"
+    // them. Here the omission is unmistakable — two branches end and NEITHER is joined back.
     // ──────────────────────────────────────────────────────────────────────────
 
     private const val SUB_ASSESS = "sub-assess-claim"
     private const val ACT_VALIDATE_DOCS = "act-validate-documents"
-    private const val ACT_ESTIMATE = "act-estimate-damage"
-    private const val ACT_DECIDE_PAYOUT = "act-decide-payout"
+    private const val DEC_DAMAGE_MAJOR = "dec-damage-major"
+    private const val ACT_DESK_ESTIMATE = "act-estimate-from-desk"
+    private const val ACT_FULL_SURVEY = "act-commission-full-survey"
+    private const val END_DESK_SETTLED = "end-settled-at-desk"
     private const val ACT_PAY_CLAIM = "act-pay-claim"
 
     val subProcessExample: FlatProcessContract =
@@ -413,14 +423,14 @@ internal object ContractExtractionExamples {
                     sourceIds = listOf("src-1"),
                 ),
                 FlatContractActivity(
-                    id = ACT_ESTIMATE,
-                    name = "Estimate damage",
+                    id = ACT_DESK_ESTIMATE,
+                    name = "Estimate from desk",
                     kind = FlatActivityKind.SERVICE,
                     sourceIds = listOf("src-1"),
                 ),
                 FlatContractActivity(
-                    id = ACT_DECIDE_PAYOUT,
-                    name = "Decide payout",
+                    id = ACT_FULL_SURVEY,
+                    name = "Commission full survey",
                     kind = FlatActivityKind.USER,
                     sourceIds = listOf("src-1"),
                 ),
@@ -431,11 +441,40 @@ internal object ContractExtractionExamples {
                     sourceIds = listOf("src-1"),
                 ),
             ),
+            // A decision is a member like any other: it stays in `decisions` and the subprocess
+            // merely names it. Grouping is by membership, not by nesting the object.
+            decisions = listOf(
+                FlatContractDecision(
+                    id = DEC_DAMAGE_MAJOR,
+                    question = "Is the damage major?",
+                    kind = ContractGatewayKind.EXCLUSIVE,
+                    branches = listOf(
+                        FlatContractBranch(
+                            id = "br-minor",
+                            label = "Minor damage",
+                            kind = FlatBranchKind.CONDITIONAL,
+                            condition = "the damage is minor",
+                        ),
+                        FlatContractBranch(
+                            id = "br-major",
+                            label = "Major damage",
+                            kind = FlatBranchKind.DEFAULT,
+                        ),
+                    ),
+                    sourceIds = listOf("src-1"),
+                ),
+            ),
             subProcesses = listOf(
                 FlatContractSubProcess(
                     id = SUB_ASSESS,
                     name = "Assess claim",
-                    activityIds = listOf(ACT_VALIDATE_DOCS, ACT_ESTIMATE, ACT_DECIDE_PAYOUT),
+                    memberIds = listOf(
+                        ACT_VALIDATE_DOCS,
+                        DEC_DAMAGE_MAJOR,
+                        ACT_DESK_ESTIMATE,
+                        ACT_FULL_SURVEY,
+                        END_DESK_SETTLED,
+                    ),
                     sourceIds = listOf("src-1"),
                 ),
             ),
@@ -446,15 +485,37 @@ internal object ContractExtractionExamples {
                     kind = FlatEndStateKind.NORMAL,
                     sourceIds = listOf("src-1"),
                 ),
+                // An end state may itself be a member. This is the only landing place available to
+                // a branch that finishes the group: a branch cannot be left unrealised, and it
+                // cannot point out of the subprocess, so without a nested end state a "nothing
+                // further is needed" branch has nowhere legal to go.
+                FlatContractEndState(
+                    id = END_DESK_SETTLED,
+                    name = "Settled at desk",
+                    kind = FlatEndStateKind.NORMAL,
+                    sourceIds = listOf("src-1"),
+                ),
             ),
             // The boundary rule this example exists to teach, shown rather than stated: the outer
             // flow enters and leaves through the subprocess's OWN id, and the only edges naming a
             // member are member-to-member. An edge with exactly one endpoint inside the group is
             // what V11 (FLOW_CROSSES_SUBPROCESS_BOUNDARY) rejects.
+            //
+            // Both ways an interior path may finish are shown, because a branch and a plain step
+            // finish differently:
+            //  - ACT_FULL_SURVEY is a plain step at the end of its path, so it simply has no
+            //    outgoing edge. Read the edges and note the absence.
+            //  - the minor path reaches END_DESK_SETTLED, an end state that is itself a member.
+            //    A branch cannot finish by having no edge — every branch must be realised — so a
+            //    nested end state is what a finishing branch points at.
+            // Joining either back to SUB_ASSESS would name a member and its own subprocess on one
+            // edge, which is the violation, not the fix for it.
             flows = listOf(
                 FlatContractFlow(from = "start", to = SUB_ASSESS),
-                FlatContractFlow(from = ACT_VALIDATE_DOCS, to = ACT_ESTIMATE),
-                FlatContractFlow(from = ACT_ESTIMATE, to = ACT_DECIDE_PAYOUT),
+                FlatContractFlow(from = ACT_VALIDATE_DOCS, to = DEC_DAMAGE_MAJOR),
+                FlatContractFlow(from = DEC_DAMAGE_MAJOR, to = ACT_DESK_ESTIMATE, branchId = "br-minor"),
+                FlatContractFlow(from = DEC_DAMAGE_MAJOR, to = ACT_FULL_SURVEY, branchId = "br-major"),
+                FlatContractFlow(from = ACT_DESK_ESTIMATE, to = END_DESK_SETTLED),
                 FlatContractFlow(from = SUB_ASSESS, to = ACT_PAY_CLAIM),
                 FlatContractFlow(from = ACT_PAY_CLAIM, to = END_NORMAL),
             ),

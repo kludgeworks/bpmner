@@ -476,7 +476,7 @@ internal class BpmnContractFidelityChecker : BpmnContractFidelityPort {
         // without the container we cannot verify nesting, so stop here.
         if (node !is BpmnSubProcess) return
 
-        checkContainment(subProcess.id, subProcess.containedActivityIds, nodeById, definition, issues)
+        checkContainment(subProcess.id, subProcess.memberIds, nodeById, definition, issues)
     }
 
     /**

@@ -72,7 +72,7 @@ class FlatContractMapperTest {
         val flat = FlatContractSubProcess(
             id = "sub-assess",
             name = "Assess claim",
-            activityIds = listOf("act-validate", "act-estimate"),
+            memberIds = listOf("act-validate", "act-estimate"),
             sourceIds = listOf("ev1"),
         )
 
@@ -80,7 +80,7 @@ class FlatContractMapperTest {
             ContractActivity.SubProcess(
                 id = "sub-assess",
                 name = "Assess claim",
-                containedActivityIds = listOf("act-validate", "act-estimate"),
+                memberIds = listOf("act-validate", "act-estimate"),
                 sourceIds = listOf("ev1"),
             ),
             flat.toSealed(),
@@ -106,7 +106,7 @@ class FlatContractMapperTest {
                 FlatContractSubProcess(
                     id = "sub-assess",
                     name = "Assess claim",
-                    activityIds = listOf("act-validate", "act-estimate"),
+                    memberIds = listOf("act-validate", "act-estimate"),
                     sourceIds = listOf("ev1"),
                 ),
             ),
@@ -119,7 +119,7 @@ class FlatContractMapperTest {
         assertEquals(4, sealed.activities.size)
         val subProcess = sealed.activities.filterIsInstance<ContractActivity.SubProcess>().single()
         assertEquals("sub-assess", subProcess.id)
-        assertEquals(listOf("act-validate", "act-estimate"), subProcess.containedActivityIds)
+        assertEquals(listOf("act-validate", "act-estimate"), subProcess.memberIds)
     }
 
     @Test

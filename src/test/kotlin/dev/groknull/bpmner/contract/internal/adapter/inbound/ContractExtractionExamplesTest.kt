@@ -53,7 +53,7 @@ class ContractExtractionExamplesTest {
     @Test
     fun `the subprocess example demonstrates the boundary rule it exists to teach`() {
         val example = ContractExtractionExamples.subProcessExample
-        val memberIds = example.subProcesses.flatMap { it.activityIds }.toSet()
+        val memberIds = example.subProcesses.flatMap { it.memberIds }.toSet()
 
         assertTrue(memberIds.isNotEmpty(), "subprocess example must declare members")
         assertTrue(example.flows.isNotEmpty(), "subprocess example must state its topology")

@@ -438,10 +438,13 @@ public data class FlatContractSubProcess(
     @field:NotEmpty
     @field:Size(max = 100)
     @get:JsonPropertyDescription(
-        "Ids of the member activities contained in this subprocess. Each must match an entry in the " +
-            "top-level `activities` array. Order follows the member flow inside the subprocess.",
+        "Ids of the member elements contained in this subprocess. Each must match an entry in the " +
+            "top-level `activities`, `decisions`, `intermediateThrows`, or `endStates` arrays. Order " +
+            "follows the member flow inside the subprocess. Membership alone marks the group's " +
+            "extent: never add a `flows` edge between a member and this subprocess's own id — the " +
+            "interior starts and ends implicitly, so branches that finish inside simply stop.",
     )
-    val activityIds: List<String>,
+    val memberIds: List<String>,
     @field:Size(max = 10)
     @get:JsonPropertyDescription("Source ids grounding this subprocess in evidence.")
     val sourceIds: List<String> = emptyList(),

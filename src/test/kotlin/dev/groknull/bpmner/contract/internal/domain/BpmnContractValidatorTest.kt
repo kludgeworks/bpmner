@@ -484,7 +484,7 @@ class BpmnContractValidatorTest {
             activities = base.activities + ContractActivity.SubProcess(
                 id = "sub-assess",
                 name = "Assess",
-                containedActivityIds = base.activities.map { it.id },
+                memberIds = base.activities.map { it.id },
                 sourceIds = sources,
             ),
             // The outer flow crosses through the subprocess's own id (V11), never through a
@@ -507,7 +507,7 @@ class BpmnContractValidatorTest {
             activities = base.activities + ContractActivity.SubProcess(
                 id = "sub-assess",
                 name = "Assess",
-                containedActivityIds = listOf("activity-receive", "act-ghost"),
+                memberIds = listOf("activity-receive", "act-ghost"),
                 sourceIds = sources,
             ),
         )
@@ -524,13 +524,13 @@ class BpmnContractValidatorTest {
                 ContractActivity.SubProcess(
                     id = "sub-a",
                     name = "A",
-                    containedActivityIds = listOf("activity-receive"),
+                    memberIds = listOf("activity-receive"),
                     sourceIds = sources,
                 ),
                 ContractActivity.SubProcess(
                     id = "sub-b",
                     name = "B",
-                    containedActivityIds = listOf("activity-receive"),
+                    memberIds = listOf("activity-receive"),
                     sourceIds = sources,
                 ),
             ),
@@ -548,13 +548,13 @@ class BpmnContractValidatorTest {
                 ContractActivity.SubProcess(
                     id = "sub-inner",
                     name = "Inner",
-                    containedActivityIds = listOf("activity-receive"),
+                    memberIds = listOf("activity-receive"),
                     sourceIds = sources,
                 ),
                 ContractActivity.SubProcess(
                     id = "sub-outer",
                     name = "Outer",
-                    containedActivityIds = listOf("activity-review", "sub-inner"),
+                    memberIds = listOf("activity-review", "sub-inner"),
                     sourceIds = sources,
                 ),
             ),
@@ -571,7 +571,7 @@ class BpmnContractValidatorTest {
             activities = base.activities + ContractActivity.SubProcess(
                 id = "sub-empty",
                 name = "Empty",
-                containedActivityIds = emptyList(),
+                memberIds = emptyList(),
                 sourceIds = sources,
             ),
         )
@@ -587,7 +587,7 @@ class BpmnContractValidatorTest {
             activities = base.activities + ContractActivity.SubProcess(
                 id = "sub-dup",
                 name = "Dup",
-                containedActivityIds = listOf("activity-receive", "activity-receive"),
+                memberIds = listOf("activity-receive", "activity-receive"),
                 sourceIds = sources,
             ),
         )
@@ -675,7 +675,7 @@ class BpmnContractValidatorTest {
             activities = base.activities + ContractActivity.SubProcess(
                 id = "sub-assess",
                 name = "Assess",
-                containedActivityIds = listOf("activity-review"),
+                memberIds = listOf("activity-review"),
                 sourceIds = sources,
             ),
             flows = listOf(
@@ -686,6 +686,113 @@ class BpmnContractValidatorTest {
         )
         assertTrue(
             validator.validate(contract).issues.any { it.code == ContractValidationCode.FLOW_CROSSES_SUBPROCESS_BOUNDARY },
+        )
+    }
+
+    // The advice on a V11 issue is the only thing a corrective retry has to act on, so an edge
+    // whose repair is "do what you already did" cannot converge. A real run spent all three
+    // attempts re-emitting byte-identical flows against advice that read "route through the
+    // subprocess's own id instead" on edges whose target was already the subprocess's own id.
+    // These two tests pin the distinction the message has to make; the codes alone cannot.
+    @Test
+    fun `V11 - an edge from a member to its own subprocess is told to remove it, not reroute it`() {
+        val base = linearContract()
+        val contract = base.copy(
+            activities = base.activities + ContractActivity.SubProcess(
+                id = "sub-assess",
+                name = "Assess",
+                memberIds = listOf("activity-review"),
+                sourceIds = sources,
+            ),
+            flows = listOf(
+                ContractFlow.Sequence(from = "start", to = "sub-assess"),
+                // The interior's exit drawn explicitly — the mistake this advice must correct.
+                ContractFlow.Sequence(from = "activity-review", to = "sub-assess"),
+                ContractFlow.Sequence(from = "sub-assess", to = "end-approved"),
+            ),
+        )
+
+        val issue = validator.validate(contract).issues
+            .single { it.code == ContractValidationCode.FLOW_CROSSES_SUBPROCESS_BOUNDARY }
+
+        assertTrue(issue.message.contains("remove it"), "expected a delete instruction, got: ${issue.message}")
+        assertFalse(
+            issue.message.contains("route through the subprocess's own id instead"),
+            "advice restates what the edge already does, so following it cannot change anything: ${issue.message}",
+        )
+    }
+
+    // Deleting is the right repair for a Sequence edge but the wrong one for a Branch edge: V9
+    // requires every branch to be realised, so "remove it" only swaps this error for
+    // DECISION_BRANCH_NOT_REALIZED. A real run oscillated between the two — attempt 2 deleted the
+    // edge and was told the branch was unrealised, attempt 3 restored it and was told it crossed
+    // the boundary — because neither message named the one legal landing place.
+    @Test
+    fun `V11 - a branch flow from a member is pointed at a member end state, not deleted`() {
+        val base = linearContract()
+        val contract = base.copy(
+            activities = base.activities + ContractActivity.SubProcess(
+                id = "sub-assess",
+                name = "Assess",
+                memberIds = listOf("activity-review", "dec-needs-survey"),
+                sourceIds = sources,
+            ),
+            decisions = base.decisions + ContractDecision(
+                id = "dec-needs-survey",
+                question = "Is a survey needed?",
+                kind = ContractGatewayKind.EXCLUSIVE,
+                branches = listOf(
+                    ConditionalBranch(id = "br-survey-yes", label = "Survey needed", condition = "a survey is needed"),
+                    DefaultBranch(id = "br-survey-no", label = "No survey"),
+                ),
+                sourceIds = sources,
+            ),
+            flows = listOf(
+                ContractFlow.Sequence(from = "start", to = "sub-assess"),
+                ContractFlow.Sequence(from = "activity-review", to = "dec-needs-survey"),
+                ContractFlow.Branch(from = "dec-needs-survey", to = "activity-review", branchId = "br-survey-yes"),
+                // The finishing branch pointed at the subprocess itself, having nowhere else to go.
+                ContractFlow.Branch(from = "dec-needs-survey", to = "sub-assess", branchId = "br-survey-no"),
+                ContractFlow.Sequence(from = "sub-assess", to = "end-approved"),
+            ),
+        )
+
+        val issue = validator.validate(contract).issues
+            .single { it.code == ContractValidationCode.FLOW_CROSSES_SUBPROCESS_BOUNDARY }
+
+        assertTrue(
+            issue.message.contains("memberIds"),
+            "a branch needs to be told where it MAY land, not just where it may not: ${issue.message}",
+        )
+        assertFalse(
+            issue.message.contains("remove it"),
+            "deleting a branch flow only trades this error for DECISION_BRANCH_NOT_REALIZED: ${issue.message}",
+        )
+    }
+
+    @Test
+    fun `V11 - an edge from a member to an unrelated element is still told to reroute`() {
+        val base = linearContract()
+        val contract = base.copy(
+            activities = base.activities + ContractActivity.SubProcess(
+                id = "sub-assess",
+                name = "Assess",
+                memberIds = listOf("activity-review"),
+                sourceIds = sources,
+            ),
+            flows = listOf(
+                ContractFlow.Sequence(from = "start", to = "activity-receive"),
+                ContractFlow.Sequence(from = "activity-receive", to = "activity-review"),
+                ContractFlow.Sequence(from = "activity-review", to = "end-approved"),
+            ),
+        )
+
+        val issue = validator.validate(contract).issues
+            .first { it.code == ContractValidationCode.FLOW_CROSSES_SUBPROCESS_BOUNDARY }
+
+        assertTrue(
+            issue.message.contains("route through the subprocess's own id instead"),
+            "a genuine boundary crossing is still repaired by rerouting: ${issue.message}",
         )
     }
 
@@ -703,7 +810,7 @@ class BpmnContractValidatorTest {
                 ContractActivity.SubProcess(
                     id = "sub-assess",
                     name = "Assess",
-                    containedActivityIds = listOf("activity-receive", "activity-review", "act-cycle-a", "act-cycle-b"),
+                    memberIds = listOf("activity-receive", "activity-review", "act-cycle-a", "act-cycle-b"),
                     sourceIds = sources,
                 ),
             ),
@@ -879,7 +986,7 @@ class BpmnContractValidatorTest {
             activities = base.activities + ContractActivity.SubProcess(
                 id = "sub-assess",
                 name = "Assess",
-                containedActivityIds = listOf("activity-review"),
+                memberIds = listOf("activity-review"),
                 sourceIds = sources,
             ),
             flows = listOf(
@@ -916,7 +1023,7 @@ class BpmnContractValidatorTest {
             activities = base.activities.map { activity ->
                 if (activity.id == "sub-assess") {
                     subAssess.copy(
-                        containedActivityIds = subAssess.containedActivityIds + listOf("act-stranded-a", "act-stranded-b"),
+                        memberIds = subAssess.memberIds + listOf("act-stranded-a", "act-stranded-b"),
                     )
                 } else {
                     activity
@@ -1083,7 +1190,7 @@ class BpmnContractValidatorTest {
             ContractActivity.SubProcess(
                 id = "sub-fulfil",
                 name = "Fulfil order",
-                containedActivityIds = listOf("act-pack", "act-ship"),
+                memberIds = listOf("act-pack", "act-ship"),
                 sourceIds = sources,
             ),
             ContractActivity(id = "act-pack", name = "Pack order", sourceIds = sources),
@@ -1156,7 +1263,7 @@ class BpmnContractValidatorTest {
                 ContractActivity.SubProcess(
                     id = "sub-assess",
                     name = "Assess",
-                    containedActivityIds = listOf("activity-review", "act-followup"),
+                    memberIds = listOf("activity-review", "act-followup"),
                     sourceIds = sources,
                 ),
             ),
