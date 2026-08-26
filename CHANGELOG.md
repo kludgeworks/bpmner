@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.8.0](https://github.com/kludgeworks/bpmner/compare/bpmner-v0.7.0...bpmner-v0.8.0) (2026-08-26)
+
+
+### Features
+
+* **layout:** route cross-lane BPMN via pseudo-interactive ELK constraints ([#735](https://github.com/kludgeworks/bpmner/issues/735)) ([c93f571](https://github.com/kludgeworks/bpmner/commit/c93f571965de37682abae38abf5f2c15a3080e4f))
+* synthesize diagram metadata ([#733](https://github.com/kludgeworks/bpmner/issues/733)) ([4c4916a](https://github.com/kludgeworks/bpmner/commit/4c4916a3ecd27acded3c9ca4211ac66da282ac2b))
+
+
+### Bug Fixes
+
+* remove synthesized diagram metadata ([#740](https://github.com/kludgeworks/bpmner/issues/740)) ([02833ff](https://github.com/kludgeworks/bpmner/commit/02833ff852793675befb00a21ba1be3684b9f971))
+* unblock subprocess extraction and the checks that were blind to it ([#747](https://github.com/kludgeworks/bpmner/issues/747)) ([d5d5456](https://github.com/kludgeworks/bpmner/commit/d5d54569e783cf433057377563a75d031b0d7614))
+
 ## [0.7.0](https://github.com/kludgeworks/bpmner/compare/bpmner-v0.6.0...bpmner-v0.7.0) (2026-08-19)
 
 
