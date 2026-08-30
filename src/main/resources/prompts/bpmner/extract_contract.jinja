@@ -13,8 +13,10 @@ Source grounding (provenance):
 - Schedule language (dates, delays, cycles, cron-like intervals): set `trigger.type` = TIMER and populate `timerKind` + `expression` + `description`.
 - Webhook/API/event-bus triggers intended for one process/listener: set `trigger.type` = MESSAGE and populate `messageName` + `description`.
 - Ordinary untyped process starts: set `trigger.type` = NONE and populate `description`.
-- Mid-flow sends that do not complete the process are intermediate throws, not tasks or end states:
-  set `intermediateThrows[].kind` = MESSAGE for point-to-point messages and populate its payload field.
+- A point-to-point message, broadcast signal, or business escalation is a `throwEvents[]` entry, not
+  a task: set `throwEvents[].kind` = MESSAGE / SIGNAL / ESCALATION and populate its payload field.
+  Do not decide whether it ends the process — that is derived from whether `flows` gives its id an
+  outgoing edge, not chosen here.
 
 {% include "bpmner/elements/activity_kinds" %}
 

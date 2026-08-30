@@ -614,6 +614,22 @@ class BpmnContractValidatorTest {
     }
 
     @Test
+    fun `V4 - an end state with an outgoing flow is told to move to activities, not to reclassify as a throw`() {
+        val linear = linearContract()
+        val contract = linear.copy(
+            flows = linear.flows + ContractFlow.Sequence(from = "end-approved", to = "activity-review"),
+        )
+        val issue =
+            validator.validate(contract).issues.single { it.code == ContractValidationCode.END_STATE_HAS_OUTGOING_FLOW }
+        assertEquals("end-approved", issue.targetId)
+        // Message/signal/escalation end states can no longer reach this check at all — issue #749's
+        // ThrowEvent placement is derived from `flows` before validation ever runs — so the only
+        // element that can still land here is NORMAL/TERMINATE/ERROR, for which the fix really is
+        // "this wasn't the end, it's an ordinary step".
+        assertTrue("`activities`" in issue.message, "expected a reclassification hint, got: ${issue.message}")
+    }
+
+    @Test
     fun `V7 - a declared but unreachable activity fails ELEMENT_UNREACHABLE_FROM_START, naming it`() {
         val linear = linearContract()
         val contract = linear.copy(

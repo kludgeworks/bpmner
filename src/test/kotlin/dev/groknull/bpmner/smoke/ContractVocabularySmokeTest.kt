@@ -346,6 +346,24 @@ class ContractVocabularySmokeTest {
         c.assertHasIntermediateThrow<ContractIntermediateThrow.Message>()
     }
 
+    // Regression coverage for issue #749: a send phrased in terminal-sounding language, with
+    // further steps after it in the source, must not be stranded as an end state. Placement is
+    // derived from the contract's own `flows` (FlatContractMapper.toSealed), not chosen by the
+    // model, so this should now succeed on the first attempt rather than needing the corrective
+    // retry loop to converge.
+    @Test
+    fun `mid-process send phrased as terminal resolves to an intermediate throw`() {
+        val c = extractContract(
+            """
+            The process starts when requested. A specialist prepares a report. The specialist
+            then sends the final version of the report to the requester. After that, the
+            requester and the end user discuss the report's findings together. Finally, the
+            report is filed away and the process ends.
+            """,
+        )
+        c.assertHasIntermediateThrow<ContractIntermediateThrow.Message>()
+    }
+
     // Gateways
 
     @Test
