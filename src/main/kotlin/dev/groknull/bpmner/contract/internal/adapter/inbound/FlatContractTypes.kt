@@ -47,12 +47,9 @@ public enum class FlatEndStateKind {
     NORMAL,
     TERMINATE,
     ERROR,
-    MESSAGE,
-    SIGNAL,
-    ESCALATION,
 }
 
-public enum class FlatIntermediateThrowKind {
+public enum class FlatThrowEventKind {
     MESSAGE,
     SIGNAL,
     ESCALATION,
@@ -216,9 +213,10 @@ public data class FlatContractLoop(
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonClassDescription(
-    "Required end state. Set `kind` and populate the matching code/name field: ERROR → errorCode, " +
-        "MESSAGE → messageName, SIGNAL → signalName, ESCALATION → escalationCode. NORMAL and " +
-        "TERMINATE leave them null.",
+    "Required end state. Set `kind` and populate the matching field: ERROR → errorCode. NORMAL " +
+        "and TERMINATE leave it null. A completion that sends a message/signal/escalation is not " +
+        "declared here — declare it as a `throwEvents` entry; whether it ends the process is " +
+        "derived from `flows`, not chosen on this type.",
 )
 public data class FlatContractEndState(
     @field:NotBlank
@@ -231,9 +229,7 @@ public data class FlatContractEndState(
     val name: String,
     @get:JsonPropertyDescription(
         "End-state kind. NORMAL (vanilla completion, default), TERMINATE (kills all parallel " +
-            "tokens), ERROR (propagates to boundary catcher; populate errorCode), MESSAGE " +
-            "(point-to-point send on completion; populate messageName), SIGNAL (broadcast; populate " +
-            "signalName), ESCALATION (notification, not failure; populate escalationCode).",
+            "tokens), ERROR (propagates to boundary catcher; populate errorCode).",
     )
     val kind: FlatEndStateKind,
     @field:Size(max = 10)
@@ -245,57 +241,41 @@ public data class FlatContractEndState(
             "(e.g. \"CREDIT_REJECTED\"). NOT a user-facing message.",
     )
     val errorCode: String? = null,
-    @field:Size(max = 200)
-    @get:JsonPropertyDescription(
-        "Required when kind=MESSAGE. Human-readable message name (e.g. \"shipment confirmation\").",
-    )
-    val messageName: String? = null,
-    @field:Size(max = 200)
-    @get:JsonPropertyDescription(
-        "Required when kind=SIGNAL. Human-readable signal name broadcast to any listener " +
-            "(e.g. \"settlement complete\").",
-    )
-    val signalName: String? = null,
-    @field:Size(max = 200)
-    @get:JsonPropertyDescription(
-        "Required when kind=ESCALATION. Stable business escalation code an enclosing scope " +
-            "matches (e.g. \"APPROVAL_OVERDUE\"). NOT a user-facing message.",
-    )
-    val escalationCode: String? = null,
 )
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonClassDescription(
-    "Intermediate throw event emitted in the middle of the process. Set `kind` and populate " +
-        "the matching payload field: MESSAGE → messageName, SIGNAL → signalName, " +
-        "ESCALATION → escalationCode.",
+    "A message/signal/escalation throw event. Set `kind` and populate the matching payload " +
+        "field: MESSAGE → messageName, SIGNAL → signalName, ESCALATION → escalationCode. Whether " +
+        "this event ends the process or continues mid-flow is NOT chosen here — it is derived " +
+        "automatically from whether `flows` gives this event's id an outgoing edge.",
 )
-public data class FlatContractIntermediateThrow(
+public data class FlatContractThrowEvent(
     @field:NotBlank
     @field:Size(max = 200)
-    @get:JsonPropertyDescription(INTERMEDIATE_THROW_ID_DESCRIPTION)
+    @get:JsonPropertyDescription(THROW_EVENT_ID_DESCRIPTION)
     val id: String,
     @field:NotBlank
     @field:Size(max = 200)
-    @get:JsonPropertyDescription(INTERMEDIATE_THROW_NAME_DESCRIPTION)
+    @get:JsonPropertyDescription(THROW_EVENT_NAME_DESCRIPTION)
     val name: String,
     @get:JsonPropertyDescription(
-        "Intermediate throw kind. MESSAGE sends a point-to-point message mid-flow, SIGNAL broadcasts " +
-            "mid-flow, ESCALATION raises a non-interrupting business escalation mid-flow.",
+        "Throw-event kind. MESSAGE sends a point-to-point message, SIGNAL broadcasts, ESCALATION " +
+            "raises a non-interrupting business escalation.",
     )
-    val kind: FlatIntermediateThrowKind,
+    val kind: FlatThrowEventKind,
     @field:Size(max = 10)
-    @get:JsonPropertyDescription(INTERMEDIATE_THROW_SOURCE_IDS_DESCRIPTION)
+    @get:JsonPropertyDescription(THROW_EVENT_SOURCE_IDS_DESCRIPTION)
     val sourceIds: List<String> = emptyList(),
     @field:Size(max = 200)
     @get:JsonPropertyDescription("Required when kind=MESSAGE. Human-readable message name.")
     val messageName: String? = null,
     @field:Size(max = 200)
-    @get:JsonPropertyDescription("Required when kind=SIGNAL. Human-readable signal name broadcast mid-flow.")
+    @get:JsonPropertyDescription("Required when kind=SIGNAL. Human-readable signal name.")
     val signalName: String? = null,
     @field:Size(max = 200)
     @get:JsonPropertyDescription(
-        "Required when kind=ESCALATION. Stable business escalation code raised mid-flow.",
+        "Required when kind=ESCALATION. Stable business escalation code.",
     )
     val escalationCode: String? = null,
 )
@@ -439,7 +419,7 @@ public data class FlatContractSubProcess(
     @field:Size(max = 100)
     @get:JsonPropertyDescription(
         "Ids of the member elements contained in this subprocess. Each must match an entry in the " +
-            "top-level `activities`, `decisions`, `intermediateThrows`, or `endStates` arrays. Order " +
+            "top-level `activities`, `decisions`, `throwEvents`, or `endStates` arrays. Order " +
             "follows the member flow inside the subprocess. Membership alone marks the group's " +
             "extent: never add a `flows` edge between a member and this subprocess's own id — the " +
             "interior starts and ends implicitly, so branches that finish inside simply stop.",
@@ -493,15 +473,21 @@ public data class FlatProcessContract(
     @field:Size(max = 50)
     @get:JsonPropertyDescription("Actors referenced by the process contract")
     val actors: List<ContractActor> = emptyList(),
-    @field:NotEmpty
     @field:Valid
     @field:Size(max = 50)
-    @get:JsonPropertyDescription("Required process end states")
-    val endStates: List<FlatContractEndState>,
+    @get:JsonPropertyDescription(
+        "Process end states of kind NORMAL/TERMINATE/ERROR only. May be empty if the process's " +
+            "only terminus is a `throwEvents` entry with no outgoing flow — that is a valid end too.",
+    )
+    val endStates: List<FlatContractEndState> = emptyList(),
     @field:Valid
     @field:Size(max = 50)
-    @get:JsonPropertyDescription("Intermediate throw events required in the middle of the process")
-    val intermediateThrows: List<FlatContractIntermediateThrow> = emptyList(),
+    @get:JsonPropertyDescription(
+        "Message/signal/escalation throw events, wherever they occur in the process. Whether each " +
+            "one ends the process or continues mid-flow is derived from `flows` (does it have an " +
+            "outgoing edge?), not chosen here.",
+    )
+    val throwEvents: List<FlatContractThrowEvent> = emptyList(),
     @field:Valid
     @field:Size(max = 50)
     @get:JsonPropertyDescription(
@@ -578,7 +564,7 @@ private const val END_STATE_ID_DESCRIPTION: String = "Stable end-state id"
 private const val END_STATE_NAME_DESCRIPTION: String = "End-state name"
 private const val END_STATE_SOURCE_IDS_DESCRIPTION: String =
     "Source ids grounding this end state in evidence."
-private const val INTERMEDIATE_THROW_ID_DESCRIPTION: String = "Stable intermediate throw id"
-private const val INTERMEDIATE_THROW_NAME_DESCRIPTION: String = "Intermediate throw name"
-private const val INTERMEDIATE_THROW_SOURCE_IDS_DESCRIPTION: String =
-    "Source ids grounding this intermediate throw in evidence."
+private const val THROW_EVENT_ID_DESCRIPTION: String = "Stable throw-event id"
+private const val THROW_EVENT_NAME_DESCRIPTION: String = "Throw-event name"
+private const val THROW_EVENT_SOURCE_IDS_DESCRIPTION: String =
+    "Source ids grounding this throw event in evidence."

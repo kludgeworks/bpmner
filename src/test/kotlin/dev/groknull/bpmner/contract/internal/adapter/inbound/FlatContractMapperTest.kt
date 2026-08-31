@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: MIT
  */
 
-@file:Suppress("TooManyFunctions")
+@file:Suppress("TooManyFunctions", "LargeClass")
 
 package dev.groknull.bpmner.contract.internal.adapter.inbound
 
@@ -248,17 +248,6 @@ class FlatContractMapperTest {
                 ContractEndState.Terminate("e-term", "End", sourceIds = sourceIds),
             flatEnd(FlatEndStateKind.ERROR, "e-err", payload = "CREDIT_REJECTED") to
                 ContractEndState.Error("e-err", "End", errorCode = "CREDIT_REJECTED", sourceIds = sourceIds),
-            flatEnd(FlatEndStateKind.MESSAGE, "e-msg", payload = "shipped") to
-                ContractEndState.Message("e-msg", "End", messageName = "shipped", sourceIds = sourceIds),
-            flatEnd(FlatEndStateKind.SIGNAL, "e-sig", payload = "settlement complete") to
-                ContractEndState.Signal("e-sig", "End", signalName = "settlement complete", sourceIds = sourceIds),
-            flatEnd(FlatEndStateKind.ESCALATION, "e-esc", payload = "APPROVAL_OVERDUE") to
-                ContractEndState.Escalation(
-                    "e-esc",
-                    "End",
-                    escalationCode = "APPROVAL_OVERDUE",
-                    sourceIds = sourceIds,
-                ),
         )
         assertEquals(
             FlatEndStateKind.entries.size,
@@ -267,6 +256,111 @@ class FlatContractMapperTest {
         )
 
         cases.forEach { (flat, expected) -> assertEquals(expected, flat.toSealed()) }
+    }
+
+    @Test
+    fun `every FlatContractThrowEvent kind round-trips via toEndState`() {
+        val sourceIds = listOf("ev1")
+        val cases: List<Pair<FlatContractThrowEvent, ContractEndState>> = listOf(
+            flatThrow(FlatThrowEventKind.MESSAGE, "t-msg", "shipped") to
+                ContractEndState.Message("t-msg", "Throw", messageName = "shipped", sourceIds = sourceIds),
+            flatThrow(FlatThrowEventKind.SIGNAL, "t-sig", "settlement complete") to
+                ContractEndState.Signal("t-sig", "Throw", signalName = "settlement complete", sourceIds = sourceIds),
+            flatThrow(FlatThrowEventKind.ESCALATION, "t-esc", "APPROVAL_OVERDUE") to
+                ContractEndState.Escalation(
+                    "t-esc",
+                    "Throw",
+                    escalationCode = "APPROVAL_OVERDUE",
+                    sourceIds = sourceIds,
+                ),
+        )
+        assertEquals(
+            FlatThrowEventKind.entries.size,
+            cases.size,
+            "every FlatThrowEventKind needs a case here — a new kind must not slip through untested",
+        )
+
+        cases.forEach { (flat, expected) -> assertEquals(expected, flat.toEndState()) }
+    }
+
+    @Test
+    fun `every FlatContractThrowEvent kind round-trips via toIntermediateThrow`() {
+        val sourceIds = listOf("ev1")
+        val cases: List<Pair<FlatContractThrowEvent, ContractIntermediateThrow>> = listOf(
+            flatThrow(FlatThrowEventKind.MESSAGE, "t-msg", "shipped") to
+                ContractIntermediateThrow.Message("t-msg", "Throw", messageName = "shipped", sourceIds = sourceIds),
+            flatThrow(FlatThrowEventKind.SIGNAL, "t-sig", "settlement complete") to
+                ContractIntermediateThrow.Signal(
+                    "t-sig",
+                    "Throw",
+                    signalName = "settlement complete",
+                    sourceIds = sourceIds,
+                ),
+            flatThrow(FlatThrowEventKind.ESCALATION, "t-esc", "APPROVAL_OVERDUE") to
+                ContractIntermediateThrow.Escalation(
+                    "t-esc",
+                    "Throw",
+                    escalationCode = "APPROVAL_OVERDUE",
+                    sourceIds = sourceIds,
+                ),
+        )
+        assertEquals(
+            FlatThrowEventKind.entries.size,
+            cases.size,
+            "every FlatThrowEventKind needs a case here — a new kind must not slip through untested",
+        )
+
+        cases.forEach { (flat, expected) -> assertEquals(expected, flat.toIntermediateThrow()) }
+    }
+
+    // The actual fix for issue #749: placement is derived from `flows`, not from which array the
+    // model chose. Two throw events, otherwise identical, differing only in outgoing-flow count.
+    @Test
+    fun `toSealed places a throw event with no outgoing flow as an end state`() {
+        val flat = FlatProcessContract(
+            id = "c-1",
+            processName = "Report process",
+            summary = "Sends a report and stops.",
+            start = FlatContractStart(
+                trigger = FlatContractTrigger(type = FlatTriggerKind.NONE, description = "Requested"),
+            ),
+            activities = listOf(flatActivity(FlatActivityKind.SERVICE, id = "a-prepare")),
+            throwEvents = listOf(flatThrow(FlatThrowEventKind.MESSAGE, "t-report-sent", "final report")),
+            flows = listOf(FlatContractFlow(from = "a-prepare", to = "t-report-sent")),
+        )
+
+        val sealed = flat.toSealed()
+
+        assertTrue(sealed.endStates.any { it is ContractEndState.Message && it.id == "t-report-sent" })
+        assertTrue(sealed.intermediateThrows.none { it.id == "t-report-sent" })
+    }
+
+    @Test
+    fun `toSealed places a throw event with an outgoing flow as an intermediate throw`() {
+        val flat = FlatProcessContract(
+            id = "c-1",
+            processName = "Report process",
+            summary = "Sends a report mid-flow, then continues.",
+            start = FlatContractStart(
+                trigger = FlatContractTrigger(type = FlatTriggerKind.NONE, description = "Requested"),
+            ),
+            activities = listOf(
+                flatActivity(FlatActivityKind.SERVICE, id = "a-prepare"),
+                flatActivity(FlatActivityKind.SERVICE, id = "a-archive"),
+            ),
+            throwEvents = listOf(flatThrow(FlatThrowEventKind.MESSAGE, "t-report-sent", "final report")),
+            endStates = listOf(flatEnd(FlatEndStateKind.NORMAL, "e-done")),
+            flows = listOf(
+                FlatContractFlow(from = "a-prepare", to = "t-report-sent"),
+                FlatContractFlow(from = "t-report-sent", to = "a-archive"),
+                FlatContractFlow(from = "a-archive", to = "e-done"),
+            ),
+        )
+
+        val sealed = flat.toSealed()
+
+        assertTrue(sealed.intermediateThrows.any { it is ContractIntermediateThrow.Message && it.id == "t-report-sent" })
+        assertTrue(sealed.endStates.none { it.id == "t-report-sent" })
     }
 
     @Test
@@ -307,45 +401,13 @@ class FlatContractMapperTest {
         assertTrue("messageName" in triggerEx.message.orEmpty())
     }
 
+    // Round-trip coverage for both FlatContractThrowEvent dispatchers lives with the other
+    // exhaustiveness tests above (`every FlatContractThrowEvent kind round-trips via toEndState` /
+    // `...via toIntermediateThrow`).
     @Test
-    fun `every FlatContractIntermediateThrow kind round-trips to the matching sealed subtype`() {
-        val sourceIds = listOf("ev1")
-        val cases: List<Pair<FlatContractIntermediateThrow, ContractIntermediateThrow>> = listOf(
-            flatThrow(FlatIntermediateThrowKind.MESSAGE, "throw-msg", payload = "invoice ready") to
-                ContractIntermediateThrow.Message(
-                    "throw-msg",
-                    "Throw",
-                    messageName = "invoice ready",
-                    sourceIds = sourceIds,
-                ),
-            flatThrow(FlatIntermediateThrowKind.SIGNAL, "throw-sig", payload = "batch closed") to
-                ContractIntermediateThrow.Signal(
-                    "throw-sig",
-                    "Throw",
-                    signalName = "batch closed",
-                    sourceIds = sourceIds,
-                ),
-            flatThrow(FlatIntermediateThrowKind.ESCALATION, "throw-esc", payload = "SLA_BREACHED") to
-                ContractIntermediateThrow.Escalation(
-                    "throw-esc",
-                    "Throw",
-                    escalationCode = "SLA_BREACHED",
-                    sourceIds = sourceIds,
-                ),
-        )
-        assertEquals(
-            FlatIntermediateThrowKind.entries.size,
-            cases.size,
-            "every FlatIntermediateThrowKind needs a case here",
-        )
-
-        cases.forEach { (flat, expected) -> assertEquals(expected, flat.toSealed()) }
-    }
-
-    @Test
-    fun `FlatContractIntermediateThrow required payload fields fail with offending id`() {
-        val message = flatThrow(FlatIntermediateThrowKind.MESSAGE, "throw-msg", payload = null)
-        val messageEx = assertFailsWith<IllegalArgumentException> { message.toSealed() }
+    fun `FlatContractThrowEvent required payload fields fail with offending id`() {
+        val message = flatThrow(FlatThrowEventKind.MESSAGE, "throw-msg", payload = null)
+        val messageEx = assertFailsWith<IllegalArgumentException> { message.toIntermediateThrow() }
         assertTrue("throw-msg" in messageEx.message.orEmpty())
         assertTrue("messageName" in messageEx.message.orEmpty())
     }
@@ -577,7 +639,11 @@ class FlatContractMapperTest {
                 ),
             ),
             endStates = listOf(flatEnd(FlatEndStateKind.NORMAL, "e-ok")),
-            intermediateThrows = listOf(flatThrow(FlatIntermediateThrowKind.MESSAGE, "throw-msg", "invoice ready")),
+            throwEvents = listOf(flatThrow(FlatThrowEventKind.MESSAGE, "throw-msg", "invoice ready")),
+            flows = listOf(
+                FlatContractFlow(from = "a-ship", to = "throw-msg"),
+                FlatContractFlow(from = "throw-msg", to = "e-ok"),
+            ),
         )
 
         val sealed: ProcessContract = flat.toSealed()
@@ -631,23 +697,20 @@ class FlatContractMapperTest {
         kind = kind,
         sourceIds = listOf("ev1"),
         errorCode = payload.takeIf { kind == FlatEndStateKind.ERROR },
-        messageName = payload.takeIf { kind == FlatEndStateKind.MESSAGE },
-        signalName = payload.takeIf { kind == FlatEndStateKind.SIGNAL },
-        escalationCode = payload.takeIf { kind == FlatEndStateKind.ESCALATION },
     )
 
     private fun flatThrow(
-        kind: FlatIntermediateThrowKind,
+        kind: FlatThrowEventKind,
         id: String,
         payload: String?,
-    ): FlatContractIntermediateThrow = FlatContractIntermediateThrow(
+    ): FlatContractThrowEvent = FlatContractThrowEvent(
         id = id,
         name = "Throw",
         kind = kind,
         sourceIds = listOf("ev1"),
-        messageName = payload.takeIf { kind == FlatIntermediateThrowKind.MESSAGE },
-        signalName = payload.takeIf { kind == FlatIntermediateThrowKind.SIGNAL },
-        escalationCode = payload.takeIf { kind == FlatIntermediateThrowKind.ESCALATION },
+        messageName = payload.takeIf { kind == FlatThrowEventKind.MESSAGE },
+        signalName = payload.takeIf { kind == FlatThrowEventKind.SIGNAL },
+        escalationCode = payload.takeIf { kind == FlatThrowEventKind.ESCALATION },
     )
 
     // Site 15: toPayloadActivity called with non-payload kind throws RetryableBpmnGenerationException.

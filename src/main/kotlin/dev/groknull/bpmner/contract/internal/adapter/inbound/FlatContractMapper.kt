@@ -36,22 +36,31 @@ import dev.groknull.bpmner.contract.UnconditionalBranch
  * dispatch only ever reads the fields the chosen kind needs.
  */
 
-public fun FlatProcessContract.toSealed(): ProcessContract = ProcessContract(
-    id = id,
-    processName = processName,
-    summary = summary,
-    start = ContractStart(trigger = start.trigger.toSealed(), sourceIds = start.sourceIds, id = start.id),
-    // Embedded subprocesses are appended to `activities` as ContractActivity.SubProcess entries so
-    // the activity-keyed loops in the validator and fidelity checker pick them up uniformly — a
-    // subprocess IS a (composite) activity in BPMN. Membership is carried by containedActivityIds.
-    activities = activities.map { it.toSealed() } + subProcesses.map { it.toSealed() },
-    decisions = decisions.map { it.toSealed() },
-    actors = actors,
-    endStates = endStates.map { it.toSealed() },
-    intermediateThrows = intermediateThrows.map { it.toSealed() },
-    assumptions = assumptions,
-    flows = flows.map { it.toSealed() },
-)
+public fun FlatProcessContract.toSealed(): ProcessContract {
+    // A message/signal/escalation throw event's end-vs-intermediate placement is purely
+    // positional in BPMN (does it have an outgoing sequence flow?), not a fact the model should
+    // have to pre-declare by choosing which array to put it in — see issue #749. Computed once
+    // here, at the one place flat wire shape becomes the sealed domain model, rather than asked
+    // for on the wire and reconciled later.
+    val outgoingCounts = flows.groupingBy { it.from }.eachCount()
+    val (terminalThrows, midFlowThrows) = throwEvents.partition { (outgoingCounts[it.id] ?: 0) == 0 }
+    return ProcessContract(
+        id = id,
+        processName = processName,
+        summary = summary,
+        start = ContractStart(trigger = start.trigger.toSealed(), sourceIds = start.sourceIds, id = start.id),
+        // Embedded subprocesses are appended to `activities` as ContractActivity.SubProcess entries so
+        // the activity-keyed loops in the validator and fidelity checker pick them up uniformly — a
+        // subprocess IS a (composite) activity in BPMN. Membership is carried by containedActivityIds.
+        activities = activities.map { it.toSealed() } + subProcesses.map { it.toSealed() },
+        decisions = decisions.map { it.toSealed() },
+        actors = actors,
+        endStates = endStates.map { it.toSealed() } + terminalThrows.map { it.toEndState() },
+        intermediateThrows = midFlowThrows.map { it.toIntermediateThrow() },
+        assumptions = assumptions,
+        flows = flows.map { it.toSealed() },
+    )
+}
 
 /**
  * Flat → sealed for a topology edge. `branchId` is recoverable from the payload — no `kind`
@@ -162,45 +171,55 @@ public fun FlatContractEndState.toSealed(): ContractEndState = when (kind) {
         errorCode = requireField(errorCode, kind, "errorCode", id),
         sourceIds = sourceIds,
     )
+}
 
-    FlatEndStateKind.SIGNAL -> ContractEndState.Signal(
+/**
+ * The terminal half of a partition by outgoing-flow count (see [FlatProcessContract.toSealed]) —
+ * a message/signal/escalation throw event with no outgoing edge is the process's end.
+ */
+public fun FlatContractThrowEvent.toEndState(): ContractEndState = when (kind) {
+    FlatThrowEventKind.MESSAGE -> ContractEndState.Message(
+        id = id,
+        name = name,
+        messageName = requireField(messageName, kind, "messageName", id),
+        sourceIds = sourceIds,
+    )
+
+    FlatThrowEventKind.SIGNAL -> ContractEndState.Signal(
         id = id,
         name = name,
         signalName = requireField(signalName, kind, "signalName", id),
         sourceIds = sourceIds,
     )
 
-    FlatEndStateKind.ESCALATION -> ContractEndState.Escalation(
+    FlatThrowEventKind.ESCALATION -> ContractEndState.Escalation(
         id = id,
         name = name,
         escalationCode = requireField(escalationCode, kind, "escalationCode", id),
         sourceIds = sourceIds,
     )
-
-    FlatEndStateKind.MESSAGE -> ContractEndState.Message(
-        id = id,
-        name = name,
-        messageName = requireField(messageName, kind, "messageName", id),
-        sourceIds = sourceIds,
-    )
 }
 
-public fun FlatContractIntermediateThrow.toSealed(): ContractIntermediateThrow = when (kind) {
-    FlatIntermediateThrowKind.MESSAGE -> ContractIntermediateThrow.Message(
+/**
+ * The mid-flow half of the same partition — a throw event with at least one outgoing edge
+ * continues the process.
+ */
+public fun FlatContractThrowEvent.toIntermediateThrow(): ContractIntermediateThrow = when (kind) {
+    FlatThrowEventKind.MESSAGE -> ContractIntermediateThrow.Message(
         id = id,
         name = name,
         messageName = requireField(messageName, kind, "messageName", id),
         sourceIds = sourceIds,
     )
 
-    FlatIntermediateThrowKind.SIGNAL -> ContractIntermediateThrow.Signal(
+    FlatThrowEventKind.SIGNAL -> ContractIntermediateThrow.Signal(
         id = id,
         name = name,
         signalName = requireField(signalName, kind, "signalName", id),
         sourceIds = sourceIds,
     )
 
-    FlatIntermediateThrowKind.ESCALATION -> ContractIntermediateThrow.Escalation(
+    FlatThrowEventKind.ESCALATION -> ContractIntermediateThrow.Escalation(
         id = id,
         name = name,
         escalationCode = requireField(escalationCode, kind, "escalationCode", id),

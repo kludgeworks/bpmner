@@ -152,7 +152,10 @@ internal class BpmnContractValidator {
                 add(
                     errorIssue(
                         code = ContractValidationCode.END_STATE_HAS_OUTGOING_FLOW,
-                        message = "end state '${endState.id}' must have no outgoing flow (found $endOutgoing)",
+                        message = "end state '${endState.id}' must have no outgoing flow (found $endOutgoing)" +
+                            " — if the source describes further steps after this element, move it into" +
+                            " `activities`; it isn't a mid-process send (those are placed automatically" +
+                            " from `flows` and can't reach this check)",
                         targetId = endState.id,
                     ),
                 )

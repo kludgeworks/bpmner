@@ -34,13 +34,15 @@ import dev.groknull.bpmner.contract.ContractGatewayKind
 internal object ContractExtractionExamples {
 
     const val MESSAGE_END_LABEL: String =
-        "MESSAGE end state: process ends by sending a specific message — use kind=MESSAGE, not NORMAL"
+        "MESSAGE throw event with no further steps: declare it in throwEvents, not as a NORMAL end state" +
+            " — whether it ends the process is derived from flows, not chosen"
 
     const val SEND_TASK_LABEL: String =
         "SEND activity: fire-and-forget outbound notification — use kind=SEND, not SERVICE"
 
     const val INTERMEDIATE_THROW_LABEL: String =
-        "Intermediate throw: mid-flow send that does NOT end the process — use intermediateThrows, not endStates or activities"
+        "MESSAGE throw event with further steps after it: declare it in throwEvents with an outgoing" +
+            " flow — not endStates or activities; placement as mid-flow follows automatically"
 
     const val SEND_THEN_NORMAL_LABEL: String =
         "SEND activity + NORMAL end: an in-flow send (SEND activity) followed by ordinary process completion (NORMAL end)"
@@ -65,6 +67,7 @@ internal object ContractExtractionExamples {
     // ──────────────────────────────────────────────────────────────────────────
 
     private const val ACT_VALIDATE = "act-validate"
+    private const val ACT_PREPARE_INVOICE = "act-prepare-invoice"
     private const val ACT_SEND_INVOICE = "act-send-invoice"
     private const val ACT_PROCESS = "act-process"
     private const val ACT_SEND_CONFIRM = "act-send-confirmation"
@@ -76,11 +79,12 @@ internal object ContractExtractionExamples {
     private const val THROW_BILLING = "throw-billing-notification"
 
     // ──────────────────────────────────────────────────────────────────────────
-    // Example 1 — MESSAGE end state
+    // Example 1 — MESSAGE throw event with no further steps (resolves to an end)
     //
     // Prose: "The process begins when started. When everything is done, the process
     //          wraps up by sending a final invoice."
-    // The terminal action IS the send → end state kind = MESSAGE.
+    // The terminal action IS the send → throwEvents entry, kind = MESSAGE. No flow
+    // leaves it, so it resolves to an end automatically — nothing here chooses that.
     // ──────────────────────────────────────────────────────────────────────────
 
     val messageEndExample: FlatProcessContract =
@@ -102,15 +106,26 @@ internal object ContractExtractionExamples {
                     kind = FlatActivityKind.SERVICE,
                     sourceIds = listOf("src-1"),
                 ),
+                FlatContractActivity(
+                    id = ACT_PREPARE_INVOICE,
+                    name = "Prepare invoice",
+                    kind = FlatActivityKind.SERVICE,
+                    sourceIds = listOf("src-1"),
+                ),
             ),
-            endStates = listOf(
-                FlatContractEndState(
+            throwEvents = listOf(
+                FlatContractThrowEvent(
                     id = END_MESSAGE,
                     name = "Final invoice sent",
-                    kind = FlatEndStateKind.MESSAGE,
+                    kind = FlatThrowEventKind.MESSAGE,
                     messageName = "final invoice",
                     sourceIds = listOf("src-1"),
                 ),
+            ),
+            flows = listOf(
+                FlatContractFlow(from = "start", to = ACT_VALIDATE),
+                FlatContractFlow(from = ACT_VALIDATE, to = ACT_PREPARE_INVOICE),
+                FlatContractFlow(from = ACT_PREPARE_INVOICE, to = END_MESSAGE),
             ),
         )
 
@@ -155,11 +170,12 @@ internal object ContractExtractionExamples {
         )
 
     // ──────────────────────────────────────────────────────────────────────────
-    // Example 3 — Intermediate throw (mid-flow; does NOT end the process)
+    // Example 3 — MESSAGE throw event with further steps (resolves to mid-flow)
     //
     // Prose: "The process starts when requested. The system sends a confirmation message
     //          to billing without ending the process. Then the process completes normally."
-    // The send is mid-flow → intermediateThrows entry; the process ends normally → NORMAL end.
+    // The send is mid-flow → throwEvents entry, kind = MESSAGE. It has an outgoing flow
+    // (to the archive step), so it resolves to an intermediate throw automatically.
     // ──────────────────────────────────────────────────────────────────────────
 
     val intermediateThrowExample: FlatProcessContract =
@@ -188,11 +204,11 @@ internal object ContractExtractionExamples {
                     sourceIds = listOf("src-1"),
                 ),
             ),
-            intermediateThrows = listOf(
-                FlatContractIntermediateThrow(
+            throwEvents = listOf(
+                FlatContractThrowEvent(
                     id = THROW_BILLING,
                     name = "Billing confirmation sent",
-                    kind = FlatIntermediateThrowKind.MESSAGE,
+                    kind = FlatThrowEventKind.MESSAGE,
                     messageName = "billing confirmation",
                     sourceIds = listOf("src-1"),
                 ),
@@ -204,6 +220,12 @@ internal object ContractExtractionExamples {
                     kind = FlatEndStateKind.NORMAL,
                     sourceIds = listOf("src-1"),
                 ),
+            ),
+            flows = listOf(
+                FlatContractFlow(from = "start", to = ACT_PROCESS),
+                FlatContractFlow(from = ACT_PROCESS, to = THROW_BILLING),
+                FlatContractFlow(from = THROW_BILLING, to = ACT_ARCHIVE),
+                FlatContractFlow(from = ACT_ARCHIVE, to = END_NORMAL),
             ),
         )
 
@@ -249,6 +271,11 @@ internal object ContractExtractionExamples {
                     kind = FlatEndStateKind.NORMAL,
                     sourceIds = listOf("src-1"),
                 ),
+            ),
+            flows = listOf(
+                FlatContractFlow(from = "start", to = ACT_SEND_INVOICE),
+                FlatContractFlow(from = ACT_SEND_INVOICE, to = ACT_ARCHIVE),
+                FlatContractFlow(from = ACT_ARCHIVE, to = END_NORMAL),
             ),
         )
     // ──────────────────────────────────────────────────────────────────────────
