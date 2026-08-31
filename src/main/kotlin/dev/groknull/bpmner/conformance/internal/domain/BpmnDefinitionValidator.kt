@@ -527,6 +527,15 @@ internal class BpmnDefinitionValidator {
                 )
             }
         }
+
+        // A black-box participant (no processRef) exists only to exchange messages across the
+        // pool boundary; one with no message flow at all is an orphan pool with nothing to show.
+        val messageFlowParticipantIds =
+            definition.messageFlows.flatMap { listOf(it.sourceRef.trim(), it.targetRef.trim()) }.toSet()
+        definition.participants
+            .filter { it.processRef.isNullOrBlank() }
+            .filterNot { it.id.trim() in messageFlowParticipantIds }
+            .forEach { errors.add("black-box participant ${it.id} has no message flow") }
     }
 
     private fun validateLanes(

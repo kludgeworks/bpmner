@@ -126,19 +126,71 @@ enum class BpmnFidelityCode {
     SUBPROCESS_BOUNDARY_CROSSED,
 
     /**
-     * The source contract declares one or more [dev.groknull.bpmner.contract.ContractActor]s
-     * (explicit role structure), but the generated [dev.groknull.bpmner.bpmn.BpmnDefinition]
-     * has no lanes. When actors are present the process has defined responsibility partitioning,
-     * so the BPMN must carry lanes to encode it.
+     * The source contract declares one or more [dev.groknull.bpmner.contract.ContractActor]s that
+     * perform at least one activity (referenced by a [dev.groknull.bpmner.contract.ContractActivity]'s
+     * `actorId`), but the generated [dev.groknull.bpmner.bpmn.BpmnDefinition] has no lanes. When a
+     * performing actor is present the process has defined responsibility partitioning, so the BPMN
+     * must carry lanes to encode it. An actor with no performed activity is modelled as a black-box
+     * participant instead ([ACTOR_IS_BOTH_LANE_AND_BLACK_BOX_POOL] covers that case), so it does not
+     * count here.
      *
      * This is a deterministic, process-level check (no per-element id required). It fires in
      * the fidelity checker at generation-time (via [dev.groknull.bpmner.authoring.internal.adapter.inbound.LlmBpmnProcessGenerator]
      * `validateOutline`) and at repair-time (via
      * [dev.groknull.bpmner.repair.internal.domain.BpmnContractAwareValidator]), making
      * lane-absence an ERROR — blocking both the generation and repair paths — whenever
-     * actor roles are declared in the contract.
+     * a performing actor role is declared in the contract.
      */
     ROLES_DECLARED_BUT_NO_LANES,
+
+    /**
+     * A contract actor is realised as both a lane and a black-box participant (a
+     * [dev.groknull.bpmner.bpmn.BpmnParticipant] with `processRef == null`) in the same
+     * [dev.groknull.bpmner.bpmn.BpmnDefinition]. The two are mutually exclusive: an actor that
+     * performs a contract activity belongs inside the pool as a lane; an actor that performs none
+     * is outside the pool as a black-box participant. An actor on both sides means the generator's
+     * lane/participant split disagreed with the contract's own actor→activity mapping.
+     */
+    ACTOR_IS_BOTH_LANE_AND_BLACK_BOX_POOL,
+
+    /**
+     * A lane's `flowNodeRefs` omits a contract activity that names this lane's actor as its
+     * `actorId`. The activity was assigned to a performer in the contract but the generated lane
+     * membership dropped it — the node may have landed in the wrong lane or no lane at all.
+     *
+     * One-directional: a lane may legitimately hold nodes beyond its actor's own activities
+     * (routing-only gateways and shared events may be placed in whichever lane fits best), so the
+     * reverse — extra nodes in a lane — is never flagged. WARNING severity: membership drift has
+     * not yet been measured across generations; see the swimlane fidelity plan for the promotion
+     * criteria before raising this to ERROR.
+     */
+    LANE_MEMBERSHIP_DIVERGES_FROM_CONTRACT,
+
+    /**
+     * An actor that performs at least one contract activity is realised as a black-box
+     * participant (`processRef == null`) with no lane of its own. A performer's work is part of
+     * this process, so it belongs inside the pool as a lane; modelling it as an external pool
+     * puts contract-declared work outside the process boundary, where a sequence flow cannot
+     * legally reach it.
+     *
+     * This is the inverse of [ACTOR_IS_BOTH_LANE_AND_BLACK_BOX_POOL] and the shape a repair
+     * would land on if it resolved that duplication by dropping the lane instead of the pool,
+     * so it is an ERROR on the same footing. Fires only when the actor has no matching lane —
+     * the both-sides case is already reported as the duplication itself.
+     */
+    PERFORMING_ACTOR_REALISED_AS_BLACK_BOX_POOL,
+
+    /**
+     * An actor that performs at least one contract activity has no lane bearing its name, in a
+     * definition that does have lanes. The responsibility the contract assigned is unrepresented.
+     *
+     * WARNING rather than ERROR because lane matching is by name: a lane labelled "Sales Team"
+     * for an actor named "Sales" is a naming divergence, not a missing responsibility, and would
+     * otherwise be reported as a false positive. Suppressed when the definition has no lanes at
+     * all ([ROLES_DECLARED_BUT_NO_LANES] covers that) and when the actor is realised as a
+     * black-box participant ([PERFORMING_ACTOR_REALISED_AS_BLACK_BOX_POOL] covers that).
+     */
+    PERFORMING_ACTOR_HAS_NO_LANE,
 }
 
 /**
