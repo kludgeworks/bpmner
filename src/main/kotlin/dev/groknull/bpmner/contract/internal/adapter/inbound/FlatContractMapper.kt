@@ -173,8 +173,10 @@ public fun FlatContractEndState.toSealed(): ContractEndState = when (kind) {
     )
 }
 
-// The terminal half of a partition by outgoing-flow count (see FlatProcessContract.toSealed) —
-// a message/signal/escalation throw event with no outgoing edge is the process's end.
+/**
+ * The terminal half of a partition by outgoing-flow count (see [FlatProcessContract.toSealed]) —
+ * a message/signal/escalation throw event with no outgoing edge is the process's end.
+ */
 public fun FlatContractThrowEvent.toEndState(): ContractEndState = when (kind) {
     FlatThrowEventKind.MESSAGE -> ContractEndState.Message(
         id = id,
@@ -198,8 +200,10 @@ public fun FlatContractThrowEvent.toEndState(): ContractEndState = when (kind) {
     )
 }
 
-// The mid-flow half of the same partition — a throw event with at least one outgoing edge
-// continues the process.
+/**
+ * The mid-flow half of the same partition — a throw event with at least one outgoing edge
+ * continues the process.
+ */
 public fun FlatContractThrowEvent.toIntermediateThrow(): ContractIntermediateThrow = when (kind) {
     FlatThrowEventKind.MESSAGE -> ContractIntermediateThrow.Message(
         id = id,
