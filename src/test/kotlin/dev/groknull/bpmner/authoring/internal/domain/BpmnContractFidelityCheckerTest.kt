@@ -1307,6 +1307,98 @@ class BpmnContractFidelityCheckerTest {
     }
 
     @Test
+    fun `performing actor realised only as a black-box pool fires ERROR`() {
+        // "Control Room" performs act-authorise but is realised as an external pool with no lane;
+        // "Driver" supplies the definition's only lane, so the process-level check stays silent.
+        val definition = multiActorLanedDefinition().copy(
+            lanes = listOf(BpmnLane(id = "Lane_Driver", name = "Driver", flowNodeRefs = listOf("act-drive"))),
+            participants = listOf(BpmnParticipant(id = "Participant_control", name = "Control Room", processRef = null)),
+        )
+
+        val report = checker.checkDetailed(multiActorContract(), definition)
+
+        assertTrue(
+            report.issues.any { it.code == BpmnFidelityCode.PERFORMING_ACTOR_REALISED_AS_BLACK_BOX_POOL },
+            "expected PERFORMING_ACTOR_REALISED_AS_BLACK_BOX_POOL; got: ${report.issues.map { it.code }}",
+        )
+        assertEquals(
+            BpmnFidelitySeverity.ERROR,
+            report.issues.first { it.code == BpmnFidelityCode.PERFORMING_ACTOR_REALISED_AS_BLACK_BOX_POOL }.severity,
+        )
+        assertFalse(report.isValid)
+    }
+
+    @Test
+    fun `performing actor with no lane at all fires the missing-lane warning`() {
+        val definition = multiActorLanedDefinition().copy(
+            lanes = listOf(BpmnLane(id = "Lane_Driver", name = "Driver", flowNodeRefs = listOf("act-drive"))),
+        )
+
+        val report = checker.checkDetailed(multiActorContract(), definition)
+
+        val missing = report.issues.filter { it.code == BpmnFidelityCode.PERFORMING_ACTOR_HAS_NO_LANE }
+        assertEquals(listOf("actor-control"), missing.map { it.contractElementId }, "got: ${report.issues}")
+        assertEquals(BpmnFidelitySeverity.WARNING, missing.first().severity)
+    }
+
+    @Test
+    fun `a performing actor on both sides reports only the duplication, not also the black-box error`() {
+        val definition = multiActorLanedDefinition().copy(
+            participants = listOf(BpmnParticipant(id = "Participant_control", name = "Control Room", processRef = null)),
+        )
+
+        val report = checker.checkDetailed(multiActorContract(), definition)
+
+        assertTrue(
+            report.issues.any { it.code == BpmnFidelityCode.ACTOR_IS_BOTH_LANE_AND_BLACK_BOX_POOL },
+            "got: ${report.issues.map { it.code }}",
+        )
+        assertTrue(
+            report.issues.none { it.code == BpmnFidelityCode.PERFORMING_ACTOR_REALISED_AS_BLACK_BOX_POOL },
+            "the both-sides case must report the duplication only; got: ${report.issues.map { it.code }}",
+        )
+    }
+
+    @Test
+    fun `regression guard - a non-performing actor realised as a lane is not reported`() {
+        // actorId is optional, so an extraction that dropped it makes a genuine performer look
+        // non-performing. Erroring on its (correct) lane would punish a correct diagram.
+        val contract = rolesContract().copy(
+            actors = rolesContract().actors + ContractActor(id = "actor-carrier", name = "Carrier"),
+        )
+        val definition = lanedDefinition().copy(
+            lanes = lanedDefinition().lanes +
+                BpmnLane(id = "Lane_Carrier", name = "Carrier", flowNodeRefs = emptyList()),
+        )
+
+        val report = checker.checkDetailed(contract, definition)
+
+        assertTrue(
+            report.issues.none {
+                it.code == BpmnFidelityCode.PERFORMING_ACTOR_REALISED_AS_BLACK_BOX_POOL ||
+                    it.code == BpmnFidelityCode.PERFORMING_ACTOR_HAS_NO_LANE ||
+                    it.code == BpmnFidelityCode.ACTOR_IS_BOTH_LANE_AND_BLACK_BOX_POOL
+            },
+            "got: ${report.issues}",
+        )
+    }
+
+    @Test
+    fun `regression guard - performing actors correctly laned produce no partition issues`() {
+        val report = checker.checkDetailed(multiActorContract(), multiActorLanedDefinition())
+
+        assertTrue(
+            report.issues.none {
+                it.code == BpmnFidelityCode.PERFORMING_ACTOR_REALISED_AS_BLACK_BOX_POOL ||
+                    it.code == BpmnFidelityCode.PERFORMING_ACTOR_HAS_NO_LANE ||
+                    it.code == BpmnFidelityCode.ACTOR_IS_BOTH_LANE_AND_BLACK_BOX_POOL ||
+                    it.code == BpmnFidelityCode.LANE_MEMBERSHIP_DIVERGES_FROM_CONTRACT
+            },
+            "got: ${report.issues}",
+        )
+    }
+
+    @Test
     fun `determinism - repeated invocation produces identical issue codes`() {
         val contract = rolesContract()
         val definition = lanelessDefinition()

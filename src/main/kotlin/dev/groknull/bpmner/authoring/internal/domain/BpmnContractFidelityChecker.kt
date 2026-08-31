@@ -44,6 +44,7 @@ import dev.groknull.bpmner.conformance.BpmnDiagnosticSeverity
 import dev.groknull.bpmner.conformance.BpmnDiagnosticSource
 import dev.groknull.bpmner.conformance.BpmnRepairScope
 import dev.groknull.bpmner.contract.ContractActivity
+import dev.groknull.bpmner.contract.ContractActor
 import dev.groknull.bpmner.contract.ContractDecision
 import dev.groknull.bpmner.contract.ContractEndState
 import dev.groknull.bpmner.contract.ContractGatewayKind
@@ -733,10 +734,18 @@ internal class BpmnContractFidelityChecker : BpmnContractFidelityPort {
      *    a lane and a black-box participant (a [BpmnParticipant] with `processRef == null`). The
      *    two are mutually exclusive: a performing actor is a lane, a non-performing actor is a
      *    black-box participant, never both.
-     * 2. [BpmnFidelityCode.LANE_MEMBERSHIP_DIVERGES_FROM_CONTRACT] — a performing actor's lane
+     * 2. [BpmnFidelityCode.PERFORMING_ACTOR_REALISED_AS_BLACK_BOX_POOL] — a performing actor is
+     *    realised as a black-box participant with no lane, putting contract-declared work outside
+     *    the process boundary.
+     * 3. [BpmnFidelityCode.PERFORMING_ACTOR_HAS_NO_LANE] — a performing actor has no lane bearing
+     *    its name in a definition that does have lanes.
+     * 4. [BpmnFidelityCode.LANE_MEMBERSHIP_DIVERGES_FROM_CONTRACT] — a performing actor's lane
      *    omits an activity that names the actor as its `actorId`. One-directional: a lane may
      *    legitimately hold nodes beyond its actor's own activities (routing-only gateways and
      *    shared events), so extra membership is never flagged.
+     *
+     * Checks 2–4 apply only to performing actors. A non-performing actor realised as a lane is
+     * deliberately not reported — see the inline rationale.
      *
      * Matching is by name — a [BpmnLane] and [BpmnParticipant] carry the actor's name, not its
      * contract id (`generate_bpmn.jinja`'s pools-and-lanes rule) — trimmed, and never on a null
@@ -761,36 +770,102 @@ internal class BpmnContractFidelityChecker : BpmnContractFidelityPort {
             val blackBoxForActor = blackBoxParticipantsByName[actor.name.trim()].orEmpty()
 
             if (lanesForActor.isNotEmpty() && blackBoxForActor.isNotEmpty()) {
-                issues +=
-                    BpmnFidelityIssue(
-                        code = BpmnFidelityCode.ACTOR_IS_BOTH_LANE_AND_BLACK_BOX_POOL,
-                        severity = BpmnFidelitySeverity.ERROR,
-                        message =
-                        "Actor '${actor.name}' (id=${actor.id}) is realised as both a lane " +
-                            "(${lanesForActor.joinToString { it.id }}) and a black-box participant " +
-                            "(${blackBoxForActor.joinToString { it.id }}). An actor is either inside " +
-                            "the pool as a lane or outside it as a black-box participant, never both.",
-                        contractElementId = actor.id,
-                    )
+                issues += bothSidesIssue(actor, lanesForActor, blackBoxForActor)
             }
 
+            // A non-performing actor realised as a lane is deliberately not reported: `actorId` is
+            // optional, so an extraction that dropped it makes a genuine performer look
+            // non-performing, and erroring there would punish a correct diagram for an upstream miss.
             if (actor.id !in performingActorIds) return@forEach
+
+            checkPerformerRealisedSide(actor, lanesForActor, blackBoxForActor, definition, issues)
             val actorActivityIds = activityIdsByActorId[actor.id].orEmpty().map { it.id }.toSet()
-            lanesForActor.forEach { lane ->
-                val missing = actorActivityIds - lane.flowNodeRefs.toSet()
-                missing.forEach { missingId ->
-                    issues +=
-                        BpmnFidelityIssue(
-                            code = BpmnFidelityCode.LANE_MEMBERSHIP_DIVERGES_FROM_CONTRACT,
-                            severity = BpmnFidelitySeverity.WARNING,
-                            message =
-                            "Activity '$missingId' names actor '${actor.name}' (id=${actor.id}) as " +
-                                "its performer, but lane '${lane.id}' — that actor's lane — does not " +
-                                "contain it.",
-                            contractElementId = missingId,
-                            bpmnElementId = lane.id,
-                        )
-                }
+            checkLaneMembership(actor, lanesForActor, actorActivityIds, issues)
+        }
+    }
+
+    private fun bothSidesIssue(
+        actor: ContractActor,
+        lanesForActor: List<BpmnLane>,
+        blackBoxForActor: List<BpmnParticipant>,
+    ): BpmnFidelityIssue = BpmnFidelityIssue(
+        code = BpmnFidelityCode.ACTOR_IS_BOTH_LANE_AND_BLACK_BOX_POOL,
+        severity = BpmnFidelitySeverity.ERROR,
+        message =
+        "Actor '${actor.name}' (id=${actor.id}) is realised as both a lane " +
+            "(${lanesForActor.joinToString { it.id }}) and a black-box participant " +
+            "(${blackBoxForActor.joinToString { it.id }}). An actor is either inside " +
+            "the pool as a lane or outside it as a black-box participant, never both.",
+        contractElementId = actor.id,
+    )
+
+    /**
+     * Reports a performing actor realised on the wrong side of the pool boundary: as a black-box
+     * participant, or as neither lane nor participant while the definition does carry lanes. The
+     * both-sides case is already reported as [BpmnFidelityCode.ACTOR_IS_BOTH_LANE_AND_BLACK_BOX_POOL],
+     * so each guard requires the actor to have no lane.
+     */
+    private fun checkPerformerRealisedSide(
+        actor: ContractActor,
+        lanesForActor: List<BpmnLane>,
+        blackBoxForActor: List<BpmnParticipant>,
+        definition: BpmnDefinition,
+        issues: MutableList<BpmnFidelityIssue>,
+    ) {
+        if (lanesForActor.isNotEmpty()) return
+        if (blackBoxForActor.isNotEmpty()) {
+            issues +=
+                BpmnFidelityIssue(
+                    code = BpmnFidelityCode.PERFORMING_ACTOR_REALISED_AS_BLACK_BOX_POOL,
+                    severity = BpmnFidelitySeverity.ERROR,
+                    message =
+                    "Actor '${actor.name}' (id=${actor.id}) performs contract activities but is " +
+                        "realised only as a black-box participant " +
+                        "(${blackBoxForActor.joinToString { it.id }}) with no lane. A performer's " +
+                        "work belongs inside the pool as a lane; as an external pool it sits " +
+                        "outside the process boundary where no sequence flow can reach it.",
+                    contractElementId = actor.id,
+                )
+            return
+        }
+        if (definition.lanes.isNotEmpty()) {
+            issues +=
+                BpmnFidelityIssue(
+                    code = BpmnFidelityCode.PERFORMING_ACTOR_HAS_NO_LANE,
+                    severity = BpmnFidelitySeverity.WARNING,
+                    message =
+                    "Actor '${actor.name}' (id=${actor.id}) performs contract activities but no " +
+                        "lane bears its name, though the definition has lanes " +
+                        "(${definition.lanes.joinToString { it.name ?: it.id }}). The declared " +
+                        "responsibility is unrepresented, or the lane is labelled differently.",
+                    contractElementId = actor.id,
+                )
+        }
+    }
+
+    /**
+     * Reports contract activities assigned to [actor] that its own lane does not contain.
+     * One-directional: extra nodes in a lane are legitimate and never flagged.
+     */
+    private fun checkLaneMembership(
+        actor: ContractActor,
+        lanesForActor: List<BpmnLane>,
+        actorActivityIds: Set<String>,
+        issues: MutableList<BpmnFidelityIssue>,
+    ) {
+        lanesForActor.forEach { lane ->
+            (actorActivityIds - lane.flowNodeRefs.toSet()).forEach { missingId ->
+                issues +=
+                    BpmnFidelityIssue(
+                        code = BpmnFidelityCode.LANE_MEMBERSHIP_DIVERGES_FROM_CONTRACT,
+                        severity = BpmnFidelitySeverity.WARNING,
+                        message =
+                        "Activity '$missingId' names actor '${actor.name}' (id=${actor.id}) as " +
+                            "its performer, but lane '${lane.id}' — that actor's lane — does not " +
+                            "contain it.",
+                        contractElementId = missingId,
+                        bpmnElementId = lane.id,
+                    )
             }
         }
     }

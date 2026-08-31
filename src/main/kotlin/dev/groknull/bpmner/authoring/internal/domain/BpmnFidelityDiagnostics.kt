@@ -165,6 +165,32 @@ enum class BpmnFidelityCode {
      * criteria before raising this to ERROR.
      */
     LANE_MEMBERSHIP_DIVERGES_FROM_CONTRACT,
+
+    /**
+     * An actor that performs at least one contract activity is realised as a black-box
+     * participant (`processRef == null`) with no lane of its own. A performer's work is part of
+     * this process, so it belongs inside the pool as a lane; modelling it as an external pool
+     * puts contract-declared work outside the process boundary, where a sequence flow cannot
+     * legally reach it.
+     *
+     * This is the inverse of [ACTOR_IS_BOTH_LANE_AND_BLACK_BOX_POOL] and the shape a repair
+     * would land on if it resolved that duplication by dropping the lane instead of the pool,
+     * so it is an ERROR on the same footing. Fires only when the actor has no matching lane —
+     * the both-sides case is already reported as the duplication itself.
+     */
+    PERFORMING_ACTOR_REALISED_AS_BLACK_BOX_POOL,
+
+    /**
+     * An actor that performs at least one contract activity has no lane bearing its name, in a
+     * definition that does have lanes. The responsibility the contract assigned is unrepresented.
+     *
+     * WARNING rather than ERROR because lane matching is by name: a lane labelled "Sales Team"
+     * for an actor named "Sales" is a naming divergence, not a missing responsibility, and would
+     * otherwise be reported as a false positive. Suppressed when the definition has no lanes at
+     * all ([ROLES_DECLARED_BUT_NO_LANES] covers that) and when the actor is realised as a
+     * black-box participant ([PERFORMING_ACTOR_REALISED_AS_BLACK_BOX_POOL] covers that).
+     */
+    PERFORMING_ACTOR_HAS_NO_LANE,
 }
 
 /**
