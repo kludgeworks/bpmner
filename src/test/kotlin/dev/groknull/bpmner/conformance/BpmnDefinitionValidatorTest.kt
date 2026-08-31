@@ -19,6 +19,7 @@ import dev.groknull.bpmner.bpmn.BpmnIntermediateCatchEvent
 import dev.groknull.bpmner.bpmn.BpmnIntermediateThrowEvent
 import dev.groknull.bpmner.bpmn.BpmnManualTask
 import dev.groknull.bpmner.bpmn.BpmnMessageEventDefinition
+import dev.groknull.bpmner.bpmn.BpmnMessageFlow
 import dev.groknull.bpmner.bpmn.BpmnMessageRef
 import dev.groknull.bpmner.bpmn.BpmnNode
 import dev.groknull.bpmner.bpmn.BpmnNoneEventDefinition
@@ -169,6 +170,7 @@ class BpmnDefinitionValidatorTest {
         val definition =
             minimalDefinition().copy(
                 participants = listOf(BpmnParticipant("Participant_external", "Payment provider")),
+                messageFlows = listOf(BpmnMessageFlow("MsgFlow_1", "Payment request", "Task_1", "Participant_external")),
             )
 
         val errors = validator.validate(definition)

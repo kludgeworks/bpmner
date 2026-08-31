@@ -21,11 +21,13 @@ import dev.groknull.bpmner.bpmn.BpmnExclusiveGateway
 import dev.groknull.bpmner.bpmn.BpmnGateway
 import dev.groknull.bpmner.bpmn.BpmnInclusiveGateway
 import dev.groknull.bpmner.bpmn.BpmnIntermediateThrowEvent
+import dev.groknull.bpmner.bpmn.BpmnLane
 import dev.groknull.bpmner.bpmn.BpmnManualTask
 import dev.groknull.bpmner.bpmn.BpmnMessageEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnNode
 import dev.groknull.bpmner.bpmn.BpmnNoneEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnParallelGateway
+import dev.groknull.bpmner.bpmn.BpmnParticipant
 import dev.groknull.bpmner.bpmn.BpmnReceiveTask
 import dev.groknull.bpmner.bpmn.BpmnScriptTask
 import dev.groknull.bpmner.bpmn.BpmnSendTask
@@ -133,7 +135,12 @@ internal class BpmnContractFidelityChecker : BpmnContractFidelityPort {
             checkDecision(decision, nodeById, outgoingBySource, issues)
         }
 
-        checkLanesPresentForRoles(contract, definition, issues)
+        // An actor id counts as "performing" when at least one contract activity names it as
+        // `actorId`. Computed once here so the lane-presence check and the lane/black-box
+        // partition check agree on the same performer set.
+        val performingActorIds = contract.activities.mapNotNull { it.actorId }.toSet()
+        checkLanesPresentForRoles(contract, definition, performingActorIds, issues)
+        checkActorLaneParticipantPartition(contract, definition, performingActorIds, issues)
 
         val report = BpmnFidelityReport(issues = issues.toList())
         if (!report.isValid) {
@@ -690,28 +697,102 @@ internal class BpmnContractFidelityChecker : BpmnContractFidelityPort {
     }
 
     /**
-     * Fires when the contract declares at least one actor (role structure is present) but the
-     * generated BPMN has no lanes. Responsibility partitioning was declared in the source and
-     * must be reflected in the BPMN; lane absence under role-present conditions is a topology
-     * fidelity failure, not a lint advisory.
+     * Fires when the contract declares at least one *performing* actor (one referenced by a
+     * contract activity's `actorId`) but the generated BPMN has no lanes. Responsibility
+     * partitioning was declared in the source and must be reflected in the BPMN; lane absence
+     * under role-present conditions is a topology fidelity failure, not a lint advisory.
+     *
+     * An actor that performs no activity is excluded: it belongs outside the pool as a
+     * black-box participant, not in a lane — see [checkActorLaneParticipantPartition].
      */
     private fun checkLanesPresentForRoles(
         contract: ProcessContract,
         definition: BpmnDefinition,
+        performingActorIds: Set<String>,
         issues: MutableList<BpmnFidelityIssue>,
     ) {
-        if (contract.actors.isEmpty()) return
+        val performingActors = contract.actors.filter { it.id in performingActorIds }
+        if (performingActors.isEmpty()) return
         if (definition.lanes.isNotEmpty()) return
         issues +=
             BpmnFidelityIssue(
                 code = BpmnFidelityCode.ROLES_DECLARED_BUT_NO_LANES,
                 severity = BpmnFidelitySeverity.ERROR,
                 message =
-                "Contract declares ${contract.actors.size} actor role(s) " +
-                    "(${contract.actors.joinToString { it.name }}) but the generated BPMN has no lanes. " +
-                    "Responsibility partitioning was declared in the source and must be encoded as " +
-                    "swimlanes — add a lane for each actor role.",
+                "Contract declares ${performingActors.size} actor role(s) that perform an activity " +
+                    "(${performingActors.joinToString { it.name }}) but the generated BPMN has no " +
+                    "lanes. Responsibility partitioning was declared in the source and must be " +
+                    "encoded as swimlanes — add a lane for each performing actor role.",
             )
+    }
+
+    /**
+     * Verifies that the generated collaboration's lane/black-box-participant split for each
+     * contract actor agrees with the contract's own actor→activity mapping:
+     * 1. [BpmnFidelityCode.ACTOR_IS_BOTH_LANE_AND_BLACK_BOX_POOL] — an actor's name matches both
+     *    a lane and a black-box participant (a [BpmnParticipant] with `processRef == null`). The
+     *    two are mutually exclusive: a performing actor is a lane, a non-performing actor is a
+     *    black-box participant, never both.
+     * 2. [BpmnFidelityCode.LANE_MEMBERSHIP_DIVERGES_FROM_CONTRACT] — a performing actor's lane
+     *    omits an activity that names the actor as its `actorId`. One-directional: a lane may
+     *    legitimately hold nodes beyond its actor's own activities (routing-only gateways and
+     *    shared events), so extra membership is never flagged.
+     *
+     * Matching is by name — a [BpmnLane] and [BpmnParticipant] carry the actor's name, not its
+     * contract id (`generate_bpmn.jinja`'s pools-and-lanes rule) — trimmed, and never on a null
+     * or blank name.
+     */
+    private fun checkActorLaneParticipantPartition(
+        contract: ProcessContract,
+        definition: BpmnDefinition,
+        performingActorIds: Set<String>,
+        issues: MutableList<BpmnFidelityIssue>,
+    ) {
+        if (contract.actors.isEmpty()) return
+
+        val activityIdsByActorId = contract.activities.filter { it.actorId != null }.groupBy { it.actorId!! }
+        val lanesByName = definition.lanes.filter { !it.name.isNullOrBlank() }.groupBy { it.name!!.trim() }
+        val blackBoxParticipantsByName = definition.participants
+            .filter { it.processRef == null && !it.name.isNullOrBlank() }
+            .groupBy { it.name!!.trim() }
+
+        contract.actors.forEach { actor ->
+            val lanesForActor = lanesByName[actor.name.trim()].orEmpty()
+            val blackBoxForActor = blackBoxParticipantsByName[actor.name.trim()].orEmpty()
+
+            if (lanesForActor.isNotEmpty() && blackBoxForActor.isNotEmpty()) {
+                issues +=
+                    BpmnFidelityIssue(
+                        code = BpmnFidelityCode.ACTOR_IS_BOTH_LANE_AND_BLACK_BOX_POOL,
+                        severity = BpmnFidelitySeverity.ERROR,
+                        message =
+                        "Actor '${actor.name}' (id=${actor.id}) is realised as both a lane " +
+                            "(${lanesForActor.joinToString { it.id }}) and a black-box participant " +
+                            "(${blackBoxForActor.joinToString { it.id }}). An actor is either inside " +
+                            "the pool as a lane or outside it as a black-box participant, never both.",
+                        contractElementId = actor.id,
+                    )
+            }
+
+            if (actor.id !in performingActorIds) return@forEach
+            val actorActivityIds = activityIdsByActorId[actor.id].orEmpty().map { it.id }.toSet()
+            lanesForActor.forEach { lane ->
+                val missing = actorActivityIds - lane.flowNodeRefs.toSet()
+                missing.forEach { missingId ->
+                    issues +=
+                        BpmnFidelityIssue(
+                            code = BpmnFidelityCode.LANE_MEMBERSHIP_DIVERGES_FROM_CONTRACT,
+                            severity = BpmnFidelitySeverity.WARNING,
+                            message =
+                            "Activity '$missingId' names actor '${actor.name}' (id=${actor.id}) as " +
+                                "its performer, but lane '${lane.id}' — that actor's lane — does not " +
+                                "contain it.",
+                            contractElementId = missingId,
+                            bpmnElementId = lane.id,
+                        )
+                }
+            }
+        }
     }
 }
 

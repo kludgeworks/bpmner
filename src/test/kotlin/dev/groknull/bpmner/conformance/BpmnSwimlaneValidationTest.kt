@@ -138,6 +138,29 @@ class BpmnSwimlaneValidationTest {
         assertTrue(validator.validate(definition).isEmpty(), "got: ${validator.validate(definition)}")
     }
 
+    @Test
+    fun `validator rejects a black-box participant with no message flow`() {
+        val definition =
+            swimlaneDefinition(
+                participants = listOf(BpmnParticipant("Participant_ext", "Carrier", processRef = null)),
+            )
+
+        assertContains(
+            validator.validate(definition).joinToString("\n"),
+            "black-box participant Participant_ext has no message flow",
+        )
+    }
+
+    @Test
+    fun `validator accepts a white-box participant with no message flows`() {
+        val definition =
+            swimlaneDefinition(
+                participants = listOf(BpmnParticipant("Participant_self", "Order service", processRef = "Process_1")),
+            )
+
+        assertTrue(validator.validate(definition).isEmpty(), "got: ${validator.validate(definition)}")
+    }
+
     private fun swimlaneDefinition(
         participants: List<BpmnParticipant> = emptyList(),
         lanes: List<BpmnLane> = emptyList(),
