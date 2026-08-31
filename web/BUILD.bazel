@@ -27,7 +27,7 @@ package(default_visibility = [
 # bundler / asset targets to the rest of the build graph.
 sonarqube(
     name = "sonar",
-    srcs = glob(["src/**/*.ts"]),
+    srcs = glob(["src/**/*.ts"]) + ["tsconfig.json"],
     project_key = "kludgeworks_bpmner_web",
     project_name = "bpmner Web",
     scm_info = ["//:git_info"],
