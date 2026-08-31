@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.8.1](https://github.com/kludgeworks/bpmner/compare/bpmner-v0.8.0...bpmner-v0.8.1) (2026-08-31)
+
+
+### Bug Fixes
+
+* **authoring:** reconcile lane and pool partition against contract actors ([#753](https://github.com/kludgeworks/bpmner/issues/753)) ([dd3defd](https://github.com/kludgeworks/bpmner/commit/dd3defd1d62f81713e7849ff488561fb09252d23))
+* **contract:** derive throw-event end/intermediate placement from flows ([#750](https://github.com/kludgeworks/bpmner/issues/750)) ([b0ff653](https://github.com/kludgeworks/bpmner/commit/b0ff653e3c97589bcd37b92bcb0f65f6ce7a6cb9))
+
 ## [0.8.0](https://github.com/kludgeworks/bpmner/compare/bpmner-v0.7.0...bpmner-v0.8.0) (2026-08-26)
 
 
